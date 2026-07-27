@@ -239,29 +239,53 @@ def api_search(q: str = "", limit: int = 10):
 
 @router.get("/api/stats")
 def api_stats():
-    """JSON endpoint — dùng cho AJAX refresh stat cards trên dashboard."""
+    """JSON endpoint — dùng cho AJAX refresh các con số trên dashboard.
+
+    Endpoint này từng luôn trả 500: nó chỉ ép `total_value_active` về chuỗi,
+    trong khi ba trường tiền thêm vào sau (`value_paid`, `value_invoiced`,
+    `value_unpaid`) vẫn là `Decimal` — thứ mà JSON không mã hoá được. Phía JS
+    lại `.catch()` nuốt lỗi, nên việc tự động làm mới im lặng không chạy suốt
+    thời gian đó, và trang chỉ mới bằng đúng lúc bạn tải lại nó.
+    """
     db = SessionLocal()
     try:
         data = get_dashboard_data(db)
     finally:
         db.close()
 
-    s = data["summary"].copy()
-    s["total_value_active"] = str(s["total_value_active"])
+    # Ép MỌI Decimal, đừng liệt kê tay từng trường — thêm một chỉ số tiền mới
+    # mà quên cập nhật danh sách là endpoint chết lần nữa.
+    summary = {
+        key: (str(value) if isinstance(value, Decimal) else value)
+        for key, value in data["summary"].items()
+    }
 
     return JSONResponse({
-        "summary":       s,
+        "summary":       summary,
         "status_counts": data["status_counts"],
         "expiring_30":   len(data["expiring_30"]),
         "expiring_60":   len(data["expiring_30"]) + len(data["expiring_31_60"]),
         "updated_at":    data["today"].isoformat(),
-        # Giá trị tương ứng 1-1 với 6 stat cards — JS dùng data-stat attribute
+        # Khớp 1-1 với thuộc tính data-stat trên các thẻ. Phải dùng ĐÚNG công
+        # thức mà template dùng khi render lần đầu: bản cũ cộng
+        # active + invoiced + expiring_soon, mà expiring_soon nay là lớp phủ
+        # tính từ end_date — nó nằm sẵn trong các nhóm kia, nên cộng vào là
+        # đếm trùng và sau 5 phút con số tự nhảy lên sai.
         "cards": {
-            "active":        s["active"] + s["invoiced"] + s["expiring_soon"],
-            "signed":        s["signed"],
-            "expiring_soon": s["expiring_soon"],
-            "expired":       s["expired"],
-            "customers":     s["total_customers"],
-            "generated":     s["generated"],
+            "active":        summary["in_service"],
+            "signed":        summary["signed"],
+            "expiring_soon": summary["expiring_soon"],
+            "expired":       summary["expired"],
+            "customers":     summary["total_customers"],
+            "generated":     summary["generated"],
+        },
+        # Phần tiền cũng làm mới được — đây mới là con số người dùng nhìn nhiều
+        # nhất, mà trước giờ chỉ đứng yên cho tới lần tải trang sau.
+        "money": {
+            "total_value_fmt":    _fmt_currency(data["summary"]["total_value_active"]),
+            "value_paid_fmt":     _fmt_currency(data["summary"]["value_paid"]),
+            "value_invoiced_fmt": _fmt_currency(data["summary"]["value_invoiced"]),
+            "value_unpaid_fmt":   _fmt_currency(data["summary"]["value_unpaid"]),
+            "in_force":           summary["in_force"],
         },
     })

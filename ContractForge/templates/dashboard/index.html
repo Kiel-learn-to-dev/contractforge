@@ -63,7 +63,11 @@
   {% endfor %}
 </div>
 <div class="text-end mb-1 pe-1" style="font-size:.7rem;color:var(--c-text-4);">
-  <i class="bi bi-arrow-repeat"></i> Tự động làm mới mỗi 5 phút<span id="stat-refresh-time"></span>
+  <button type="button" id="stat-refresh-now"
+          style="background:none;border:none;padding:0;font:inherit;color:inherit;cursor:pointer;text-decoration:underline dotted;"
+          title="Làm mới số liệu ngay">
+    <i class="bi bi-arrow-repeat"></i> Tự động làm mới mỗi 5 phút
+  </button><span id="stat-refresh-time"></span>
 </div>
 
 <!-- ── F8: Monthly stats strip ───────────────────────────────────────────── -->
@@ -116,10 +120,10 @@
             </span>
           </div>
           <div class="fw-bold mt-1" style="font-size:1.35rem;line-height:1.15;color:var(--c-primary);word-break:break-all;">
-            {{ summary.total_value_fmt }}<span class="ms-1" style="font-size:.8rem;font-weight:500;color:var(--c-text-2);">VNĐ</span>
+            <span data-money="total_value_fmt">{{ summary.total_value_fmt }}</span><span class="ms-1" style="font-size:.8rem;font-weight:500;color:var(--c-text-2);">VNĐ</span>
           </div>
           <div style="font-size:.72rem;color:var(--c-text-3);margin-top:2px;">
-            {{ summary.in_force }} hợp đồng đang hiệu lực
+            <span data-money="in_force">{{ summary.in_force }}</span> hợp đồng đang hiệu lực
           </div>
         </div>
 
@@ -136,7 +140,7 @@
               <a href="/contracts?status=PaidActive" class="text-decoration-none" style="font-size:.78rem;color:var(--c-text-2);">Đã thanh toán</a>
             </div>
             <span class="fw-semibold text-end" style="font-size:.82rem;color:#16a34a;word-break:break-all;">
-              {{ summary.value_paid_fmt }}&thinsp;<span style="font-size:.68rem;font-weight:400;color:var(--c-text-3);">VNĐ</span>
+              <span data-money="value_paid_fmt">{{ summary.value_paid_fmt }}</span>&thinsp;<span style="font-size:.68rem;font-weight:400;color:var(--c-text-3);">VNĐ</span>
             </span>
           </div>
 
@@ -147,7 +151,7 @@
               <a href="/contracts?status=Invoiced" class="text-decoration-none" style="font-size:.78rem;color:var(--c-text-2);">Đã xuất hóa đơn</a>
             </div>
             <span class="fw-semibold text-end" style="font-size:.82rem;color:#0891b2;word-break:break-all;">
-              {{ summary.value_invoiced_fmt }}&thinsp;<span style="font-size:.68rem;font-weight:400;color:var(--c-text-3);">VNĐ</span>
+              <span data-money="value_invoiced_fmt">{{ summary.value_invoiced_fmt }}</span>&thinsp;<span style="font-size:.68rem;font-weight:400;color:var(--c-text-3);">VNĐ</span>
             </span>
           </div>
 
@@ -158,7 +162,7 @@
               <span style="font-size:.78rem;color:var(--c-text-2);">Chưa thanh toán</span>
             </div>
             <span class="fw-semibold text-end" style="font-size:.82rem;color:#f59e0b;word-break:break-all;">
-              {{ summary.value_unpaid_fmt }}&thinsp;<span style="font-size:.68rem;font-weight:400;color:var(--c-text-3);">VNĐ</span>
+              <span data-money="value_unpaid_fmt">{{ summary.value_unpaid_fmt }}</span>&thinsp;<span style="font-size:.68rem;font-weight:400;color:var(--c-text-3);">VNĐ</span>
             </span>
           </div>
 
@@ -472,20 +476,46 @@
 
   /* ── F4: AJAX stat-card refresh ──────────────────────────────────────── */
   function refreshStats() {
-    fetch('/api/stats')
-      .then(function (r) { return r.json(); })
+    return fetch('/api/stats')
+      .then(function (r) {
+        if (!r.ok) throw new Error('/api/stats ' + r.status);
+        return r.json();
+      })
       .then(function (data) {
         var cards = data.cards || {};
         Object.keys(cards).forEach(function (key) {
           var el = document.querySelector('[data-stat="' + key + '"]');
           if (el) el.textContent = cards[key];
         });
+        // Phần tiền cũng làm mới — đây là con số được nhìn nhiều nhất.
+        var money = data.money || {};
+        Object.keys(money).forEach(function (key) {
+          var el = document.querySelector('[data-money="' + key + '"]');
+          if (el) el.textContent = money[key];
+        });
         var ts = document.getElementById('stat-refresh-time');
         if (ts) ts.textContent = ' · ' + new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
       })
-      .catch(function () {});
+      .catch(function (err) {
+        // KHÔNG nuốt lỗi. Endpoint này trả 500 suốt một thời gian dài vì
+        // Decimal không mã hoá được sang JSON, và vì lỗi bị nuốt nên trang cứ
+        // đứng yên mà không ai biết. Thà nói ra còn hơn im lặng sai.
+        console.error('Làm mới số liệu thất bại:', err);
+        var ts = document.getElementById('stat-refresh-time');
+        if (ts) ts.textContent = ' · không làm mới được, hãy tải lại trang';
+      });
   }
   setInterval(refreshStats, 5 * 60 * 1000);
+
+  // Bấm để làm mới ngay, khỏi đợi hết 5 phút — và đây cũng là cách kiểm tra
+  // việc làm mới có thật sự chạy hay không.
+  var refreshBtn = document.getElementById('stat-refresh-now');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', function () {
+      refreshBtn.disabled = true;
+      refreshStats().finally(function () { refreshBtn.disabled = false; });
+    });
+  }
 
   /* ── F6: Monthly expiry bar chart ────────────────────────────────────── */
   var monthlyData = {{ monthly_forecast_data | tojson }};
