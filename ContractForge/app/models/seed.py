@@ -154,6 +154,26 @@ def run_migrations(db: Session) -> None:
         conn.execute(text("UPDATE contracts SET status='PaidActive' WHERE status='Active'"))
         conn.commit()
 
+        # ── ExpiringSoon không còn là trạng thái lưu trong DB (v49) ───────────
+        # Trước đây bản quét tự động ghi đè Signed → ExpiringSoon khi còn ≤30 ngày,
+        # khiến hợp đồng đó không xuất hoá đơn được nữa. Nay "sắp hết hạn" tính từ
+        # end_date, nên phải trả các bản ghi cũ về trạng thái nghiệp vụ thật.
+        #
+        # Trạng thái gốc không được lưu lại, nên suy từ chứng từ đã đính kèm —
+        # đây là bằng chứng đáng tin nhất về việc hợp đồng đã đi tới đâu:
+        conn.execute(text(
+            "UPDATE contracts SET status='PaidActive' "
+            "WHERE status='ExpiringSoon' AND payment_slip_path IS NOT NULL"
+        ))
+        conn.execute(text(
+            "UPDATE contracts SET status='Invoiced' "
+            "WHERE status='ExpiringSoon' AND invoice_pdf_path IS NOT NULL"
+        ))
+        conn.execute(text(
+            "UPDATE contracts SET status='Signed' WHERE status='ExpiringSoon'"
+        ))
+        conn.commit()
+
 
 def run_all_seeds(db: Session):
     safe_print("[seed] Bắt đầu seed data...")

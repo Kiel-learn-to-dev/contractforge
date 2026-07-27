@@ -94,11 +94,7 @@
             </span>
           </td>
           <td>
-            {% set sl = {
-              'Active':('success','Hiệu lực'),
-              'Signed':('teal','Đã ký'),
-              'ExpiringSoon':('warning','Sắp hết hạn'),
-            }.get(item.status, ('secondary','?')) %}
+            {% set sl = status_labels.get(item.status, ('secondary', item.status)) %}
             <span class="badge bg-{{ sl[0] }}-subtle text-{{ sl[0] }}" style="font-size:.72rem;">{{ sl[1] }}</span>
           </td>
           <td class="text-muted" style="font-size:.78rem;">

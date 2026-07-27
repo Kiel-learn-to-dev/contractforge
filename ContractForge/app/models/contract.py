@@ -5,7 +5,9 @@ Blueprint §5.4: lưu toàn bộ dữ liệu hợp đồng, trạng thái vòng 
 liên kết khách hàng, sản phẩm, template và file đầu ra.
 
 Trạng thái (ContractStatus):
-  Draft → Generated → Sent → Signed → Active → ExpiringSoon → Expired → Terminated
+  Draft → Generated → Sent → Signed → Invoiced → PaidActive → Expired → Terminated
+
+Luật chuyển trạng thái và chứng từ bắt buộc: app/services/lifecycle.py
 """
 
 import enum
@@ -171,13 +173,27 @@ class Contract(Base):
     def selected_unit_names(self, value):
         self._selected_unit_names = json.dumps(list(value or []), ensure_ascii=False)
 
+    # ── Hết hạn: dẫn xuất từ end_date, không phải trạng thái lưu trong DB ────
+    # Import cục bộ: lifecycle import ContractStatus từ chính module này, nên
+    # import ở đầu file sẽ thành vòng tròn.
+
+    @property
+    def days_to_expiry(self):
+        """Số ngày còn lại tới hạn. Âm nếu đã quá hạn, None nếu không có hạn."""
+        from app.services.lifecycle import days_to_expiry
+        return days_to_expiry(self.end_date)
+
+    @property
+    def expiry_bucket(self):
+        """'expired' | 'critical' | 'warning' | 'info' | None — mức khẩn của hạn."""
+        from app.services.lifecycle import expiry_bucket
+        return expiry_bucket(self.end_date)
+
     @property
     def is_expiring_soon(self) -> bool:
-        if not self.end_date:
-            return False
-        from datetime import date
-        delta = (self.end_date - date.today()).days
-        return 0 < delta <= 30
+        """Còn hiệu lực nhưng sẽ hết hạn trong ≤30 ngày."""
+        from app.services.lifecycle import is_expiring_soon
+        return is_expiring_soon(self.end_date)
 
     def __repr__(self):
         return f"<Contract {self.contract_number} [{self.status}]>"

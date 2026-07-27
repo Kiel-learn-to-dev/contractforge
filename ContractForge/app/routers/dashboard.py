@@ -26,6 +26,7 @@ from app.services.dashboard_service import (
     get_monthly_expiry_forecast, get_monthly_stats, get_top_customers,
     EXPIRING_SOON_DAYS, EXPIRING_WARN_DAYS,
 )
+from app.services import lifecycle
 
 router = APIRouter(tags=["dashboard"])
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
@@ -110,18 +111,11 @@ def dashboard_expiring(request: Request, days: int = 60):
         "contracts": contracts,
         "days":      days,
         "today":     date.today(),
+        "status_labels": lifecycle.STATUS_LABELS,
     })
 
 
 # ─── Export CSV ──────────────────────────────────────────────────────────────
-
-_STATUS_LABELS = {
-    "Active":       "Hiệu lực",
-    "PaidActive":   "Đã thanh toán",
-    "Invoiced":     "Xuất hóa đơn",
-    "Signed":       "Đã ký",
-    "ExpiringSoon": "Sắp hết hạn",
-}
 
 @router.get("/dashboard/expiring/export")
 def export_expiring(days: int = 60):
@@ -144,7 +138,7 @@ def export_expiring(days: int = 60):
             item["customer_name"],
             item["end_date"].strftime("%d/%m/%Y"),
             item["days_left"],
-            _STATUS_LABELS.get(item["status"], item["status"]),
+            lifecycle.status_label(item["status"]),
             int(item["total_amount"]) if item["total_amount"] else "",
         ])
 
@@ -159,6 +153,10 @@ def export_expiring(days: int = 60):
 
 # ─── Global Search API ────────────────────────────────────────────────────────
 
+# Nhãn RÚT GỌN, chỉ dùng cho ô tìm kiếm nhanh — mỗi dòng kết quả rất hẹp nên
+# "Xuất HĐ" vừa chỗ còn "Đã xuất hóa đơn" thì không. Cố ý khác
+# lifecycle.STATUS_LABELS (nhãn đầy đủ cho bảng biểu). Base.html tra màu theo
+# đúng chuỗi này, nên đổi ở đây phải đổi cả STATUS_COLOR bên đó.
 _STATUS_VI = {
     "Draft": "Nháp", "Generated": "Đã sinh file", "Sent": "Đã gửi",
     "Signed": "Đã ký", "Active": "Hiệu lực", "Invoiced": "Xuất HĐ",

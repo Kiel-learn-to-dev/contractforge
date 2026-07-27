@@ -3,9 +3,13 @@ dashboard_service.py — Tất cả business logic cho Dashboard & nhắc hạn.
 
 Chức năng chính:
   1. auto_update_contract_statuses() — Cập nhật tự động trạng thái:
-       Active/Signed → ExpiringSoon (còn ≤30 ngày)
-       Active/Signed/ExpiringSoon → Expired (đã quá hạn)
+       hợp đồng đang hiệu lực đã quá end_date → Expired
      Gọi mỗi khi load dashboard (hoặc startup).
+
+     Bản quét này KHÔNG còn ghi ExpiringSoon. Trước đây nó đổi Signed → ExpiringSoon
+     khi còn ≤30 ngày, mà ExpiringSoon không có lối tới Invoiced — hợp đồng đã ký
+     vào vùng 30 ngày cuối bị khoá, không xuất hoá đơn được nữa. "Sắp hết hạn" nay
+     tính từ end_date mỗi lần hiển thị (lifecycle.expiry_bucket).
 
   2. get_dashboard_data() — Một lần gọi, lấy đủ data cho toàn bộ dashboard:
        - stats: đếm theo status
@@ -33,82 +37,57 @@ from app.models.contract_event import ContractEvent
 from app.models.contract_template import ContractTemplate
 from app.models.customer import Customer
 from app.models.product import Product
+from app.services import lifecycle
 
 
 # ─── Thresholds ──────────────────────────────────────────────────────────────
+# Ngưỡng và tập trạng thái sống ở app/services/lifecycle.py để dashboard, danh
+# sách hợp đồng và báo cáo Excel không thể đếm lệch nhau nữa. Re-export ở đây
+# cho code cũ đang import từ module này.
 
-EXPIRING_SOON_DAYS = 30     # ≤30 ngày → ExpiringSoon
-EXPIRING_WARN_DAYS = 60     # ≤60 ngày → hiển thị cảnh báo trên dashboard
+EXPIRING_SOON_DAYS = lifecycle.EXPIRING_SOON_DAYS   # ≤30 ngày → cảnh báo "sắp hết hạn"
+EXPIRING_WARN_DAYS = lifecycle.EXPIRING_WARN_DAYS   # ≤60 ngày → hiện trên dashboard
 
-# Trạng thái hợp đồng còn trong vòng đời hiệu lực — dùng chung cho mọi thống kê
-# dashboard (tránh lặp danh sách giống hệt ở nhiều hàm).
-ACTIVE_LIFECYCLE_STATUSES = [
-    ContractStatus.Active, ContractStatus.Signed,
-    ContractStatus.PaidActive, ContractStatus.Invoiced,
-    ContractStatus.ExpiringSoon,
-]
+ACTIVE_LIFECYCLE_STATUSES = lifecycle.ACTIVE_LIFECYCLE_STATUSES
 
 
 # ─── Status auto-update ───────────────────────────────────────────────────────
 
 def auto_update_contract_statuses(db: Session) -> dict:
     """
-    Quét toàn bộ hợp đồng đang hiệu lực và tự động cập nhật trạng thái.
+    Quét hợp đồng đang hiệu lực và đánh dấu những cái đã quá hạn.
 
-    Quy tắc:
-      - end_date ≤ today                → Expired  (nếu đang Active/Signed/ExpiringSoon)
-      - 0 < days_to_end ≤ EXPIRING_SOON_DAYS → ExpiringSoon (nếu đang Active/Signed)
-      - days_to_end > EXPIRING_SOON_DAYS     → Active     (nếu đang ExpiringSoon nhưng được gia hạn)
+    Quy tắc duy nhất:
+      - end_date ≤ today → Expired
+
+    Đây là thay đổi trạng thái tự động **duy nhất** còn lại. Cảnh báo sắp hết hạn
+    không còn ghi vào DB: nó được tính từ end_date mỗi lần hiển thị, nên một hợp
+    đồng gần hết hạn vẫn giữ nguyên trạng thái nghiệp vụ thật (Signed / Invoiced /
+    PaidActive) và vẫn đi tiếp bình thường trong quy trình thu tiền.
 
     Returns:
-        dict với {newly_expired: int, newly_expiring_soon: int, restored_active: int}
+        dict với {newly_expired: int}
     """
     today = date.today()
-    counts = {"newly_expired": 0, "newly_expiring_soon": 0, "restored_active": 0}
+    counts = {"newly_expired": 0}
 
-    # Các hợp đồng còn "sống" và có end_date
-    active_set = ACTIVE_LIFECYCLE_STATUSES
-    candidates = (
+    expired_now = (
         db.query(Contract)
         .filter(
-            Contract.status.in_(active_set),
+            Contract.status.in_(ACTIVE_LIFECYCLE_STATUSES),
             Contract.end_date.isnot(None),
+            Contract.end_date <= today,
         )
         .all()
     )
 
-    changed = []
-    for c in candidates:
-        days_left = (c.end_date - today).days
+    for c in expired_now:
+        c.status = ContractStatus.Expired
+        _add_event(db, c.id, "expired",
+                   f"Tự động cập nhật: hết hạn ngày {c.end_date}", "system")
+        counts["newly_expired"] += 1
 
-        if days_left <= 0:
-            # Hết hạn
-            if c.status != ContractStatus.Expired:
-                c.status = ContractStatus.Expired
-                _add_event(db, c.id, "expired",
-                           f"Tự động cập nhật: hết hạn ngày {c.end_date}", "system")
-                counts["newly_expired"] += 1
-                changed.append(c.id)
-
-        elif days_left <= EXPIRING_SOON_DAYS:
-            # Sắp hết hạn — chỉ chuyển từ PaidActive/Active/Signed (không chuyển Invoiced)
-            if c.status in (ContractStatus.PaidActive, ContractStatus.Active, ContractStatus.Signed):
-                c.status = ContractStatus.ExpiringSoon
-                _add_event(db, c.id, "expiring_soon_alert",
-                           f"Tự động cập nhật: còn {days_left} ngày đến hạn", "system")
-                counts["newly_expiring_soon"] += 1
-                changed.append(c.id)
-
-        else:
-            # Còn nhiều ngày — nếu đang ExpiringSoon (ví dụ đã gia hạn) → PaidActive
-            if c.status == ContractStatus.ExpiringSoon:
-                c.status = ContractStatus.PaidActive
-                _add_event(db, c.id, "activated",
-                           "Tự động khôi phục Đang hiệu lực (end_date được gia hạn)", "system")
-                counts["restored_active"] += 1
-                changed.append(c.id)
-
-    if changed:
+    if expired_now:
         db.commit()
 
     return counts
@@ -165,13 +144,10 @@ def get_dashboard_data(db: Session) -> dict:
     )
     value_invoiced = Decimal(str(value_invoiced_row or 0))
 
-    # Chưa thanh toán (Active legacy + Signed + ExpiringSoon — chưa có HĐ hoặc chưa TT)
-    unpaid_statuses = [
-        ContractStatus.Active, ContractStatus.Signed, ContractStatus.ExpiringSoon,
-    ]
+    # Chưa thanh toán (Signed + legacy — chưa xuất hóa đơn hoặc chưa thu tiền)
     value_unpaid_row = (
         db.query(func.sum(Contract.total_amount))
-        .filter(Contract.status.in_(unpaid_statuses))
+        .filter(Contract.status.in_(lifecycle.UNPAID_STATUSES))
         .scalar()
     )
     value_unpaid = Decimal(str(value_unpaid_row or 0))
@@ -203,13 +179,36 @@ def get_dashboard_data(db: Session) -> dict:
     # Đã sinh file = tất cả HĐ đã từng generate (có output_file_path), không phân biệt trạng thái
     count_generated_file = db.query(Contract).filter(Contract.output_file_path.isnot(None)).count()
 
+    # Số hợp đồng đang trong vòng đời hiệu lực. MỘT con số có thẩm quyền, thay cho
+    # kiểu cộng tay `active + invoiced + expiring_soon` rải rác trong template —
+    # hai chỗ trong dashboard/index.html từng cộng theo hai công thức khác nhau.
+    count_in_force = (
+        db.query(func.count(Contract.id))
+        .filter(Contract.status.in_(ACTIVE_LIFECYCLE_STATUSES))
+        .scalar()
+        or 0
+    )
+    # Hẹp hơn: đang thực sự chạy dịch vụ (không tính Signed đang chờ xuất hoá đơn).
+    # Khớp đúng bộ lọc `?alert_filter=all_active` mà thẻ trên dashboard trỏ tới,
+    # nên con số và danh sách mở ra luôn bằng nhau.
+    count_in_service = (
+        db.query(func.count(Contract.id))
+        .filter(Contract.status.in_(lifecycle.IN_SERVICE_STATUSES))
+        .scalar()
+        or 0
+    )
+
     summary = {
         "total_contracts":    sum(status_counts.values()),
+        "in_force":           count_in_force,
+        "in_service":         count_in_service,
         "active":             status_counts.get("Active", 0) + status_counts.get("PaidActive", 0),
         "paid_active":        status_counts.get("PaidActive", 0),
         "invoiced":           status_counts.get("Invoiced", 0),
         "signed":             status_counts["Signed"],
-        "expiring_soon":      status_counts["ExpiringSoon"],
+        # Lớp phủ tính từ end_date, KHÔNG phải một nhóm riêng: các hợp đồng này
+        # cũng đã được đếm trong in_force. Đừng cộng nó vào các con số khác.
+        "expiring_soon":      len(expiring_30),
         "expired":            status_counts["Expired"],
         "generated":          count_generated_file,
         "terminated":         status_counts["Terminated"],
@@ -254,7 +253,7 @@ def get_expiring_contracts(db: Session, days: int = 30) -> list[dict]:
 def _get_expiring_list(db: Session, today: date, days: int) -> list[dict]:
     """
     Lấy danh sách hợp đồng có end_date trong khoảng (today, today+days].
-    Bao gồm cả Active, Signed, ExpiringSoon.
+    Bao gồm mọi trạng thái còn trong vòng đời hiệu lực.
     Sắp xếp theo end_date ASC (gần hết hạn nhất lên trước).
     """
     cutoff = today + timedelta(days=days)
@@ -286,7 +285,12 @@ def _get_expiring_list(db: Session, today: date, days: int) -> list[dict]:
             "days_left":     days_left,
             "status":        c.status.value,
             "total_amount":  c.total_amount,
-            "urgency":       "critical" if days_left <= 7 else "warning" if days_left <= 14 else "info",
+            # `expiry_bucket` phân loại theo ngưỡng cố định và trả None khi còn
+            # >30 ngày. Nhưng ở đây mọi dòng đều nằm trong cửa sổ người dùng chọn
+            # (có thể tới 365 ngày), nên đáng chú ý theo định nghĩa — quy về
+            # "info". Không có bước này thì trang 60/365 ngày đếm thiếu nhóm
+            # "Chú ý" vì các dòng xa hạn mang urgency None.
+            "urgency":       lifecycle.expiry_bucket(c.end_date, today) or "info",
         })
     return result
 
@@ -490,14 +494,16 @@ def get_action_items(db: Session) -> list[dict]:
     today = date.today()
     items: list[dict] = []
 
-    # ── 1. HĐ ExpiringSoon còn ≤7 ngày ──────────────────────────────────────
+    # ── 1. HĐ đang hiệu lực còn ≤7 ngày ─────────────────────────────────────
+    # Lọc theo end_date, không theo trạng thái. Bản cũ lọc `status == ExpiringSoon`
+    # nên sau khi bỏ trạng thái đó, mục việc gấp nhất sẽ luôn ra 0.
     critical_count = (
         db.query(func.count(Contract.id))
         .filter(
-            Contract.status == ContractStatus.ExpiringSoon,
+            Contract.status.in_(ACTIVE_LIFECYCLE_STATUSES),
             Contract.end_date.isnot(None),
             Contract.end_date > today,
-            Contract.end_date <= today + timedelta(days=7),
+            Contract.end_date <= today + timedelta(days=lifecycle.EXPIRY_CRITICAL_DAYS),
         )
         .scalar() or 0
     )

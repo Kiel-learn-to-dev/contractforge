@@ -1,12 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
 
-{% if update_counts and (update_counts.newly_expired > 0 or update_counts.newly_expiring_soon > 0) %}
+{% if update_counts and update_counts.newly_expired > 0 %}
 <div class="alert alert-warning alert-dismissible fade show mb-3 py-2" style="font-size:.82rem;">
   <i class="bi bi-arrow-repeat me-2"></i>
   <strong>Cập nhật tự động:</strong>
-  {% if update_counts.newly_expired %} {{ update_counts.newly_expired }} hợp đồng chuyển → <strong>Hết hạn</strong>.{% endif %}
-  {% if update_counts.newly_expiring_soon %} {{ update_counts.newly_expiring_soon }} hợp đồng chuyển → <strong>Sắp hết hạn</strong>.{% endif %}
+  {{ update_counts.newly_expired }} hợp đồng chuyển → <strong>Hết hạn</strong>.
   <button type="button" class="btn-close btn-sm" data-bs-dismiss="alert"></button>
 </div>
 {% endif %}
@@ -40,7 +39,7 @@
 <!-- ── Row 1: Stat cards ─────────────────────────────────────────────────── -->
 <div class="row g-3 mb-3">
   {% set cards = [
-    ("bi-journal-check",     "#16a34a", "Đang hiệu lực",      summary.active + summary.invoiced + summary.expiring_soon, "/contracts?alert_filter=all_active",  "active"),
+    ("bi-journal-check",     "#16a34a", "Đang hiệu lực",      summary.in_service, "/contracts?alert_filter=all_active",  "active"),
     ("bi-pen-check",         "#0d9488", "Đã ký (chờ HĐ)",     summary.signed,                  "/contracts?status=Signed",      "signed"),
     ("bi-alarm",             "#f59e0b", "Sắp hết hạn (≤30d)", summary.expiring_soon,           "/dashboard/expiring?days=30",   "expiring_soon"),
     ("bi-x-circle",          "#dc2626", "Đã hết hạn",          summary.expired,                "/contracts?status=Expired",     "expired"),
@@ -120,7 +119,7 @@
             {{ summary.total_value_fmt }}<span class="ms-1" style="font-size:.8rem;font-weight:500;color:var(--c-text-2);">VNĐ</span>
           </div>
           <div style="font-size:.72rem;color:var(--c-text-3);margin-top:2px;">
-            {{ summary.active + summary.signed + summary.invoiced + summary.expiring_soon }} hợp đồng đang hiệu lực
+            {{ summary.in_force }} hợp đồng đang hiệu lực
           </div>
         </div>
 
@@ -181,7 +180,6 @@
           ("PaidActive",   "Đã thanh toán","#16a34a"),
           ("Invoiced",     "Xuất hóa đơn", "#0891b2"),
           ("Signed",       "Đã ký",        "#0d9488"),
-          ("ExpiringSoon", "Sắp hết hạn",  "#f59e0b"),
           ("Generated",    "Đã sinh file", "#6366f1"),
           ("Expired",      "Hết hạn",      "#dc2626"),
           ("Terminated",   "Thanh lý",     "#6b7280"),

@@ -78,16 +78,29 @@ def list_customers(db: Session, filters: CustomerFilters):
     Mỗi phần tử của rows là (Customer, contract_count: int) để tránh
     lazy-load sau khi session đóng.
     """
-    from sqlalchemy import func, case
+    from datetime import date as _date, timedelta as _timedelta
+    from sqlalchemy import func, case, and_
     from app.models.contract import Contract
+    from app.services import lifecycle
 
-    _ACTIVE_ST = ('Active', 'ExpiringSoon', 'Signed', 'PaidActive')
+    # Dùng chung định nghĩa với dashboard. Bản cũ tự liệt kê tay và thiếu
+    # 'Invoiced', nên cùng một khách hàng ra số hợp đồng hiệu lực khác nhau
+    # tuỳ xem bạn đang nhìn dashboard hay danh sách khách hàng.
+    _ACTIVE_ST = lifecycle.ACTIVE_LIFECYCLE_STATUS_VALUES
+    _today = _date.today()
+    _soon = _today + _timedelta(days=lifecycle.EXPIRING_SOON_DAYS)
     q = (
         db.query(
             Customer,
             func.count(Contract.id).label("contract_count"),
             func.sum(case((Contract.status.in_(_ACTIVE_ST), 1), else_=0)).label("active_count"),
-            func.sum(case((Contract.status == 'ExpiringSoon', 1), else_=0)).label("expiring_count"),
+            # "Sắp hết hạn" tính từ end_date, không còn là một trạng thái.
+            func.sum(case((and_(
+                Contract.status.in_(_ACTIVE_ST),
+                Contract.end_date.isnot(None),
+                Contract.end_date > _today,
+                Contract.end_date <= _soon,
+            ), 1), else_=0)).label("expiring_count"),
         )
         .outerjoin(Contract, Contract.customer_id == Customer.id)
         .group_by(Customer.id)

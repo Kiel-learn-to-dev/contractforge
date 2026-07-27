@@ -35,24 +35,22 @@ from app.services.contract_service import (
     _build_contract_query,
 )
 from app.services.customer_service import CustomerFilters, list_customers
+from app.services import lifecycle
 
 router = APIRouter(prefix="/contracts", tags=["contracts"])
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 PER_PAGE = 25
 
-STATUS_LABELS = {
-    "Draft":        ("secondary", "Nháp"),
-    "Generated":    ("info",      "Đã sinh file"),
-    "Sent":         ("primary",   "Đã gửi"),
-    "Signed":       ("success",   "Đã ký"),
-    "Active":       ("success",   "Hiệu lực"),          # legacy
-    "Invoiced":     ("info",      "Đã xuất hóa đơn"),
-    "PaidActive":   ("success",   "Đã thanh toán"),
-    "ExpiringSoon": ("warning",   "Sắp hết hạn"),
-    "Expired":      ("danger",    "Đã hết hạn"),
-    "Terminated":   ("dark",      "Thanh lý"),
-}
+# Nhãn trạng thái sống ở lifecycle.py — dashboard, danh sách và trang sắp hết hạn
+# dùng chung một bảng để không nơi nào hiện "?" cho trạng thái nó chưa biết.
+STATUS_LABELS = lifecycle.STATUS_LABELS
+
+# Trạng thái người dùng chọn được trong bộ lọc / dropdown. Bỏ các trạng thái
+# đã ngừng dùng để không mời người dùng lọc theo thứ luôn rỗng.
+SELECTABLE_STATUSES = [
+    s.value for s in ContractStatus if s not in lifecycle.DEPRECATED_STATUSES
+]
 
 
 def _flash(url, msg, t="success"):
@@ -116,9 +114,9 @@ def contract_list(
                 (today - c.updated_at.date()).days > 10
             )
             flag_expiring = (
-                c.end_date and
-                c.status.value in ("Active", "Signed", "ExpiringSoon") and
-                0 <= (c.end_date - today).days <= 60
+                c.end_date is not None and
+                c.status in lifecycle.ACTIVE_LIFECYCLE_STATUSES and
+                0 <= (c.end_date - today).days <= lifecycle.EXPIRING_WARN_DAYS
             )
             contracts_data.append({
                 "contract": c,
@@ -128,7 +126,7 @@ def contract_list(
                 "total_amount": float(c.total_amount) if c.total_amount else 0,
             })
 
-        statuses = [s.value for s in ContractStatus]
+        statuses = SELECTABLE_STATUSES
         products = db.query(Product).filter(Product.is_active == True).order_by(Product.name).all()
         customers = (
             db.query(Customer)

@@ -27,6 +27,7 @@ from app.models.contract import Contract, ContractStatus
 from app.models.contract_event import ContractEvent
 from app.models.customer import Customer
 from app.models.contract_template import ContractTemplate
+from app.services import lifecycle
 from app.services.docx_renderer import render_docx, build_render_context
 from app.utils.amount_to_words_vi import amount_to_words, amount_to_words_chan
 from app.utils.date_helpers import (
@@ -213,24 +214,16 @@ def _build_contract_query(
         )
     elif alert_filter == "expiring_60":
         today = _date.today()
-        d60 = today + timedelta(days=60)
+        d60 = today + timedelta(days=lifecycle.EXPIRING_WARN_DAYS)
         query = query.filter(
-            Contract.status.in_([
-                ContractStatus.Active, ContractStatus.Signed,
-                ContractStatus.PaidActive, ContractStatus.ExpiringSoon,
-            ]),
+            Contract.status.in_(lifecycle.ACTIVE_LIFECYCLE_STATUSES),
             Contract.end_date.isnot(None),
             Contract.end_date >= today,
             Contract.end_date <= d60,
         )
     elif alert_filter == "all_active":
         # Tất cả hợp đồng đang thực sự hiệu lực (không bao gồm Signed chờ kích hoạt)
-        query = query.filter(
-            Contract.status.in_([
-                ContractStatus.PaidActive, ContractStatus.Active,
-                ContractStatus.Invoiced, ContractStatus.ExpiringSoon,
-            ])
-        )
+        query = query.filter(Contract.status.in_(lifecycle.IN_SERVICE_STATUSES))
     return query
 
 
@@ -302,11 +295,9 @@ def get_stats(db: Session) -> dict:
     expiring = 0
     for c in all_contracts:
         stats[c.status.value] = stats.get(c.status.value, 0) + 1
-        if c.end_date and c.status in (ContractStatus.Active, ContractStatus.Signed,
-                                          ContractStatus.PaidActive, ContractStatus.Invoiced):
-            delta = (c.end_date - today).days
-            if 0 < delta <= 30:
-                expiring += 1
+        if c.status in lifecycle.ACTIVE_LIFECYCLE_STATUSES and \
+                lifecycle.is_expiring_soon(c.end_date, today):
+            expiring += 1
     stats["expiring_soon_count"] = expiring
     return stats
 
@@ -548,18 +539,36 @@ def generate_docx(db: Session, contract_id: int) -> Contract:
 
 # ─── Status update ────────────────────────────────────────────────────────────
 
-VALID_TRANSITIONS = {
-    ContractStatus.Draft:        {ContractStatus.Generated},
-    ContractStatus.Generated:    {ContractStatus.Sent, ContractStatus.Signed},
-    ContractStatus.Sent:         {ContractStatus.Signed},
-    ContractStatus.Signed:       {ContractStatus.Invoiced, ContractStatus.Terminated},
-    ContractStatus.Invoiced:     {ContractStatus.PaidActive, ContractStatus.Terminated},
-    ContractStatus.Active:       {ContractStatus.Invoiced, ContractStatus.PaidActive, ContractStatus.Terminated},  # legacy
-    ContractStatus.PaidActive:   {ContractStatus.ExpiringSoon, ContractStatus.Expired, ContractStatus.Terminated},
-    ContractStatus.ExpiringSoon: {ContractStatus.PaidActive, ContractStatus.Expired, ContractStatus.Terminated},
-    ContractStatus.Expired:      {ContractStatus.Terminated},
-    ContractStatus.Terminated:   set(),
-}
+# Luật vòng đời sống ở app/services/lifecycle.py. Tên này được re-export vì
+# routers/contracts.py import nó để dựng danh sách "chuyển tiếp được" trên UI.
+VALID_TRANSITIONS = lifecycle.VALID_TRANSITIONS
+
+
+def _apply_status_change(
+    db: Session,
+    contract: Contract,
+    new_status,
+    actor: str = "user",
+    note: str = "",
+) -> Contract:
+    """Kiểm tra rồi áp dụng một bước chuyển trạng thái — **không commit**.
+
+    Đây là lối đi duy nhất được phép ghi `Contract.status`. Cả đổi từng hợp đồng
+    lẫn đổi hàng loạt đều đi qua đây, nên không thể có đường vòng nào bỏ qua
+    kiểm tra hợp lệ, chứng từ bắt buộc, hay ghi lịch sử.
+
+    Người gọi chịu trách nhiệm commit — nhờ vậy thao tác hàng loạt gói được
+    nhiều hợp đồng vào một giao dịch duy nhất.
+    """
+    new_st = lifecycle.validate_transition(contract, new_status)
+
+    old_status = contract.status.value
+    contract.status = new_st
+    desc = f"Chuyển trạng thái {old_status} → {new_st.value}"
+    if note:
+        desc += f": {note}"
+    _add_event(db, contract.id, "status_changed", desc, actor)
+    return contract
 
 
 def update_status(
@@ -573,30 +582,7 @@ def update_status(
     if not contract:
         raise LookupError(f"Không tìm thấy hợp đồng id={contract_id}")
 
-    try:
-        new_st = ContractStatus(new_status)
-    except ValueError:
-        raise ValueError(f"Trạng thái không hợp lệ: {new_status!r}")
-
-    allowed = VALID_TRANSITIONS.get(contract.status, set())
-    if new_st not in allowed:
-        raise ValueError(
-            f"Không thể chuyển từ {contract.status.value} sang {new_st.value}. "
-            f"Cho phép: {[s.value for s in allowed] or 'không có'}"
-        )
-
-    # Yêu cầu file trước khi chuyển sang trạng thái thanh toán
-    if new_st == ContractStatus.Invoiced and not contract.invoice_pdf_path:
-        raise ValueError("Vui lòng upload file hóa đơn PDF trước khi chuyển sang 'Đã xuất hóa đơn'.")
-    if new_st == ContractStatus.PaidActive and not contract.payment_slip_path:
-        raise ValueError("Vui lòng upload file ủy nhiệm chi trước khi chuyển sang 'Đã thanh toán'.")
-
-    old_status = contract.status.value
-    contract.status = new_st
-    desc = f"Chuyển trạng thái {old_status} → {new_st.value}"
-    if note:
-        desc += f": {note}"
-    _add_event(db, contract.id, "status_changed", desc, actor)
+    _apply_status_change(db, contract, new_status, actor=actor, note=note)
     db.commit()
     db.refresh(contract)
     return contract
@@ -627,19 +613,49 @@ def bulk_delete(db: Session, ids: list[int]) -> int:
     return deleted
 
 
-def bulk_update_status(db: Session, ids: list[int], new_status: str) -> int:
-    """Cập nhật trạng thái nhiều hợp đồng. Trả về số bản ghi đã cập nhật."""
-    valid = {s.value for s in ContractStatus}
-    if new_status not in valid:
-        raise ValueError(f"Trạng thái không hợp lệ: {new_status}")
-    updated = 0
-    for cid in ids:
-        c = db.query(Contract).filter(Contract.id == cid).first()
-        if c:
-            c.status = ContractStatus(new_status)
-            updated += 1
+def bulk_update_status(db: Session, ids: list[int], new_status: str,
+                       actor: str = "user") -> int:
+    """Cập nhật trạng thái nhiều hợp đồng. Trả về số bản ghi đã cập nhật.
+
+    Áp dụng **đúng** bộ luật của `update_status()` — trước đây hàm này gán thẳng
+    `c.status`, nên chọn nhiều hợp đồng ở màn hình danh sách là nhảy được từ
+    'Đã sinh file' sang 'Đã thanh toán' mà không cần hoá đơn lẫn uỷ nhiệm chi,
+    và không để lại dấu vết nào trong lịch sử.
+
+    Chính sách giao dịch: **tất cả hoặc không có gì**. Nếu bất kỳ hợp đồng nào
+    trong lô không hợp lệ, không hợp đồng nào bị đổi. Với thao tác một người dùng
+    trên một danh sách vừa chọn bằng mắt, sửa lại lựa chọn rồi bấm lần nữa dễ hiểu
+    hơn nhiều so với "12 cái xong, 3 cái lỗi, tự đoán xem cái nào".
+
+    Raises:
+        ValueError: nếu trạng thái đích không hợp lệ, hoặc có hợp đồng không
+            chuyển được — kèm danh sách số hợp đồng và lý do.
+    """
+    new_st = lifecycle.parse_status(new_status)
+
+    contracts = db.query(Contract).filter(Contract.id.in_(ids)).all() if ids else []
+    found = {c.id for c in contracts}
+    missing = [cid for cid in ids if cid not in found]
+
+    problems: list[str] = [f"#{cid}: không tìm thấy" for cid in missing]
+    for c in contracts:
+        try:
+            lifecycle.validate_transition(c, new_st)
+        except ValueError as exc:
+            problems.append(f"{c.contract_number}: {exc}")
+
+    if problems:
+        # Không đụng vào DB. Session chưa có thay đổi nào để rollback.
+        raise ValueError(
+            f"Không cập nhật hợp đồng nào. {len(problems)} hợp đồng không hợp lệ — "
+            + "; ".join(problems[:5])
+            + (f" (và {len(problems) - 5} lỗi khác)" if len(problems) > 5 else "")
+        )
+
+    for c in contracts:
+        _apply_status_change(db, c, new_st, actor=actor)
     db.commit()
-    return updated
+    return len(contracts)
 
 
 def _add_event(db: Session, contract_id: int, event_type: str,
