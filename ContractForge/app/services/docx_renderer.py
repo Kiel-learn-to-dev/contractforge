@@ -258,7 +258,7 @@ def build_render_context(
     ctx["PARTY_A_REPRESENTATIVE"]      = _rep_name
     ctx["PARTY_A_REPRESENTATIVE_FULL"] = f"{_prefix} {_rep_name}".strip() if _prefix else _rep_name
     ctx["PARTY_A_TITLE"]          = customer.representative_title or ""
-    # HSSK-specific
+    # Tên Bên A kèm xã/phường — vài mẫu cần dạng này
     ward_suffix = f", {customer.ward}" if customer.ward else ""
     ctx["PARTY_A_NAME_WARD"]      = f"{customer.legal_name or ''}{ward_suffix}"
     # Optional Party A fields (dùng để chèn dòng động vào bảng)

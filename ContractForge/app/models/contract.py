@@ -38,7 +38,7 @@ class Contract(Base):
 
     # --- Số hợp đồng & trạng thái ---
     contract_number = Column(String(100), unique=True, nullable=False, index=True,
-                              comment="Số hợp đồng chính thức, VD: HĐ-YTCS-001/2025")
+                              comment="Số hợp đồng chính thức, VD: 01/ACME/2026")
     status = Column(Enum(ContractStatus), nullable=False,
                     default=ContractStatus.Draft, index=True)
 

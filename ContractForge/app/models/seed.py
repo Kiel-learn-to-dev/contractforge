@@ -174,6 +174,65 @@ def run_migrations(db: Session) -> None:
         ))
         conn.commit()
 
+        # ── Khuôn số hợp đồng thành cấu hình trên sản phẩm (v50) ─────────────
+        cols_p = [row[1] for row in conn.execute(text("PRAGMA table_info(products)")).fetchall()]
+        if "contract_number_format" not in cols_p:
+            conn.execute(text(
+                "ALTER TABLE products ADD COLUMN contract_number_format VARCHAR(200)"
+            ))
+            conn.commit()
+
+    _backfill_contract_number_formats(db)
+
+
+def _backfill_contract_number_formats(db: Session) -> None:
+    """Khôi phục khuôn số hợp đồng mà bản cài đặt này đang thực sự dùng.
+
+    Khuôn được **suy ngược từ chính các hợp đồng đã sinh**, không phải chép từ
+    một hằng số trong mã nguồn. Đây là điểm mấu chốt: khuôn số của một tổ chức
+    là dữ liệu riêng của họ, viết nó vào source là khoá mã nguồn vào tổ chức đó.
+    Đọc ngược từ dữ liệu giữ nguyên 100% hành vi đánh số mà source vẫn trung tính.
+
+    Chỉ chạy cho sản phẩm chưa có khuôn, nên chạy lại nhiều lần vẫn an toàn và
+    không ghi đè thứ người dùng tự đặt.
+    """
+    from app.models.contract import Contract
+    from app.models.customer import Customer
+    from app.services.contract_service import make_contract_slug
+    from app.services.numbering import infer_format
+
+    pending = db.query(Product).filter(
+        (Product.contract_number_format.is_(None))
+        | (Product.contract_number_format == "")
+    ).all()
+    if not pending:
+        return
+
+    filled = 0
+    for product in pending:
+        # Hợp đồng mới nhất phản ánh quy ước đánh số hiện hành nhất.
+        rows = (
+            db.query(Contract, Customer)
+            .join(Customer, Contract.customer_id == Customer.id)
+            .filter(Contract.product_id == product.id,
+                    Contract.contract_number.isnot(None))
+            .order_by(Contract.id.desc())
+            .limit(20)
+            .all()
+        )
+        for contract, customer in rows:
+            year = (contract.sign_date or contract.start_date or contract.created_at).year
+            slug = make_contract_slug(customer.legal_name or "")
+            fmt = infer_format(contract.contract_number, slug, year)
+            if fmt:
+                product.contract_number_format = fmt
+                filled += 1
+                break
+
+    if filled:
+        db.commit()
+        safe_print(f"  [migration] Đã suy ra khuôn số hợp đồng cho {filled} sản phẩm.")
+
 
 def run_all_seeds(db: Session):
     safe_print("[seed] Bắt đầu seed data...")

@@ -4,7 +4,7 @@ file_naming.py — Quy tắc đặt tên file output .docx.
 Quy tắc (từ blueprint §5.6):
   - Ổn định, dễ tìm, tránh trùng lặp
   - Format: {loại_hđ}_{mã_KH}_{số_hđ_safe}_{timestamp}.docx
-  - Ví dụ: YTCS_KH001_HD001-2025_20250115_093045.docx
+  - Ví dụ: HOPDONG_KH001_HD001-2026_20260115_093045.docx
 
 Hàm công khai:
   make_output_filename(contract_number, customer_code, contract_type, ts=None)
@@ -50,13 +50,13 @@ def make_output_filename(
     Tạo tên file output .docx.
 
     Args:
-        contract_number: VD "HĐ-YTCS-001/2025"
+        contract_number: VD "01/ACME/2026"
         customer_code:   VD "KH-001"
-        contract_type:   VD "YTCS", "HSSK"
+        contract_type:   Nhãn phân loại của mẫu, VD "Hợp đồng", "Phụ lục"
         ts:              Timestamp, mặc định now()
 
     Returns:
-        Ví dụ: "YTCS_KH-001_HD-YTCS-001-2025_20250115_093045.docx"
+        Ví dụ: "HOPDONG_KH-001_01-ACME-2026_20260115_093045.docx"
     """
     if ts is None:
         ts = datetime.now()

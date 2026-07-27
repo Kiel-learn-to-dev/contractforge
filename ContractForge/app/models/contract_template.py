@@ -22,11 +22,11 @@ class ContractTemplate(Base):
     id = Column(Integer, primary_key=True, index=True)
 
     code = Column(String(50), unique=True, nullable=False, index=True,
-                  comment="Mã template nội bộ, VD: TPL-YTCS-2024")
+                  comment="Mã template nội bộ, VD: TPL-DICHVU-2026")
     name = Column(String(200), nullable=False,
                   comment="Tên hiển thị trong giao diện")
     contract_type = Column(String(80), nullable=False,
-                           comment="YTCS | HSSK | Phụ lục | Nghiệm thu | Thanh lý | Khác")
+                           comment="Nhãn phân loại tự do, VD: Hợp đồng | Phụ lục | Nghiệm thu")
 
     # File storage
     file_path = Column(String(500), nullable=True,

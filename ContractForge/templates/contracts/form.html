@@ -78,8 +78,8 @@
                   data-vat="{{ p.default_vat_rate or 0 }}"
                   data-months=""
                   data-template="{{ p.default_template_id or '' }}"
-                  data-shortname="{% if 'YTCS' in p.code %}Y tế cơ sở{% elif 'HSSK' in p.code %}Hồ sơ sức khỏe cá nhân{% else %}{{ p.name }}{% endif %}">
-                  {% if 'YTCS' in p.code %}Y tế cơ sở (YTCS){% elif 'HSSK' in p.code %}Hồ sơ sức khỏe cá nhân (HSSK){% else %}{{ p.code }} — {{ p.name }}{% endif %}
+                  data-shortname="{{ p.name }}">
+                  {{ p.code }} — {{ p.name }}
                 </option>
                 {% endfor %}
               </select>
@@ -91,7 +91,7 @@
                 {% for t in templates %}
                 <option value="{{ t.id }}"
                   {% if (prefill and prefill.get('template_id')|string == t.id|string) or (sel_template and sel_template.id == t.id) %}selected{% endif %}
-                  data-product-code="{% if 'YTCS' in t.code %}SW-YTCS{% elif 'HSSK' in t.code %}SW-HSSK{% else %}{% endif %}">
+                  data-product-code="{{ product_code_by_template.get(t.id, '') }}">
                   {{ t.name }}
                 </option>
                 {% endfor %}
@@ -407,10 +407,19 @@ function amtToWords(n) {
 function fmtN(n) { return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.'); }
 function parseN(s) { return parseFloat(String(s).replace(/\./g,'').replace(',','.'))||0; }
 
-var PRICES = {
-  'SW-YTCS': {pre:500000, vat:0,  post:500000},
-  'SW-HSSK': {pre:440909, vat:8,  post:476182}
-};
+// Giá lấy từ danh mục sản phẩm qua data-price / data-vat trên từng <option>.
+// Bản trước có một bảng giá viết cứng theo mã sản phẩm ngay trong template —
+// sản phẩm mới không tự điền giá được, và sửa giá phải sửa ở hai nơi.
+// LƯU Ý: dùng parseFloat, KHÔNG dùng parseN. parseN đọc số theo kiểu Việt Nam
+// (dấu chấm là phân cách nghìn), còn data-* là số thô từ DB — VAT "8.00" qua
+// parseN sẽ thành 800%.
+function priceOfOption(opt) {
+  if (!opt) return null;
+  var pre = parseFloat(opt.dataset.price || '') || 0;
+  if (!pre) return null;
+  var vat = parseFloat(opt.dataset.vat || '0') || 0;
+  return { pre: pre, vat: vat, post: Math.round(pre * (1 + vat / 100)) };
+}
 
 function recalcPrice() {
   var pre = parseN(gid('inp-price-pre') && gid('inp-price-pre').value);
@@ -480,7 +489,7 @@ function onProductChange() {
   var opt  = sel.options[sel.selectedIndex];
   var code = opt && opt.dataset.code || '';
   // Điền giá
-  var fixed = PRICES[code];
+  var fixed = priceOfOption(opt);
   if (fixed) {
     var eP = gid('inp-price-pre'); if (eP) eP.value = fmtN(fixed.pre);
     var eR = gid('inp-vat');       if (eR) eR.value = fixed.vat;
@@ -610,11 +619,11 @@ function suggestContractNumber(customerId) {
   var numEl = gid('inp-contract-number'); if (!numEl) return;
   // Không ghi đè nếu user đã nhập tay
   if (numEl.value && !numEl.dataset.autoFilled) return;
+  // Gửi thẳng id sản phẩm; khuôn số là cấu hình trên sản phẩm, không phải thứ
+  // đoán ra từ mã sản phẩm ở phía trình duyệt.
   var selProd = gid('sel-product');
-  var code = (selProd && selProd.value && selProd.options[selProd.selectedIndex])
-    ? (selProd.options[selProd.selectedIndex].dataset.code || '') : '';
-  var type = code.indexOf('HSSK') >= 0 ? 'HSSK' : 'YTCS';
-  fetch('/contracts/suggest-number?customer_id=' + customerId + '&contract_type=' + type)
+  var productId = (selProd && selProd.value) ? selProd.value : '0';
+  fetch('/contracts/suggest-number?customer_id=' + customerId + '&product_id=' + productId)
     .then(function(r) { return r.json(); })
     .then(function(d) {
       if (d && d.number) {
@@ -657,7 +666,7 @@ function autoFillSignLocation(selectEl) {
   if (!opt || !opt.value) return;
   var legalName = opt.dataset.name || '';
   if (legalName) {
-    // Hiển thị tên đơn vị, chữ đầu lowercase: "Trạm y tế xã Phước An"
+    // Hiển thị tên đơn vị, chữ đầu lowercase: "Trạm y tế xã Sông Xanh"
     locEl.value = legalName.charAt(0).toLowerCase() + legalName.slice(1);
     locEl.dataset.autoFilled = '1';
   }

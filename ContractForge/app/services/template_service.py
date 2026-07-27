@@ -30,7 +30,9 @@ UPLOAD_DIR = str(UPLOAD_TEMPLATES_DIR)
 MAX_FILE_SIZE = 10 * 1024 * 1024   # 10 MB
 ALLOWED_EXTENSIONS = {".docx"}
 
-CONTRACT_TYPES = ["YTCS", "HSSK", "Phụ lục", "Nghiệm thu", "Thanh lý", "Khác"]
+# Nhóm mẫu hợp đồng gợi ý trong form. Đây là nhãn phân loại tự do — người dùng
+# gõ giá trị khác cũng được; danh sách này chỉ để bấm cho nhanh.
+CONTRACT_TYPES = ["Hợp đồng", "Phụ lục", "Nghiệm thu", "Thanh lý", "Báo giá", "Khác"]
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────

@@ -25,10 +25,11 @@
           <code class="text-muted" style="font-size:0.8rem;">{{ tpl.code }}</code>
           <span class="badge rounded-pill"
             style="font-size:0.7rem;background:
-              {% if tpl.contract_type == 'YTCS' %}#1a2238;color:#fff
-              {% elif tpl.contract_type == 'HSSK' %}#2a9d8f;color:#fff
+              {% if tpl.contract_type == 'Hợp đồng' %}#1a2238;color:#fff
               {% elif tpl.contract_type == 'Phụ lục' %}#457b9d;color:#fff
+              {% elif tpl.contract_type == 'Nghiệm thu' %}#e9c46a;color:#333
               {% elif tpl.contract_type == 'Thanh lý' %}#e76f51;color:#fff
+              {% elif tpl.contract_type == 'Báo giá' %}#2a9d8f;color:#fff
               {% else %}#6c757d;color:#fff{% endif %};">
             {{ tpl.contract_type }}
           </span>

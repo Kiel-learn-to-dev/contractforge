@@ -130,8 +130,24 @@ TEMPLATES_DIR = BASE_DIR / "templates"
 STATIC_DIR = BASE_DIR / "static"
 ASSETS_DIR = BASE_DIR / "assets"
 
-# Sample form template (not a user-managed contract template).
-FORM_08A_TEMPLATE = ASSETS_DIR / "default_templates" / "template_08A.docx"
+def resolve_form_08a_template(assets_dir: Path) -> Path:
+    """Chọn mẫu biểu 08a: bản riêng của cơ quan nếu có, không thì bản mẫu.
+
+    Biểu 08a được render on-the-fly chứ không phải mẫu người dùng tải lên, nên
+    phải luôn có một file. Repo loại trừ mọi .docx trong assets vì chúng mang
+    tiêu đề thư thật; bản mẫu hư cấu `sample_form_08a.docx` được commit để bản
+    clone sạch vẫn dùng được chức năng này.
+
+    Bản riêng luôn thắng — nâng cấp không được đổi giấy tờ đang phát hành.
+    """
+    private = assets_dir / "default_templates" / "template_08A.docx"
+    if private.exists():
+        return private
+    return assets_dir / "default_templates" / "sample_form_08a.docx"
+
+
+# Acceptance-form template (rendered on demand, not a user-managed template).
+FORM_08A_TEMPLATE = resolve_form_08a_template(ASSETS_DIR)
 
 # The SQLite database filename inside the data root (single source of truth).
 DB_FILENAME = "contract_manager.db"

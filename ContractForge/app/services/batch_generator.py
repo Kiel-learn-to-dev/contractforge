@@ -16,7 +16,7 @@ Lý do KHÔNG lưu BatchJob vào DB:
 
 Quy tắc số hợp đồng trong batch:
   User cung cấp prefix/pattern, hệ thống tự thêm suffix theo thứ tự.
-  VD: prefix="HĐ-YTCS" → HĐ-YTCS-001/2025, HĐ-YTCS-002/2025, ...
+  VD: prefix="HD-DV" → 01/ACME/2026, 02/ACME/2026, ...
   Hoặc user import Excel với cột "Số hợp đồng" riêng từng dòng.
 """
 
@@ -113,7 +113,7 @@ def run_batch(
                        month_count, unit_price_vat, total_amount, ...)
         per_customer_overrides: Tuỳ chọn — dict {customer_id: {field: value}}
                                  cho phép override từng KH (VD từ Excel)
-        contract_number_prefix: Prefix số HĐ, VD "HĐ-YTCS"
+        contract_number_prefix: Prefix số HĐ, VD "HD-DV"
         year: Năm cho số HĐ, mặc định năm hiện tại
 
     Returns:
@@ -168,15 +168,16 @@ def run_batch(
         # Xác định số hợp đồng
         contract_number = (row_params.get("contract_number") or "").strip()
         if not contract_number:
-            # Sinh số HĐ đúng quy chuẩn: per (customer, contract_type, year)
+            # Sinh số HĐ đúng quy chuẩn: bộ đếm riêng per (customer, khuôn, year)
             from app.services.contract_service import (
                 get_next_contract_seq, make_contract_slug,
-                build_contract_number, contract_type_from_code,
+                build_contract_number, resolve_number_format,
             )
-            c_type = contract_type_from_code(template.code)
-            seq  = get_next_contract_seq(db, customer.id, contract_type=c_type, year=year)
+            number_format = resolve_number_format(db, row_params.get("product_id"))
+            seq  = get_next_contract_seq(db, customer.id,
+                                         number_format=number_format, year=year)
             slug = make_contract_slug(customer.legal_name or "")
-            contract_number = build_contract_number(seq, slug, c_type, year)
+            contract_number = build_contract_number(seq, slug, number_format, year)
 
         row = BatchRowResult(
             customer_id=cust_id,
@@ -394,11 +395,11 @@ def make_batch_template_xlsx() -> bytes:
         cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
 
     # Sample rows
-    ws.append(["KH-001", "HĐ-YTCS-001/2025", "15/01/2025",
+    ws.append(["KH-001", "01/ACME/2026", "15/01/2025",
                "15/01/2025", "12", "1",
                "24000000", "24000000", "",
                "Nguyễn Văn A", "", ""])
-    ws.append(["KH-002", "HĐ-YTCS-002/2025", "15/01/2025",
+    ws.append(["KH-002", "02/ACME/2026", "15/01/2025",
                "15/01/2025", "12", "1",
                "24000000", "24000000", "",
                "Nguyễn Văn A", "", ""])

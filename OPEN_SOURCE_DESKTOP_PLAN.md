@@ -1059,7 +1059,7 @@ These decisions should be recorded before their dependent task begins:
 
 3. **Quotation feature**
    - Recommendation: keep it, but make it entirely product/template-driven.
-   - Do not preserve named YTCS/HSSK branches in the public core.
+   - Do not preserve branches named after specific product codes in the public core.
 
 4. **Window-close behavior**
    - Option A: close window and exit application.

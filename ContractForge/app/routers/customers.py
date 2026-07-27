@@ -323,8 +323,8 @@ def download_template():
 
     # Dòng ví dụ
     ws.append([
-        "KH-001", "Trạm Y tế xã Đại Phước", "TYT Đại Phước", "Trạm y tế",
-        "Ấp Bến Sắn", "Xã Đại Phước", "Đồng Nai",
+        "KH-001", "Trạm Y tế xã Sông Xanh", "TYT Sông Xanh", "Trạm y tế",
+        "Thôn Bình Minh", "Xã Sông Xanh", "Tỉnh Mẫu",
         "", "", "1234/QĐ-UBND", "01/01/2010",
         "Nguyễn Văn A", "Nam", "Trưởng Trạm",
         "", "", "",
@@ -363,6 +363,7 @@ def export_report():
     from fastapi.responses import StreamingResponse
     from app.models.customer import Customer
     from app.models.contract import Contract, ContractStatus
+    from app.models.product import Product
     from datetime import date as _dt_date
 
     # ── Helpers ───────────────────────────────────────────────────────────────
@@ -414,19 +415,26 @@ def export_report():
         try: return d.strftime("%d/%m/%Y")
         except Exception: return str(d)
 
+    def _product_label(product) -> str:
+        """Nhãn ngắn của sản phẩm — dùng mã trong danh mục, đó chính là công dụng của nó."""
+        if not product:
+            return ""
+        return (product.code or "").strip() or (product.name or "")[:10]
+
     def _products_of(contracts):
-        """Tập tên sản phẩm ngắn gọn: 'YTCS', 'HSSK'."""
-        names = set()
-        for c in contracts:
-            if c.product and c.product.name:
-                n = c.product.name.upper()
-                if "YTCS" in n or "Y TẾ CƠ SỞ" in n:
-                    names.add("YTCS")
-                elif "HSSK" in n or "HỒ SƠ" in n:
-                    names.add("HSSK")
-                else:
-                    names.add(c.product.name[:10])
-        return names
+        """Tập nhãn sản phẩm có trong danh sách hợp đồng.
+
+        Bản trước dò tên sản phẩm để quy về hai mã viết cứng. Nay lấy thẳng mã
+        trong danh mục, nên báo cáo tự đúng với mọi danh mục sản phẩm.
+        """
+        return {
+            label for c in contracts
+            if (label := _product_label(c.product))
+        }
+
+    # Toàn bộ sản phẩm đang bán — mốc để biết khách hàng còn thiếu sản phẩm nào.
+    # Nạp sau khi mở session bên dưới; các hàm lồng nhau đọc nó lúc được gọi.
+    catalog_labels: set[str] = set()
 
     def _classify(customer, all_contracts):
         """Trả về (tier, action_text, days_to_exp, nearest_expiry_contract)."""
@@ -441,7 +449,7 @@ def export_report():
         # Sản phẩm
         active_prods  = _products_of(active)
         all_prods     = _products_of(all_contracts)
-        missing_prods = {"YTCS", "HSSK"} - all_prods if all_prods else set()
+        missing_prods = (catalog_labels - all_prods) if all_prods else set()
 
         # ── Tier 1: HĐ active, hết hạn ≤30 ngày ────────────────────────────
         expiring_soon = [c for c in active if c.end_date and
@@ -529,6 +537,12 @@ def export_report():
             .order_by(Customer.code)
             .all()
         )
+        catalog_labels.update(
+            label
+            for p in db.query(Product).filter(Product.is_active == True).all()
+            if (label := _product_label(p))
+        )
+
         # Materialize toàn bộ trước khi close session
         cust_data = []
         for c in customers:
@@ -551,7 +565,7 @@ def export_report():
                           and 0 <= (x.end_date - TODAY).days <= 60)
             prods_active = " & ".join(sorted(_products_of(active_cts))) or "—"
             prods_all    = " & ".join(sorted(_products_of(contracts))) or "—"
-            missing      = " & ".join(sorted({"YTCS","HSSK"} - _products_of(contracts))) or "—"
+            missing      = " & ".join(sorted(catalog_labels - _products_of(contracts))) or "—"
             gender_label = {"Nam": "(Ông)", "Nữ": "(Bà)"}.get(
                 c.representative_gender or "", "")
             rep_display  = f"{gender_label} {c.representative_name}".strip() if c.representative_name else ""
@@ -752,13 +766,7 @@ def export_report():
         cts = sorted(d["contracts"], key=lambda x: (x.sign_date or _dt_date.min), reverse=True)
         for ct in cts:
             ct_idx += 1
-            prod_name = ct.product.name if ct.product else ""
-            prod_short = ""
-            if prod_name:
-                pn = prod_name.upper()
-                if "YTCS" in pn or "Y TẾ CƠ SỞ" in pn: prod_short = "YTCS"
-                elif "HSSK" in pn or "HỒ SƠ" in pn: prod_short = "HSSK"
-                else: prod_short = prod_name[:10]
+            prod_short = _product_label(ct.product)
             vals = [
                 ct_idx, c.code or "", c.short_name or c.legal_name or "",
                 ct.contract_number or "",
@@ -845,15 +853,14 @@ def export_report():
 
     _s4_section(r, "CƠ HỘI"); r += 1
     _s4_row(r, "KH có thể upsell thêm sản phẩm", upsell_cnt); r += 1
-    ytcs_only = sum(1 for d in cust_data
-                    if _products_of(d["active_cts"]) == {"YTCS"})
-    hssk_only  = sum(1 for d in cust_data
-                     if _products_of(d["active_cts"]) == {"HSSK"})
-    both       = sum(1 for d in cust_data
-                     if len(_products_of(d["active_cts"])) >= 2)
-    _s4_row(r, "  Đang có YTCS (chưa có HSSK)", ytcs_only); r += 1
-    _s4_row(r, "  Đang có HSSK (chưa có YTCS)", hssk_only); r += 1
-    _s4_row(r, "  Có cả YTCS + HSSK", both); r += 2
+    # Một dòng cho mỗi sản phẩm trong danh mục, thay vì hai dòng viết cứng cho
+    # hai sản phẩm cụ thể — danh mục thêm sản phẩm thì báo cáo tự có thêm dòng.
+    for label in sorted(catalog_labels):
+        only_this = sum(1 for d in cust_data
+                        if _products_of(d["active_cts"]) == {label})
+        _s4_row(r, f"  Chỉ đang dùng {label}", only_this); r += 1
+    multi = sum(1 for d in cust_data if len(_products_of(d["active_cts"])) >= 2)
+    _s4_row(r, "  Đang dùng từ 2 sản phẩm trở lên", multi); r += 2
 
     _s4_section(r, "TOP 5 THEO GIÁ TRỊ HĐ ACTIVE"); r += 1
     top5 = sorted(cust_data, key=lambda x: x["active_val"], reverse=True)[:5]

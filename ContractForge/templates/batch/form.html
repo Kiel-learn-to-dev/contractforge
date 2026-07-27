@@ -55,10 +55,10 @@
               <option value="">— Chọn sản phẩm —</option>
               {% for p in products %}
               <option value="{{ p.id }}" data-code="{{ p.code }}"
+                data-price="{{ p.default_price or '' }}"
+                data-vat="{{ p.default_vat_rate or 0 }}"
                 {% if prefill and prefill.get('product_id')==p.id|string %}selected{% endif %}>
-                {% if 'YTCS' in p.code %}Y tế cơ sở (YTCS)
-                {% elif 'HSSK' in p.code %}Hồ sơ sức khỏe (HSSK)
-                {% else %}{{ p.code }} — {{ p.name }}{% endif %}
+                {{ p.code }} — {{ p.name }}
               </option>
               {% endfor %}
             </select>
@@ -284,13 +284,14 @@
     if (startEl && !startEl.value) startEl.value = this.value;
   });
 
-  // 8. Auto-fill price from product
-  var PRICES = {'SW-YTCS': 500000, 'SW-HSSK': 476182};
+  // 8. Auto-fill price from product — lấy từ danh mục qua data-price/data-vat,
+  //    không phải bảng giá viết cứng theo mã sản phẩm như bản trước.
   var prodEl = document.getElementById('sel-prod');
   if (prodEl) prodEl.addEventListener('change', function() {
     var opt = this.options[this.selectedIndex];
-    var code = opt ? (opt.dataset.code || '') : '';
-    var price = PRICES[code];
+    var pre = parseFloat(opt ? (opt.dataset.price || '') : '') || 0;
+    var vat = parseFloat(opt ? (opt.dataset.vat || '0') : '0') || 0;
+    var price = pre ? Math.round(pre * (1 + vat / 100)) : 0;
     if (price) {
       var priceEl = document.querySelector('input[name="unit_price_vat"]');
       if (priceEl && !priceEl.value) priceEl.value = price;

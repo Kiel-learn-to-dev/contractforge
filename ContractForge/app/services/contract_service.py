@@ -27,7 +27,8 @@ from app.models.contract import Contract, ContractStatus
 from app.models.contract_event import ContractEvent
 from app.models.customer import Customer
 from app.models.contract_template import ContractTemplate
-from app.services import lifecycle
+from app.models.product import Product
+from app.services import lifecycle, numbering
 from app.services.docx_renderer import render_docx, build_render_context
 from app.utils.amount_to_words_vi import amount_to_words, amount_to_words_chan
 from app.utils.date_helpers import (
@@ -55,9 +56,8 @@ def get_by_number(db: Session, contract_number: str) -> Optional[Contract]:
 def make_contract_slug(name: str) -> str:
     """
     Chuyển tên khách hàng → slug hợp đồng: viết hoa, không dấu, không khoảng trắng.
-    VD: "Trạm Y tế xã Phước An"          → "TYTPHUOCAN"
-        "Trạm Y tế xã Đại Phước"         → "TYTDAIPHUOC"
-        "Trung tâm Y tế phường Tam Phước" → "TYTTAMPHUOC"
+    VD: "Công ty TNHH An Bình"     → "CTYTNHHANBINH"
+        "Trạm Y tế xã Sông Xanh"   → "TRAMYTEXASONGXANH"
     """
     # Rút gọn tên đơn vị y tế thành TYT
     unit_replacements = [
@@ -89,12 +89,32 @@ def make_contract_slug(name: str) -> str:
     return slug.upper()
 
 
+def resolve_number_format(db: Session, product_id=None) -> str:
+    """Khuôn số hợp đồng áp dụng cho một sản phẩm.
+
+    Khuôn là dữ liệu trên bản ghi sản phẩm, không phải nhánh if trong code —
+    xem app/services/numbering.py. Sản phẩm chưa cấu hình thì dùng khuôn mặc
+    định trung tính.
+    """
+    # product_id có thể tới từ form (chuỗi), từ router (int), hoặc thiếu hẳn.
+    try:
+        pid = int(product_id or 0)
+    except (TypeError, ValueError):
+        pid = 0
+
+    if pid:
+        product = db.query(Product).filter(Product.id == pid).first()
+        if product and (product.contract_number_format or "").strip():
+            return product.contract_number_format
+    return numbering.DEFAULT_FORMAT
+
+
 def get_next_contract_seq(db: Session, customer_id: int,
-                          contract_type: str = "YTCS",
+                          number_format: str = "",
                           year: int = 0) -> str:
     """
-    Tìm số thứ tự nhỏ nhất chưa dùng cho (customer, contract_type, year).
-    - Đi theo sản phẩm + năm: cùng KH nhưng khác sản phẩm thì bộ đếm riêng.
+    Tìm số thứ tự nhỏ nhất chưa dùng cho (customer, khuôn số, year).
+    - Bộ đếm riêng theo khuôn: cùng KH nhưng khác khuôn thì đếm độc lập.
     - Lấp khoảng trống: nếu 01 đã xóa và 02 còn, kết quả là 01.
     - Sang năm mới reset về 01.
     """
@@ -102,54 +122,29 @@ def get_next_contract_seq(db: Session, customer_id: int,
     if not year:
         year = _date.today().year
 
-    # Xác định pattern dựa trên loại hợp đồng
-    if contract_type == "HSSK":
-        # Format: {seq}/VIETTEL-{slug}/HSSK/{year}
-        pattern = f"%/HSSK/{year}"
-    else:
-        # Format: {seq}/KDGP/DNI-{slug}/{year}
-        pattern = f"%/KDGP/DNI-%/{year}"
+    pattern = numbering.like_pattern(number_format or numbering.DEFAULT_FORMAT, year)
 
     existing = db.query(Contract.contract_number).filter(
         Contract.customer_id == customer_id,
         Contract.contract_number.like(pattern),
     ).all()
 
-    # Extract seq numbers from existing contracts
-    used = set()
-    for (num,) in existing:
-        if num:
-            part = num.split("/")[0].strip()
-            try:
-                used.add(int(part))
-            except ValueError:
-                pass
-
-    # Find smallest unused positive integer
-    seq = 1
-    while seq in used:
-        seq += 1
-    return str(seq).zfill(2)
-
-
-def contract_type_from_code(code: str) -> str:
-    """Xác định loại hợp đồng (YTCS | HSSK) từ mã template hoặc số hợp đồng."""
-    return "HSSK" if "HSSK" in (code or "").upper() else "YTCS"
+    used = {
+        seq for (num,) in existing
+        if (seq := numbering.seq_of(num)) is not None
+    }
+    return numbering.next_seq(used)
 
 
 def build_contract_number(seq: str, slug: str,
-                          contract_type: str = "YTCS", year: int = 0) -> str:
+                          number_format: str = "", year: int = 0) -> str:
     """
-    Ghép số hợp đồng chuẩn theo loại — nguồn sự thật duy nhất cho cả form lẻ,
-    batch và preview (tránh lặp công thức ở nhiều nơi).
-      HSSK: {seq}/VIETTEL-{slug}/HSSK/{year}
-      YTCS: {seq}/KDGP/DNI-{slug}/{year}
+    Ghép số hợp đồng theo khuôn — nguồn sự thật duy nhất cho form lẻ, batch
+    và preview (tránh lặp công thức ở nhiều nơi).
     """
-    if not year:
-        year = date.today().year
-    if contract_type == "HSSK":
-        return f"{seq}/VIETTEL-{slug}/HSSK/{year}"
-    return f"{seq}/KDGP/DNI-{slug}/{year}"
+    return numbering.build_number(
+        seq, slug, number_format or numbering.DEFAULT_FORMAT, year or date.today().year
+    )
 
 
 

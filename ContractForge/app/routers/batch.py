@@ -218,7 +218,7 @@ async def batch_preview(request: Request):
 
     from app.services.contract_service import (
         get_next_contract_seq, make_contract_slug,
-        build_contract_number, contract_type_from_code,
+        build_contract_number, resolve_number_format,
     )
 
     try:
@@ -253,16 +253,18 @@ async def batch_preview(request: Request):
     db = SessionLocal()
     try:
         tpl = db.query(ContractTemplate).filter(ContractTemplate.id == template_id).first()
-        c_type = contract_type_from_code(tpl.code if tpl else "")
+        # Preview phải dùng đúng khuôn mà lúc sinh thật sẽ dùng — cùng lấy từ
+        # sản phẩm được chọn, nếu không số xem trước sẽ khác số sinh ra.
+        number_format = resolve_number_format(db, data.get("product_id"))
 
         preview_rows = []
         for cid in cust_ids:
             cust = db.query(Customer).filter(Customer.id == cid).first()
             if not cust:
                 continue
-            seq  = get_next_contract_seq(db, cid, contract_type=c_type, year=year)
+            seq  = get_next_contract_seq(db, cid, number_format=number_format, year=year)
             slug = make_contract_slug(cust.legal_name or "")
-            num  = build_contract_number(seq, slug, c_type, year)
+            num  = build_contract_number(seq, slug, number_format, year)
             end_d, acc_d, liq_d = calc_dates(start_date)
             total_units = cust.total_units
             preview_rows.append({

@@ -75,7 +75,7 @@ CANONICAL_MAP: dict[str, str] = {
     "PARTY_A_ADDRESS":          "party_a.address",
     "PARTY_A_REPRESENTATIVE":   "party_a.representative",
     "PARTY_A_TITLE":            "party_a.title",
-    "PARTY_A_NAME_WARD":        "party_a.name_ward",   # HSSK specific
+    "PARTY_A_NAME_WARD":        "party_a.name_ward",   # tên kèm xã/phường
     "PARTY_A_TAX_CODE":         "party_a.tax_code",
     "PARTY_A_BANK_ACCOUNT":     "party_a.bank_account",
     "PARTY_A_BANK_NAME":        "party_a.bank_name",

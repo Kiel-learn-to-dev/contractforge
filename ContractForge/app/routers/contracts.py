@@ -31,6 +31,7 @@ from app.services.contract_service import (
     list_contracts, sum_contracts, get_contract, create_draft,
     generate_docx, update_status, get_stats, VALID_TRANSITIONS,
     make_contract_slug, get_next_contract_seq, build_contract_number,
+    resolve_number_format,
     delete_contract, bulk_delete, bulk_update_status,
     _build_contract_query,
 )
@@ -305,6 +306,13 @@ def new_form(request: Request, customer_id: int = 0, template_id: int = 0):
         # preselected
         sel_customer = db.query(Customer).filter(Customer.id == customer_id).first() if customer_id else None
         sel_template = db.query(ContractTemplate).filter(ContractTemplate.id == template_id).first() if template_id else None
+        # Mẫu nào thuộc sản phẩm nào — để form lọc danh sách mẫu theo sản phẩm
+        # đang chọn. Quan hệ này lấy từ Product.default_template_id, thay cho
+        # bản cũ dò chuỗi trong mã mẫu.
+        product_code_by_template = {
+            p.default_template_id: p.code
+            for p in products if p.default_template_id
+        }
     finally:
         db.close()
 
@@ -313,6 +321,7 @@ def new_form(request: Request, customer_id: int = 0, template_id: int = 0):
         "form_title": "Tạo hợp đồng mới",
         "customers": customers, "products": products, "templates": tpls,
         "sel_customer": sel_customer, "sel_template": sel_template,
+        "product_code_by_template": product_code_by_template,
         "errors": [], "prefill": {},
         "status_labels": STATUS_LABELS,
     })
@@ -348,6 +357,10 @@ async def new_submit(request: Request):
             "form_title": "Tạo hợp đồng mới",
             "customers": customers, "products": products, "templates": tpls,
             "sel_customer": None, "sel_template": None,
+            "product_code_by_template": {
+                p.default_template_id: p.code
+                for p in products if p.default_template_id
+            },
             "errors": [str(e)], "prefill": data,
             "status_labels": STATUS_LABELS,
         }, status_code=422)
@@ -423,10 +436,11 @@ def get_customer_units(customer_id: int = 0):
 
 
 @router.get("/suggest-number", response_class=JSONResponse)
-def suggest_contract_number(customer_id: int = 0, contract_type: str = "YTCS"):
+def suggest_contract_number(customer_id: int = 0, product_id: int = 0):
     """
-    Gợi ý số hợp đồng dựa trên khách hàng và loại hợp đồng.
-    Trả về: { "number": "01/KDGP/DNI-TYTXAPHUOCAN/2026" }
+    Gợi ý số hợp đồng cho một (khách hàng, sản phẩm).
+    Khuôn số lấy từ cấu hình của sản phẩm — xem app/services/numbering.py.
+    Trả về: { "number": "01/TRAMYTEXAA/2026" }
     """
     db = SessionLocal()
     try:
@@ -434,9 +448,10 @@ def suggest_contract_number(customer_id: int = 0, contract_type: str = "YTCS"):
         if not customer:
             return JSONResponse({"number": "", "error": "Khách hàng không tồn tại"})
         year = date.today().year
-        seq  = get_next_contract_seq(db, customer_id, contract_type=contract_type, year=year)
+        number_format = resolve_number_format(db, product_id)
+        seq  = get_next_contract_seq(db, customer_id, number_format=number_format, year=year)
         slug = make_contract_slug(customer.legal_name or "")
-        number = build_contract_number(seq, slug, contract_type, year)
+        number = build_contract_number(seq, slug, number_format, year)
         return JSONResponse({"number": number})
     finally:
         db.close()

@@ -11,6 +11,7 @@ Hàm công khai:
 """
 
 import os
+import re
 
 from sqlalchemy.orm import Session, joinedload
 
@@ -23,15 +24,20 @@ from app.utils.file_naming import sanitize_for_filename
 
 
 def _work_content(contract: Contract, product) -> str:
-    """Nội dung công việc trong biểu 08A — nhãn ngắn gọn theo loại sản phẩm."""
-    code = (getattr(product, "code", "") or "").upper()
-    num  = (contract.contract_number or "").upper()
-    if "HSSK" in code or "HSSK" in num:
-        return "Phần mềm Hồ sơ sức khỏe cá nhân"
-    if "YTCS" in code or "KDGP" in num or "DNI" in num:
-        return "Phần mềm Y tế cơ sở"
-    # Fallback: tên sản phẩm nếu không nhận diện được loại
-    return (getattr(product, "name", "") or "Phần mềm").strip()
+    """Nội dung công việc trong biểu 08A — nhãn ngắn gọn của sản phẩm.
+
+    Lấy thẳng từ danh mục sản phẩm, bỏ phần viết tắt trong ngoặc ở cuối tên
+    ("Phần mềm Quản lý Kho (WMS)" → "Phần mềm Quản lý Kho"), vì trong biểu 08A
+    mã viết tắt nội bộ không có ý nghĩa với bên duyệt chi.
+
+    Bản trước dò chuỗi mã sản phẩm để trả về nhãn viết cứng cho hai sản phẩm cụ
+    thể. Cách đó khoá mã nguồn vào một danh mục, và sản phẩm mới thì rơi vào
+    nhánh dự phòng. Muốn đổi nhãn: sửa tên sản phẩm trong danh mục.
+    """
+    name = (getattr(product, "name", "") or "").strip()
+    if not name:
+        return "Phần mềm"
+    return re.sub(r"\s*\([^()]*\)\s*$", "", name).strip() or name
 
 
 def build_08a_context(db: Session, contract: Contract, customer: Customer,
