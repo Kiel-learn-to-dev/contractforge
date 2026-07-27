@@ -2,7 +2,7 @@
 
 ## Document status
 
-- Status: Proposed
+- Status: Phases 1–6 implemented and verified; Phase 7 (public beta tag) awaiting owner sign-off
 - Date: 2026-07-09
 - Scope: Convert the current local FastAPI application into a neutral, single-user, open-source desktop application for Windows.
 - Primary distribution: Standalone Windows desktop application using WebView2 through `pywebview`.
@@ -342,15 +342,15 @@ Tasks that share models, migration logic, or lifecycle policy must remain sequen
 
 **Acceptance criteria:**
 
-- [ ] `.gitignore` excludes `data/`, runtime databases, uploads, outputs, logs, executables, ZIP files, Python caches, virtual environments, build folders, and local tool settings.
-- [ ] A public-repository scanner fails when a forbidden file class or known organization term is introduced.
-- [ ] Git is initialized only after the ignore rules and scanner are verified.
+- [x] `.gitignore` excludes `data/`, runtime databases, uploads, outputs, logs, executables, ZIP files, Python caches, virtual environments, build folders, and local tool settings.
+- [x] A public-repository scanner fails when a forbidden file class or known organization term is introduced.
+- [x] Git is initialized only after the ignore rules and scanner are verified.
 
 **Verification:**
 
-- [ ] Run `git status --short --ignored` and confirm private/runtime paths are ignored.
-- [ ] Add representative fake forbidden files in a temporary test directory and confirm the scanner rejects them.
-- [ ] Confirm no real data file is staged.
+- [x] Run `git status --short --ignored` and confirm private/runtime paths are ignored.
+- [x] Add representative fake forbidden files in a temporary test directory and confirm the scanner rejects them.
+- [x] Confirm no real data file is staged.
 
 **Dependencies:** None.
 
@@ -370,15 +370,15 @@ Tasks that share models, migration logic, or lifecycle policy must remain sequen
 
 **Acceptance criteria:**
 
-- [ ] Every test receives an isolated temporary database.
-- [ ] Test fixtures can create customers, products, templates, contracts, documents, and events.
-- [ ] Running tests does not change the size, timestamp, or hash of the real database.
+- [x] Every test receives an isolated temporary database.
+- [x] Test fixtures can create customers, products, templates, contracts, documents, and events.
+- [x] Running tests does not change the size, timestamp, or hash of the real database.
 
 **Verification:**
 
-- [ ] Run `python -m pytest`.
-- [ ] Compare the production database hash before and after the suite.
-- [ ] Run the suite twice and confirm deterministic results.
+- [x] Run `python -m pytest`.
+- [x] Compare the production database hash before and after the suite.
+- [x] Run the suite twice and confirm deterministic results.
 
 **Dependencies:** Task 1.
 
@@ -395,10 +395,10 @@ Tasks that share models, migration logic, or lifecycle policy must remain sequen
 
 ### Checkpoint A: Safe foundation
 
-- [ ] No private file can be staged accidentally.
-- [ ] Tests use only temporary data.
-- [ ] The existing application still starts against the existing data directory.
-- [ ] The real database has not changed.
+- [x] No private file can be staged accidentally.
+- [x] Tests use only temporary data.
+- [x] The existing application still starts against the existing data directory.
+- [x] The real database has not changed.
 
 ---
 
@@ -410,15 +410,15 @@ Tasks that share models, migration logic, or lifecycle policy must remain sequen
 
 **Acceptance criteria:**
 
-- [ ] Windows runtime data defaults to `%LOCALAPPDATA%\ContractForge`.
-- [ ] Tests can override the data root through an explicit configuration value.
-- [ ] Source and installation directories remain read-only during normal use.
+- [x] Windows runtime data defaults to `%LOCALAPPDATA%\ContractForge`.
+- [x] Tests can override the data root through an explicit configuration value.
+- [x] Source and installation directories remain read-only during normal use.
 
 **Verification:**
 
-- [ ] Start with an empty LocalAppData directory and verify all runtime folders are created.
-- [ ] Create a test record and verify it appears only in the configured user-data directory.
-- [ ] Run from a read-only installation directory.
+- [x] Start with an empty LocalAppData directory and verify all runtime folders are created.
+- [x] Create a test record and verify it appears only in the configured user-data directory.
+- [x] Run from a read-only installation directory.
 
 **Dependencies:** Task 2.
 
@@ -439,15 +439,15 @@ Tasks that share models, migration logic, or lifecycle policy must remain sequen
 
 **Acceptance criteria:**
 
-- [ ] Migration creates a timestamped backup before copying.
-- [ ] Migration is idempotent and cannot overwrite a non-empty destination silently.
-- [ ] The old data directory remains untouched until the user explicitly confirms cleanup.
+- [x] Migration creates a timestamped backup before copying.
+- [x] Migration is idempotent and cannot overwrite a non-empty destination silently.
+- [x] The old data directory remains untouched until the user explicitly confirms cleanup.
 
 **Verification:**
 
-- [ ] Test empty destination, existing destination, interrupted copy, and repeated migration.
-- [ ] Compare database integrity and key record counts before and after migration.
-- [ ] Verify uploaded and generated files remain reachable.
+- [x] Test empty destination, existing destination, interrupted copy, and repeated migration.
+- [x] Compare database integrity and key record counts before and after migration.
+- [x] Verify uploaded and generated files remain reachable.
 
 **Dependencies:** Task 3.
 
@@ -464,10 +464,10 @@ Tasks that share models, migration logic, or lifecycle policy must remain sequen
 
 ### Checkpoint B: Data migration
 
-- [ ] A new installation starts with isolated LocalAppData.
-- [ ] A legacy installation can migrate without data loss.
-- [ ] Rollback consists of restoring the backup and selecting the old data root.
-- [ ] No migration code deletes the source automatically.
+- [x] A new installation starts with isolated LocalAppData.
+- [x] A legacy installation can migrate without data loss.
+- [x] Rollback consists of restoring the backup and selecting the old data root.
+- [x] No migration code deletes the source automatically.
 
 ---
 
@@ -479,15 +479,15 @@ Tasks that share models, migration logic, or lifecycle policy must remain sequen
 
 **Acceptance criteria:**
 
-- [ ] Public source contains no real Party B name, address, bank, tax, representative, or authorization value.
-- [ ] A clean installation displays first-run organization setup.
-- [ ] Existing databases retain their previously saved settings without being overwritten.
+- [x] Public source contains no real Party B name, address, bank, tax, representative, or authorization value.
+- [x] A clean installation displays first-run organization setup.
+- [x] Existing databases retain their previously saved settings without being overwritten.
 
 **Verification:**
 
-- [ ] Start with an empty database and complete organization setup.
-- [ ] Generate a sample contract and confirm organization fields come from settings.
-- [ ] Open an existing database and confirm its settings are unchanged.
+- [x] Start with an empty database and complete organization setup.
+- [x] Generate a sample contract and confirm organization fields come from settings.
+- [x] Open an existing database and confirm its settings are unchanged.
 
 **Dependencies:** Tasks 2 and 3.
 
@@ -508,15 +508,15 @@ Tasks that share models, migration logic, or lifecycle policy must remain sequen
 
 **Acceptance criteria:**
 
-- [ ] No customer is created automatically in a clean installation.
-- [ ] Public sample products use fictional, generic names and values, or the catalog starts empty.
-- [ ] Seed execution remains idempotent.
+- [x] No customer is created automatically in a clean installation.
+- [x] Public sample products use fictional, generic names and values, or the catalog starts empty.
+- [x] Seed execution remains idempotent.
 
 **Verification:**
 
-- [ ] Initialize an empty database twice and compare record counts.
-- [ ] Run the public-content scanner.
-- [ ] Confirm existing user-created customers and products are not modified.
+- [x] Initialize an empty database twice and compare record counts.
+- [x] Run the public-content scanner.
+- [x] Confirm existing user-created customers and products are not modified.
 
 **Dependencies:** Tasks 2 and 5.
 
@@ -535,15 +535,15 @@ Tasks that share models, migration logic, or lifecycle policy must remain sequen
 
 **Acceptance criteria:**
 
-- [ ] The public repository contains only fictional, neutral sample DOCX files.
-- [ ] Quotation price, VAT, duration, and template come from the selected product/template.
-- [ ] No product code triggers organization-specific behavior in Python.
+- [x] The public repository contains only fictional, neutral sample DOCX files.
+- [x] Quotation price, VAT, duration, and template come from the selected product/template.
+- [x] No product code triggers organization-specific behavior in Python.
 
 **Verification:**
 
-- [ ] Extract text from every bundled DOCX and run the public-content scanner.
-- [ ] Generate quotations for two generic products with different prices and templates.
-- [ ] Verify an existing private uploaded template still renders correctly.
+- [x] Extract text from every bundled DOCX and run the public-content scanner.
+- [x] Generate quotations for two generic products with different prices and templates.
+- [x] Verify an existing private uploaded template still renders correctly.
 
 **Dependencies:** Tasks 5 and 6.
 
@@ -565,15 +565,15 @@ Tasks that share models, migration logic, or lifecycle policy must remain sequen
 
 **Acceptance criteria:**
 
-- [ ] CI fails on forbidden organization terms and internal number patterns.
-- [ ] CI fails when database, PDF, customer upload, generated contract, log, EXE, or ZIP artifacts are tracked.
-- [ ] Scanner output identifies paths without printing sensitive file content.
+- [x] CI fails on forbidden organization terms and internal number patterns.
+- [x] CI fails when database, PDF, customer upload, generated contract, log, EXE, or ZIP artifacts are tracked.
+- [x] Scanner output identifies paths without printing sensitive file content.
 
 **Verification:**
 
-- [ ] Add test fixtures for each forbidden class.
-- [ ] Run the scanner locally and in GitHub Actions.
-- [ ] Confirm the clean repository passes.
+- [x] Add test fixtures for each forbidden class.
+- [x] Run the scanner locally and in GitHub Actions.
+- [x] Confirm the clean repository passes.
 
 **Dependencies:** Tasks 1 and 7.
 
@@ -589,10 +589,10 @@ Tasks that share models, migration logic, or lifecycle policy must remain sequen
 
 ### Checkpoint C: Neutralization
 
-- [ ] Clean installation contains no real organization or customer information.
-- [ ] All public templates use fictional identities.
-- [ ] Existing local private data remains usable.
-- [ ] CI rejects reintroduction of branded/private material.
+- [x] Clean installation contains no real organization or customer information.
+- [x] All public templates use fictional identities.
+- [x] Existing local private data remains usable.
+- [x] CI rejects reintroduction of branded/private material.
 
 ---
 
@@ -604,15 +604,15 @@ Tasks that share models, migration logic, or lifecycle policy must remain sequen
 
 **Acceptance criteria:**
 
-- [ ] Bulk updates enforce the same `VALID_TRANSITIONS` rules as single updates.
-- [ ] `Invoiced` requires its configured invoice evidence and `PaidActive` requires payment evidence.
-- [ ] Every successful status change creates a `ContractEvent`; failed batches roll back consistently.
+- [x] Bulk updates enforce the same `VALID_TRANSITIONS` rules as single updates.
+- [x] `Invoiced` requires its configured invoice evidence and `PaidActive` requires payment evidence.
+- [x] Every successful status change creates a `ContractEvent`; failed batches roll back consistently.
 
 **Verification:**
 
-- [ ] Test every allowed and rejected transition.
-- [ ] Reproduce the former `Generated -> PaidActive` bulk bypass and confirm rejection.
-- [ ] Test a mixed-validity bulk operation and its transaction policy.
+- [x] Test every allowed and rejected transition.
+- [x] Reproduce the former `Generated -> PaidActive` bulk bypass and confirm rejection.
+- [x] Test a mixed-validity bulk operation and its transaction policy.
 
 **Dependencies:** Task 2.
 
@@ -633,15 +633,15 @@ Tasks that share models, migration logic, or lifecycle policy must remain sequen
 
 **Acceptance criteria:**
 
-- [ ] A `Signed` contract nearing its end date remains `Signed` and can become `Invoiced`.
-- [ ] Dashboard warnings are derived from `end_date` and configurable thresholds.
-- [ ] `PaidActive` and `Invoiced` contribute correctly to active/signed/report totals.
+- [x] A `Signed` contract nearing its end date remains `Signed` and can become `Invoiced`.
+- [x] Dashboard warnings are derived from `end_date` and configurable thresholds.
+- [x] `PaidActive` and `Invoiced` contribute correctly to active/signed/report totals.
 
 **Verification:**
 
-- [ ] Reproduce the former `Signed -> ExpiringSoon` failure and confirm invoicing remains possible.
-- [ ] Compare dashboard and Excel report totals for the same fixture.
-- [ ] Test expiry boundaries at 0, 7, 30, 31, and 60 days.
+- [x] Reproduce the former `Signed -> ExpiringSoon` failure and confirm invoicing remains possible.
+- [x] Compare dashboard and Excel report totals for the same fixture.
+- [x] Test expiry boundaries at 0, 7, 30, 31, and 60 days.
 
 **Dependencies:** Task 9.
 
@@ -659,10 +659,10 @@ Tasks that share models, migration logic, or lifecycle policy must remain sequen
 
 ### Checkpoint D: Business behavior
 
-- [ ] End-to-end lifecycle works from draft through payment.
-- [ ] Expiry warnings do not alter billing state.
-- [ ] Dashboard, contract list, and reports agree.
-- [ ] All lifecycle and reporting regression tests pass.
+- [x] End-to-end lifecycle works from draft through payment.
+- [x] Expiry warnings do not alter billing state.
+- [x] Dashboard, contract list, and reports agree.
+- [x] All lifecycle and reporting regression tests pass.
 
 ---
 
@@ -674,19 +674,19 @@ Tasks that share models, migration logic, or lifecycle policy must remain sequen
 
 **Acceptance criteria:**
 
-- [ ] Every launcher binds to `127.0.0.1`.
-- [ ] Unsafe requests from untrusted Origin/Host values are rejected.
-- [ ] Customer-controlled values are rendered through `textContent`, DOM construction, or Jinja `tojson`.
-- [ ] Sub-unit updates verify both unit ID and customer ID.
-- [ ] Contract deletion applies a documented database/file cleanup policy.
+- [x] Every launcher binds to `127.0.0.1`.
+- [x] Unsafe requests from untrusted Origin/Host values are rejected.
+- [x] Customer-controlled values are rendered through `textContent`, DOM construction, or Jinja `tojson`.
+- [x] Sub-unit updates verify both unit ID and customer ID.
+- [x] Contract deletion applies a documented database/file cleanup policy.
 
 **Verification:**
 
-- [ ] Confirm another LAN device cannot connect.
-- [ ] Submit cross-origin POST requests and expect rejection.
-- [ ] Test HTML/script payloads in customer names, addresses, search, and batch lists.
-- [ ] Attempt cross-customer sub-unit modification and expect rejection.
-- [ ] Delete a contract fixture and verify the selected cleanup policy.
+- [x] Confirm another LAN device cannot connect.
+- [x] Submit cross-origin POST requests and expect rejection.
+- [x] Test HTML/script payloads in customer names, addresses, search, and batch lists.
+- [x] Attempt cross-customer sub-unit modification and expect rejection.
+- [x] Delete a contract fixture and verify the selected cleanup policy.
 
 **Dependencies:** Tasks 2 and 10.
 
@@ -704,11 +704,11 @@ Tasks that share models, migration logic, or lifecycle policy must remain sequen
 
 ### Checkpoint E: Security
 
-- [ ] Application is loopback-only.
-- [ ] Known stored-XSS payloads do not execute.
-- [ ] Cross-origin state-changing requests fail.
-- [ ] Ownership checks protect customer sub-resources.
-- [ ] Sensitive files follow the documented deletion policy.
+- [x] Application is loopback-only.
+- [x] Known stored-XSS payloads do not execute.
+- [x] Cross-origin state-changing requests fail.
+- [x] Ownership checks protect customer sub-resources.
+- [x] Sensitive files follow the documented deletion policy.
 
 ---
 
@@ -720,17 +720,17 @@ Tasks that share models, migration logic, or lifecycle policy must remain sequen
 
 **Acceptance criteria:**
 
-- [ ] Launcher starts FastAPI in a controlled background process/thread.
-- [ ] WebView opens only after `/health` succeeds.
-- [ ] Closing the final window follows a defined policy: exit completely or minimize to tray.
-- [ ] Server is stopped cleanly when the application exits.
-- [ ] External URLs are opened in the system browser rather than inside the application.
+- [x] Launcher starts FastAPI in a controlled background process/thread.
+- [x] WebView opens only after `/health` succeeds.
+- [x] Closing the final window follows a defined policy: exit completely or minimize to tray.
+- [x] Server is stopped cleanly when the application exits.
+- [x] External URLs are opened in the system browser rather than inside the application.
 
 **Verification:**
 
-- [ ] Test clean launch, second launch, server-start failure, occupied port, window close, tray restore, restart, and full exit.
-- [ ] Confirm no normal browser window opens.
-- [ ] Confirm only localhost navigation remains inside WebView.
+- [x] Test clean launch, second launch, server-start failure, occupied port, window close, tray restore, restart, and full exit.
+- [x] Confirm no normal browser window opens.
+- [x] Confirm only localhost navigation remains inside WebView.
 
 **Dependencies:** Task 11.
 
@@ -751,16 +751,16 @@ Tasks that share models, migration logic, or lifecycle policy must remain sequen
 
 **Acceptance criteria:**
 
-- [ ] End user does not need to install Python.
-- [ ] Package includes all required application assets but no user database or private profile.
-- [ ] Installer checks for WebView2 Runtime and offers the approved installation path when missing.
-- [ ] Application writes only to LocalAppData.
+- [x] End user does not need to install Python.
+- [x] Package includes all required application assets but no user database or private profile.
+- [x] Installer checks for WebView2 Runtime and offers the approved installation path when missing.
+- [x] Application writes only to LocalAppData.
 
 **Verification:**
 
-- [ ] Install and run on a clean Windows virtual machine.
-- [ ] Exercise customer creation, template upload, contract generation, DOCX/Excel/ZIP download, PDF/image viewing, and backup.
-- [ ] Uninstall and verify user data is preserved unless explicitly selected for removal.
+- [x] Install and run on a clean Windows virtual machine.
+- [x] Exercise customer creation, template upload, contract generation, DOCX/Excel/ZIP download, PDF/image viewing, and backup.
+- [x] Uninstall and verify user data is preserved unless explicitly selected for removal.
 
 **Dependencies:** Task 12.
 
