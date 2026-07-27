@@ -6,6 +6,10 @@ chúng cần một cửa sổ WebView2 thật và một máy Windows sạch.
 
 Chạy trên **máy ảo Windows chưa cài Python**.
 
+> Những mục đánh dấu ✔(dev) đã được xác nhận trên máy phát triển với bản .exe
+> 42 MB build ngày 27/07/2026 — nhưng máy đó **có** Python và WebView2 Runtime
+> sẵn, nên vẫn phải làm lại trên máy sạch trước khi phát hành.
+
 ## Chuẩn bị
 
 - [ ] Tải `ContractForge.exe` từ artifact của workflow `Windows release`.
@@ -14,15 +18,17 @@ Chạy trên **máy ảo Windows chưa cài Python**.
 
 ## Khởi động lần đầu
 
-- [ ] Double-click `ContractForge.exe`. Cửa sổ mở, **không có cửa sổ đen console**.
-- [ ] Không có tab trình duyệt nào bật lên.
+- [x] ✔(dev) Double-click `ContractForge.exe`. Cửa sổ mở, tiêu đề
+      "ContractForge — Quản lý Hợp đồng", **không có cửa sổ đen console**.
+- [x] ✔(dev) Không có tab trình duyệt nào bật lên.
 - [ ] Trang đầu tiên là màn hình thiết lập tổ chức (`/settings?setup=1`), vì hồ sơ
-      còn trống.
+      còn trống. *(xác nhận từ mã nguồn, chưa xác nhận trên .exe máy sạch)*
 - [ ] `%LOCALAPPDATA%\ContractForge` được tạo, bên trong có `contract_manager.db`,
       `uploads/`, `outputs/`, `logs/`, `backups/`.
 - [ ] Thư mục cài đặt **không** bị ghi thêm gì.
-- [ ] Mở `%LOCALAPPDATA%\ContractForge\logs\contractforge.log` — có dòng
-      `Server ready`, và cổng là một số ngẫu nhiên trên `127.0.0.1`.
+- [x] ✔(dev) Log có dòng `Server ready`, cổng là số ngẫu nhiên trên `127.0.0.1`.
+- [x] ✔(dev) Nếu có `data/` nằm cạnh `.exe` thì dùng đúng nó, **không** tạo
+      cơ sở dữ liệu trống trong LocalAppData.
 
 ## Nghiệp vụ đầy đủ
 
@@ -41,10 +47,11 @@ Chạy trên **máy ảo Windows chưa cài Python**.
 - [ ] Thu nhỏ, phóng to, đổi kích thước cửa sổ — bố cục không vỡ.
 - [ ] Bấm một link ra ngoài (nếu có) → mở bằng trình duyệt hệ thống, **không**
       điều hướng bên trong cửa sổ ứng dụng.
-- [ ] Icon khay hệ thống hiện ra; menu "Thoát" đóng được ứng dụng.
-- [ ] Đóng cửa sổ → tiến trình `ContractForge.exe` biến mất khỏi Task Manager
-      (kiểm tra **cả hai** tiến trình: onefile chạy một bootloader cha và một
-      tiến trình con).
+- [x] ✔(dev) Icon khay hệ thống hiện ra.
+- [ ] Menu khay "Thoát" đóng được ứng dụng.
+- [x] ✔(dev) Đóng cửa sổ → **mọi** tiến trình `ContractForge.exe` biến mất
+      (onefile chạy một bootloader cha + một tiến trình con), server tắt theo,
+      và không còn tiến trình `msedgewebview2.exe` nào của ứng dụng.
 - [ ] Mở lại ngay lập tức → chạy được, không báo "cổng đang bận".
 - [ ] Mở hai bản cùng lúc → mỗi bản tự lấy một cổng riêng, cả hai đều chạy.
 
@@ -52,7 +59,9 @@ Chạy trên **máy ảo Windows chưa cài Python**.
 
 - [ ] Trên máy chưa có WebView2 Runtime: ứng dụng báo rõ ràng và chỉ chỗ tải,
       hoặc tự lùi về mở bằng trình duyệt — **không** im lặng chết.
-- [ ] Sau khi cài WebView2 Runtime, mở lại thì cửa sổ riêng hiện lên.
+      *(chưa kiểm được: máy phát triển đã có sẵn Runtime 150.0.4078.99)*
+- [x] ✔(dev) Có WebView2 Runtime thì cửa sổ riêng hiện lên và điều hướng trong
+      ứng dụng hoạt động.
 
 ## Nâng cấp và gỡ cài đặt
 

@@ -58,13 +58,17 @@ Rồi mở http://127.0.0.1:8000
 ### Chạy như một ứng dụng desktop
 
 ```bash
-pip install "pywebview" "pystray" "pillow"
+pip install pywebview pystray pillow
 ```
 
 Rồi chạy `ContractForge.pyw` (Windows: double-click). Server khởi động ngay trong
 tiến trình đó, trên một cổng trống do hệ điều hành cấp, và hiện trong một cửa sổ
 WebView2 riêng — không phụ thuộc trình duyệt. Đóng cửa sổ là server dừng theo.
 Thiếu `pywebview` thì ứng dụng vẫn chạy, chỉ là mở bằng trình duyệt hệ thống.
+
+Trên Windows, cửa sổ dùng **WebView2 Runtime**. Windows 11 và Windows 10 bản mới
+đã có sẵn; nếu chưa, tải tại
+<https://developer.microsoft.com/microsoft-edge/webview2/>.
 
 ### Đóng gói thành .exe
 

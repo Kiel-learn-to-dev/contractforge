@@ -43,6 +43,12 @@ hiddenimports = (
         "uvicorn.lifespan.on",
         # WebSocket cố ý KHÔNG có: app không dùng, và app/desktop.py đặt
         # ws="none" nên uvicorn không nạp lớp đó.
+        # Vỏ cửa sổ. pywebview chọn engine lúc chạy nên PyInstaller không lần
+        # ra bằng phân tích tĩnh; edgechromium là engine WebView2 trên Windows.
+        "webview.platforms.edgechromium",
+        "clr_loader",
+        "pythonnet",
+        "pystray._win32",
     ]
 )
 

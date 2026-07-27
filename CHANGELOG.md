@@ -45,7 +45,8 @@ Bản đầu tiên đủ điều kiện công khai mã nguồn.
   khuôn từ chính các hợp đồng đã có, nên cách đánh số giữ nguyên tuyệt đối.
 - **Ứng dụng desktop có cửa sổ riêng.** Server chạy trong tiến trình chính trên
   một cổng trống do hệ điều hành cấp, hiện trong cửa sổ WebView2. Đóng cửa sổ là
-  server dừng — không còn tiến trình mồ côi giữ khoá cơ sở dữ liệu.
+  server dừng — không còn tiến trình mồ côi giữ khoá cơ sở dữ liệu. Bản đóng gói
+  Windows nặng khoảng 42 MB và không cần cài Python.
 - Nội dung công việc trong biểu 08a lấy từ tên sản phẩm trong danh mục (bỏ phần
   viết tắt trong ngoặc) thay vì hai nhãn viết cứng. **Chữ in ra sẽ khác một chút
   so với bản cũ** — đổi tên sản phẩm trong danh mục nếu muốn chỉnh.
