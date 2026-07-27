@@ -55,8 +55,27 @@ cd ContractForge && python -m uvicorn main:app --host 127.0.0.1 --port 8000
 
 Rồi mở http://127.0.0.1:8000
 
-Trên Windows có thể chạy thẳng `ContractForge.pyw` — nó tự kiểm tra thư viện, khởi động
-server và hiện biểu tượng ở khay hệ thống.
+### Chạy như một ứng dụng desktop
+
+```bash
+pip install "pywebview" "pystray" "pillow"
+```
+
+Rồi chạy `ContractForge.pyw` (Windows: double-click). Server khởi động ngay trong
+tiến trình đó, trên một cổng trống do hệ điều hành cấp, và hiện trong một cửa sổ
+WebView2 riêng — không phụ thuộc trình duyệt. Đóng cửa sổ là server dừng theo.
+Thiếu `pywebview` thì ứng dụng vẫn chạy, chỉ là mở bằng trình duyệt hệ thống.
+
+### Đóng gói thành .exe
+
+```bash
+python -m PyInstaller --clean --noconfirm packaging/pyinstaller/contractforge.spec
+```
+
+Hoặc chạy `build_exe.bat` trên Windows. Bản đóng gói không cần cài Python và
+**không chứa dữ liệu người dùng** — lần chạy đầu tiên nó tự dựng thư mục dữ liệu
+sạch. Danh sách kiểm tra trước khi phát hành:
+[tests/smoke/windows_release_checklist.md](tests/smoke/windows_release_checklist.md).
 
 > Server **chỉ lắng nghe trên `127.0.0.1`**. Đây là ứng dụng một người dùng chạy cục bộ;
 > nó không có cơ chế đăng nhập nên không được mở ra mạng LAN hay Internet.

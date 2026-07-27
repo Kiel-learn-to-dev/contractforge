@@ -1,7 +1,7 @@
 @echo off
 chcp 65001 >nul
 echo ============================================
-echo   ContractForge - Build EXE Launcher
+echo   ContractForge - Build EXE
 echo ============================================
 echo.
 
@@ -19,33 +19,23 @@ echo Python:
 python --version
 echo.
 
-REM Cai PyInstaller va deps bang python -m pip (tranh loi PATH)
-echo [1/3] Cai dat PyInstaller va dependencies...
-python -m pip install pyinstaller pystray pillow --quiet --no-warn-script-location
+echo [1/3] Cai dependencies (runtime + desktop + PyInstaller)...
+python -m pip install --quiet --no-warn-script-location ^
+    -r ContractForge\requirements.txt ^
+    pywebview pystray pillow pyinstaller
 if errorlevel 1 (
-    echo [LOI] Khong cai duoc PyInstaller
+    echo [LOI] Khong cai duoc dependencies
     pause
     exit /b 1
 )
 echo     Done.
 echo.
 
-REM Build bang python -m PyInstaller (tranh loi pyinstaller.exe khong trong PATH)
-echo [2/3] Build ContractForge.exe ...
-python -m PyInstaller --clean --noconfirm ^
-    --onefile ^
-    --windowed ^
-    --name ContractForge ^
-    --icon cf_icon.ico ^
-    --hidden-import pystray ^
-    --hidden-import pystray._win32 ^
-    --hidden-import PIL ^
-    --hidden-import PIL.Image ^
-    --hidden-import PIL.ImageDraw ^
-    --hidden-import PIL.ImageFont ^
-    --hidden-import tkinter ^
-    ContractForge.pyw
-
+REM Build theo spec file. Spec giu toan bo cau hinh dong goi o mot noi
+REM (packaging/pyinstaller/contractforge.spec) thay vi mot chuoi co dai
+REM tham so trong file .bat nay - de doc, de sua, va CI dung chung duoc.
+echo [2/3] Build ContractForge.exe theo packaging\pyinstaller\contractforge.spec ...
+python -m PyInstaller --clean --noconfirm packaging\pyinstaller\contractforge.spec
 if errorlevel 1 (
     echo [LOI] Build that bai! Xem loi o tren.
     pause
@@ -60,13 +50,14 @@ if exist "dist\ContractForge.exe" (
     echo ============================================
     echo  BUILD THANH CONG!
     echo  ContractForge.exe da san sang.
-    echo  Double-click ContractForge.exe de chay.
+    echo.
+    echo  Luu y: du lieu nguoi dung nam o
+    echo  %%LOCALAPPDATA%%\ContractForge — KHONG nam trong .exe.
+    echo  Go cai dat khong lam mat du lieu.
     echo ============================================
     echo.
-    REM Don dep
     rmdir /s /q build 2>nul
     rmdir /s /q dist 2>nul
-    del /q *.spec 2>nul
 ) else (
     echo [LOI] Khong tim thay dist\ContractForge.exe
     echo Xem log o tren de biet nguyen nhan.

@@ -1,0 +1,70 @@
+name: Windows release
+
+# Đóng gói bản Windows độc lập. Chạy khi push tag v*, và chạy tay được để thử
+# quy trình build mà không cần tạo release.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r ContractForge/requirements.txt
+          python -m pip install pywebview pystray pillow pyinstaller
+
+      # Chốt chặn: không bao giờ phát hành thứ có dữ liệu riêng lọt vào.
+      - name: Scan public repository content
+        run: python scripts/check_public_repo.py --root .
+
+      - name: Run tests
+        env:
+          PYTHONPATH: ContractForge
+        run: python -m pytest -q
+
+      - name: Build executable
+        run: python -m PyInstaller --clean --noconfirm packaging/pyinstaller/contractforge.spec
+
+      - name: Verify the package carries no user data
+        shell: pwsh
+        run: |
+          $exe = "dist/ContractForge.exe"
+          if (-not (Test-Path $exe)) { throw "khong tim thay $exe" }
+          $size = (Get-Item $exe).Length
+          Write-Host "ContractForge.exe = $([math]::Round($size/1MB,1)) MB"
+          if ($size -lt 5MB) { throw "file qua nho, build co the thieu tai nguyen" }
+          # Cơ sở dữ liệu và mẫu riêng không được nằm trong artifact.
+          if (Test-Path "dist/contract_manager.db") { throw "co CSDL trong ban dong goi" }
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ContractForge-windows
+          path: dist/ContractForge.exe
+          if-no-files-found: error
+
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/ContractForge.exe
+          draft: true
+          generate_release_notes: true
