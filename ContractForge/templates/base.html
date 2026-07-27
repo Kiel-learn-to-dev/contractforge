@@ -757,13 +757,36 @@ window.CfPortalMenu = function(toggleEl, items, opts) {
 
         var icon = r.type === 'contract' ? 'bi-journal-text' : 'bi-building';
         var sc   = r.status ? (STATUS_COLOR[r.status] || 'var(--c-text-3)') : 'var(--c-text-3)';
-        a.innerHTML =
-          '<i class="bi ' + icon + '" style="font-size:14px;color:var(--c-primary);flex-shrink:0;"></i>' +
-          '<div style="flex:1;min-width:0;">' +
-            '<div style="font-size:12px;font-weight:600;color:var(--c-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + r.label + '</div>' +
-            '<div style="font-size:11px;color:var(--c-text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + r.sub + '</div>' +
-          '</div>' +
-          (r.status ? '<span style="font-size:10px;font-weight:600;color:' + sc + ';flex-shrink:0;">' + r.status + '</span>' : '');
+
+        // Dựng bằng DOM + textContent, KHÔNG nối chuỗi innerHTML: r.label và
+        // r.sub là tên khách hàng / số hợp đồng do người dùng nhập, nên nối
+        // chuỗi ở đây biến ô tìm kiếm thành lỗ XSS lưu trữ.
+        var iconEl = document.createElement('i');
+        iconEl.className = 'bi ' + icon;
+        iconEl.style.cssText = 'font-size:14px;color:var(--c-primary);flex-shrink:0;';
+
+        var body = document.createElement('div');
+        body.style.cssText = 'flex:1;min-width:0;';
+
+        var labelEl = document.createElement('div');
+        labelEl.style.cssText = 'font-size:12px;font-weight:600;color:var(--c-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+        labelEl.textContent = r.label;
+
+        var subEl = document.createElement('div');
+        subEl.style.cssText = 'font-size:11px;color:var(--c-text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+        subEl.textContent = r.sub;
+
+        body.appendChild(labelEl);
+        body.appendChild(subEl);
+        a.appendChild(iconEl);
+        a.appendChild(body);
+
+        if (r.status) {
+          var statusEl = document.createElement('span');
+          statusEl.style.cssText = 'font-size:10px;font-weight:600;flex-shrink:0;color:' + sc + ';';
+          statusEl.textContent = r.status;
+          a.appendChild(statusEl);
+        }
         drop.appendChild(a);
       });
     }

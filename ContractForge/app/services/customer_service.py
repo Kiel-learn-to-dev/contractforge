@@ -517,7 +517,13 @@ def save_sub_units(db: Session, customer_id: int, units_data: list[dict]) -> Non
             continue
         uid = udata.get("id")
         if uid:
-            obj = db.query(CustomerUnit).filter(CustomerUnit.id == int(uid)).first()
+            # Phải kiểm cả chủ sở hữu: form gửi lên id đơn vị con, và bản cũ tra
+            # theo mỗi id. Sửa id trong form là ghi đè được đơn vị con của khách
+            # hàng KHÁC. Id lạ thì rơi xuống nhánh tạo mới bên dưới, không cướp.
+            obj = db.query(CustomerUnit).filter(
+                CustomerUnit.id == int(uid),
+                CustomerUnit.customer_id == customer_id,
+            ).first()
         else:
             obj = None
         if obj is None:

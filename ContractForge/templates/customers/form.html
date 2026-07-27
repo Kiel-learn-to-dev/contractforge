@@ -408,8 +408,10 @@ bindRemoveButtons();
 updateUnitCount();
 
 (function() {
-  const INIT_PROVINCE = {{ ('"' + ((prefill.province if prefill else (customer.province if customer else '')) or '') + '"') | safe }};
-  const INIT_WARD     = {{ ('"' + ((prefill.ward     if prefill else (customer.ward     if customer else '')) or '') + '"') | safe }};
+  // | tojson, không phải nối chuỗi rồi | safe: giá trị này là dữ liệu người dùng
+  // nhập, một dấu nháy kép trong đó là thoát ra khỏi chuỗi JS.
+  const INIT_PROVINCE = {{ ((prefill.province if prefill else (customer.province if customer else '')) or '') | tojson }};
+  const INIT_WARD     = {{ ((prefill.ward     if prefill else (customer.ward     if customer else '')) or '') | tojson }};
 
   const selProv = document.getElementById('sel-province');
   const selWard = document.getElementById('sel-ward');

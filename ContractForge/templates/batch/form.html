@@ -32,9 +32,10 @@
   <span class="bg bg-gr">3 Sinh hàng loạt</span>
 </div>
 
-<!-- Inject customer data as JSON — Python-normalized, no Jinja filter needed -->
+<!-- Dữ liệu khách hàng dạng JSON. `| tojson` escape < > & nên tên khách hàng
+     chứa "</script>" không cắt được khối script này. -->
 <script id="customers-json" type="application/json">
-{{ customers_json | safe }}
+{{ customers_data | tojson }}
 </script>
 
 <form method="post" action="/batch/preview" id="batch-form">
@@ -181,18 +182,46 @@
       listEl.innerHTML = '<div class="text-center text-muted small">Không tìm thấy khách hàng.</div>';
       return;
     }
-    var html = '';
+    // Dựng bằng DOM + textContent. c.label và c.code là tên/mã khách hàng do
+    // người dùng nhập; nối thẳng vào innerHTML thì một khách hàng đặt tên chứa
+    // thẻ script sẽ chạy được mã ngay trên trang sinh hàng loạt.
+    listEl.textContent = '';
     items.forEach(function(c) {
-      var units = c.units > 1
-        ? '<span class="badge bg-primary-subtle text-primary " style="font-size:.68rem;">' + c.units + ' cơ sở</span>'
-        : '';
-      html += '<label class="cust-item" data-id="' + c.id + '">'
-        + '<input type="checkbox" name="customer_ids" value="' + c.id + '" class="form-check-input flex-shrink-0 chk-cust" style="cursor:pointer;">'
-        + '<span><span class="fw6">' + c.label + '</span>' + units
-        + '<br><small class="muted">' + c.code + '</small></span>'
-        + '</label>';
+      var label = document.createElement('label');
+      label.className = 'cust-item';
+      label.dataset.id = c.id;
+
+      var box = document.createElement('input');
+      box.type = 'checkbox';
+      box.name = 'customer_ids';
+      box.value = c.id;
+      box.className = 'form-check-input flex-shrink-0 chk-cust';
+      box.style.cursor = 'pointer';
+
+      var text = document.createElement('span');
+      var name = document.createElement('span');
+      name.className = 'fw6';
+      name.textContent = c.label;
+      text.appendChild(name);
+
+      if (c.units > 1) {
+        var units = document.createElement('span');
+        units.className = 'badge bg-primary-subtle text-primary';
+        units.style.fontSize = '.68rem';
+        units.textContent = c.units + ' cơ sở';
+        text.appendChild(units);
+      }
+
+      text.appendChild(document.createElement('br'));
+      var code = document.createElement('small');
+      code.className = 'muted';
+      code.textContent = c.code;
+      text.appendChild(code);
+
+      label.appendChild(box);
+      label.appendChild(text);
+      listEl.appendChild(label);
     });
-    listEl.innerHTML = html;
     // Re-bind checkbox change
     listEl.querySelectorAll('.chk-cust').forEach(function(chk) {
       chk.addEventListener('change', function() {

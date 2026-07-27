@@ -48,6 +48,23 @@ if str(_APP_SOURCE) not in sys.path:
     sys.path.insert(0, str(_APP_SOURCE))
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _dispose_import_time_engine():
+    """Đóng engine mà app.database tạo ra lúc import.
+
+    Import app.database là tạo ngay một engine trỏ vào _TEST_DATA_ROOT ở trên.
+    Từng test đã rebind sang engine tạm riêng, nên engine này không được dùng —
+    nhưng nó vẫn giữ một kết nối SQLite mở, và Python báo ResourceWarning khi
+    thoát. Đóng nó lại để bộ test kết thúc sạch.
+    """
+    yield
+    try:
+        import app.database as database
+        database.engine.dispose()
+    except Exception:
+        pass
+
+
 # ─── 2. Database isolation ────────────────────────────────────────────────────
 @pytest.fixture()
 def data_root(tmp_path: Path) -> Path:

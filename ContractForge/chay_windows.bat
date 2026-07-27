@@ -130,7 +130,8 @@ echo [%date% %time%] Khoi dong uvicorn >>"%LOGFILE%"
 
 start "" cmd /c "timeout /t 3 /nobreak >nul && start http://localhost:8888"
 
-"%~dp0venv\Scripts\python.exe" -m uvicorn main:app --host 0.0.0.0 --port 8888 >>"%LOGFILE%" 2>&1
+REM Chi lang nghe tren 127.0.0.1. App khong co dang nhap nen khong duoc mo ra LAN.
+"%~dp0venv\Scripts\python.exe" -m uvicorn main:app --host 127.0.0.1 --port 8888 >>"%LOGFILE%" 2>&1
 
 echo [%date% %time%] Uvicorn exit code: %errorlevel% >>"%LOGFILE%"
 echo [%date% %time%] Server da tat >>"%LOGFILE%"

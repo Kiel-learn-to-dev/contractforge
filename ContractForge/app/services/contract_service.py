@@ -591,26 +591,58 @@ def update_status(
 # ─── Internal helpers ────────────────────────────────────────────────────────
 
 
+# Các cột trỏ tới file thuộc riêng một hợp đồng. Xoá hợp đồng thì xoá luôn.
+# KHÔNG bao gồm hồ sơ giấy tờ khách hàng (CustomerDocument) — thứ đó thuộc về
+# khách hàng, dùng chung cho nhiều hợp đồng, nên phải sống lâu hơn từng hợp đồng.
+_CONTRACT_OWNED_FILE_COLUMNS = (
+    "output_file_path",     # bản .docx đã sinh
+    "signed_pdf_path",      # bản scan hợp đồng đã ký
+    "invoice_pdf_path",     # hoá đơn
+    "payment_slip_path",    # uỷ nhiệm chi
+)
+
+
+def _delete_owned_files(contract: Contract) -> int:
+    """Xoá các file thuộc riêng hợp đồng này khỏi đĩa. Trả về số file đã xoá.
+
+    Best-effort: file khoá hay đã bị xoá tay không được chặn việc xoá bản ghi —
+    cùng cách xử lý với file cũ trong `generate_docx()`. Bản ghi DB là nguồn sự
+    thật; file mồ côi còn lại chỉ chiếm chỗ, còn bản ghi mồ côi thì làm hỏng
+    danh sách.
+    """
+    removed = 0
+    for column in _CONTRACT_OWNED_FILE_COLUMNS:
+        path = getattr(contract, column, None)
+        if not path:
+            continue
+        try:
+            if os.path.exists(path):
+                os.remove(path)
+                removed += 1
+        except OSError:
+            pass
+    return removed
+
+
 def delete_contract(db: Session, contract_id: int) -> bool:
-    """Xóa 1 hợp đồng. Trả về True nếu thành công."""
+    """Xóa 1 hợp đồng, kèm mọi file thuộc riêng nó. Trả về True nếu thành công."""
     c = db.query(Contract).filter(Contract.id == contract_id).first()
     if not c:
         return False
+    _delete_owned_files(c)
     db.delete(c)
     db.commit()
     return True
 
 
 def bulk_delete(db: Session, ids: list[int]) -> int:
-    """Xóa nhiều hợp đồng. Trả về số bản ghi đã xóa."""
-    deleted = 0
-    for cid in ids:
-        c = db.query(Contract).filter(Contract.id == cid).first()
-        if c:
-            db.delete(c)
-            deleted += 1
+    """Xóa nhiều hợp đồng kèm file của chúng. Trả về số bản ghi đã xóa."""
+    contracts = db.query(Contract).filter(Contract.id.in_(ids)).all() if ids else []
+    for c in contracts:
+        _delete_owned_files(c)
+        db.delete(c)
     db.commit()
-    return deleted
+    return len(contracts)
 
 
 def bulk_update_status(db: Session, ids: list[int], new_status: str,

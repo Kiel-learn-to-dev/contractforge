@@ -58,13 +58,16 @@ def dashboard(request: Request):
     finally:
         db.close()
 
-    # Serialize chart data — tránh vấn đề Decimal không JSON-serializable
-    monthly_forecast_json = json.dumps(
-        [{"label": m["label"], "count": m["count"]} for m in monthly_forecast]
-    )
-    by_product_json = json.dumps(
-        [{"name": p["name"][:30], "count": p["count"]} for p in data["by_product"]]
-    )
+    # Dữ liệu biểu đồ — chỉ giữ các trường nguyên thuỷ (Decimal không JSON hoá được).
+    # Template dùng bộ lọc `| tojson`, không phải json.dumps + | safe: tojson escape
+    # cả `<` `>` `&`, nên một tên sản phẩm chứa "</script>" không thoát ra khỏi khối
+    # <script> được.
+    monthly_forecast_data = [
+        {"label": m["label"], "count": m["count"]} for m in monthly_forecast
+    ]
+    by_product_data = [
+        {"name": p["name"][:30], "count": p["count"]} for p in data["by_product"]
+    ]
 
     # Format total_value for display
     data["summary"]["total_value_fmt"]    = _fmt_currency(data["summary"]["total_value_active"])
@@ -87,8 +90,8 @@ def dashboard(request: Request):
     return templates.TemplateResponse(request, "dashboard/index.html", {
         "page_title":            "Dashboard",
         "action_items":          action_items,
-        "monthly_forecast_json": monthly_forecast_json,
-        "by_product_json":       by_product_json,
+        "monthly_forecast_data": monthly_forecast_data,
+        "by_product_data":       by_product_data,
         "monthly_stats":         monthly_stats,
         "top_customers":         top_customers,
         **data,

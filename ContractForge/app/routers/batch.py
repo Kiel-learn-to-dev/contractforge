@@ -98,7 +98,8 @@ def batch_form(request: Request):
 
     return tpl_env.TemplateResponse(request, "batch/form.html", {
         "request": request, "page_title": "Sinh hàng loạt",
-        "customers_json": json.dumps(customers_list, ensure_ascii=False),
+        # Template dùng `| tojson` — xem chú thích ở routers/dashboard.py.
+        "customers_data": customers_list,
         "templates": tpls, "products": products,
         "prefill": None,
         "errors": [], **_fv(request),

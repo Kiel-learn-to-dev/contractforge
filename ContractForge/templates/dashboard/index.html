@@ -488,7 +488,7 @@
   setInterval(refreshStats, 5 * 60 * 1000);
 
   /* ── F6: Monthly expiry bar chart ────────────────────────────────────── */
-  var monthlyData = {{ monthly_forecast_json | safe }};
+  var monthlyData = {{ monthly_forecast_data | tojson }};
   var expiryCtx = document.getElementById('expiryChart');
   if (expiryCtx && monthlyData.length) {
     var barColors = monthlyData.map(function (d, i) {
@@ -536,7 +536,7 @@
   }
 
   /* ── F7: Product doughnut chart ──────────────────────────────────────── */
-  var productData = {{ by_product_json | safe }};
+  var productData = {{ by_product_data | tojson }};
   var productCtx  = document.getElementById('productChart');
   if (productCtx && productData.length) {
     var palette = ['#003fb1','#0d9488','#2563eb','#d97706','#7c3aed','#94a3b8'];

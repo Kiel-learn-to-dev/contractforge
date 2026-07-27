@@ -52,4 +52,5 @@ echo " De DUNG: Nhan Ctrl+C"
 echo "========================================"
 echo ""
 
-python3 -m uvicorn main:app --host 0.0.0.0 --port 8888
+# Chi lang nghe tren 127.0.0.1. App khong co dang nhap nen khong duoc mo ra LAN.
+python3 -m uvicorn main:app --host 127.0.0.1 --port 8888
