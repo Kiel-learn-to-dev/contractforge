@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block content %}
+{% if flash_msg %}
+<div class="alert alert-{{ flash_type }}">
+  <i class="bi bi-{% if flash_type=='success' %}check-circle{% elif flash_type=='danger' %}x-circle{% else %}exclamation-triangle{% endif %}-fill"></i>
+  <span>{{ flash_msg }}</span><button class="alert-dismiss">×</button>
+</div>
+{% endif %}
+<div class="page-intro">
+  <div>
+    <h2>Danh mục khách hàng</h2>
+    <p>Mô hình hành chính 2 cấp — xã/phường + tỉnh/thành phố</p>
+  </div>
+  <div class="page-actions">
+    <a href="/customers/export-report.xlsx" class="btn btn-sm btn-outline-success"><i class="bi bi-bar-chart-fill me-1"></i>Xuất báo cáo</a>
+    <a href="/customers/import" class="btn btn-sm btn-outline"><i class="bi bi-file-earmark-excel"></i> Import Excel</a>
+    <a href="/customers/new" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg"></i> Thêm khách hàng</a>
+  </div>
+</div>
+
+<!-- Bulk bar -->
+<div id="cust-bulk-bar" class="bulk-bar">
+  <span id="cust-bulk-count" class="bulk-count"></span>
+  <form id="form-cust-bulk" method="post" action="/customers/bulk-delete" style="margin:0">
+    <button type="button" class="btn btn-sm btn-outline-danger" onclick="doCustBulkDelete()"><i class="bi bi-trash3"></i> Xóa đã chọn</button>
+  </form>
+  <button type="button" class="btn btn-sm btn-outline ms-auto" onclick="clearCustSelection()"><i class="bi bi-x-lg"></i></button>
+</div>
+<form id="form-cust-del-one" method="post" style="display:none"></form>
+
+<!-- Stats -->
+<div style="display:grid;grid-template-columns:160px 1fr;gap:12px;margin-bottom:16px">
+  <div class="card card-accent-blue">
+    <div class="hero-metric" style="padding:14px">
+      <div class="eyebrow"><i class="bi bi-people me-1"></i>Tổng</div>
+      <div class="mvalue" style="font-size:24px">{{ total }}</div>
+      <div class="msub">khách hàng</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-body" style="padding:14px">
+      <form method="get" action="/customers" class="d-flex gap-2 flex-wrap align-items-center" id="customer-filter-form">
+        <div class="input-group" style="flex:1;min-width:200px">
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
+          <input type="text" name="q" value="{{ filters.q }}" class="form-control form-control-sm" id="filter-q" placeholder="Tìm tên, mã, đại diện…">
+        </div>
+        <select name="ward" class="form-select form-select-sm" style="width:180px" id="filter-ward" data-native-select="true">
+          <option value="">— Tất cả địa bàn —</option>
+          {% for w2 in options.wards %}<option value="{{ w2 }}" {% if filters.ward==w2 %}selected{% endif %}>{{ w2 }}</option>{% endfor %}
+        </select>
+        <select name="customer_type" class="form-select form-select-sm" style="width:150px" id="filter-type" data-native-select="true">
+          <option value="">— Tất cả loại —</option>
+          {% for t in options.customer_types %}<option value="{{ t }}" {% if filters.customer_type==t %}selected{% endif %}>{{ t }}</option>{% endfor %}
+        </select>
+        <select name="active_only" class="form-select form-select-sm" style="width:140px" data-native-select="true">
+          <option value="1" {% if filters.active_only %}selected{% endif %}>Đang hoạt động</option>
+          <option value="0" {% if not filters.active_only %}selected{% endif %}>Tất cả</option>
+        </select>
+        <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i></button>
+        <a href="/customers" class="btn btn-sm btn-outline"><i class="bi bi-x-lg"></i></a>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% macro sort_url(col) %}/customers?q={{ filters.q }}&ward={{ filters.ward }}&customer_type={{ filters.customer_type }}&active_only={{ 1 if filters.active_only else 0 }}&sort_by={{ col }}&sort_dir={{ "desc" if (sort_by==col and sort_dir=="asc") else "asc" }}&per_page={{ per_page }}&page=1{% endmacro %}
+{% macro sort_icon(col) %}{% if sort_by==col %}<i class="bi bi-caret-{{ 'down' if sort_dir=='desc' else 'up' }}-fill" style="font-size:9px;opacity:.8"></i>{% else %}<i class="bi bi-chevron-expand" style="font-size:9px;opacity:.3"></i>{% endif %}{% endmacro %}
+
+{% if customers_with_count %}
+<div class="card">
+  <div style="overflow-x:auto">
+    <table class="data-table">
+      <thead><tr>
+        <th style="width:36px;padding-left:16px"><input type="checkbox" id="chk-cust-all"></th>
+        <th><a href="{{ sort_url('code') }}" class="sort-link">Mã KH {{ sort_icon('code') }}</a></th>
+        <th style="min-width:200px"><a href="{{ sort_url('legal_name') }}" class="sort-link">Tên đơn vị {{ sort_icon('legal_name') }}</a></th>
+        <th><a href="{{ sort_url('customer_type') }}" class="sort-link">Loại {{ sort_icon('customer_type') }}</a></th>
+        <th><a href="{{ sort_url('ward') }}" class="sort-link">Xã/Phường {{ sort_icon('ward') }}</a></th>
+        <th><a href="{{ sort_url('representative_name') }}" class="sort-link">Đại diện {{ sort_icon('representative_name') }}</a></th>
+        <th class="text-center"><a href="{{ sort_url('contract_count') }}" class="sort-link">HĐ {{ sort_icon('contract_count') }}</a></th>
+        <th><a href="{{ sort_url('is_active') }}" class="sort-link">T.Thái {{ sort_icon('is_active') }}</a></th>
+        <th style="width:90px"></th>
+      </tr></thead>
+      <tbody>
+      {% for c, contract_count, active_count, expiring_count in customers_with_count %}
+      <tr class="cust-row" data-id="{{ c.id }}" style="cursor:pointer">
+        <td style="padding-left:16px"><input type="checkbox" class="chk-cust-row" value="{{ c.id }}"></td>
+        <td><span class="mono badge badge-gray">{{ c.code }}</span></td>
+        <td>
+          <a href="/customers/{{ c.id }}" class="fw-600" onclick="event.stopPropagation()">{{ c.legal_name }}</a>
+          {% if c.short_name and c.short_name!=c.legal_name %}<div class="text-muted fs-12">{{ c.short_name }}</div>{% endif %}
+        </td>
+        <td>
+          <span class="badge {% if c.customer_type=='Trạm y tế' %}ctype-tyt{% elif c.customer_type=='TTYT' %}ctype-ttyt{% else %}ctype-default{% endif %}">{{ c.customer_type }}</span>
+        </td>
+        <td class="text-muted fs-12">{{ c.ward or '—' }}</td>
+        <td>
+          {% if c.representative_name %}<div class="fs-12 fw-600">{{ c.representative_name }}</div>{% if c.representative_title %}<div class="text-muted" style="font-size:11px">{{ c.representative_title }}</div>{% endif %}{% else %}<span class="text-muted">—</span>{% endif %}
+        </td>
+        <td class="text-center">
+          {% if contract_count == 0 %}
+            <span class="text-muted" title="Chưa có hợp đồng">—</span>
+          {% elif expiring_count > 0 %}
+            <span class="badge badge-amber" title="{{ expiring_count }} HĐ sắp hết hạn">{{ contract_count }}</span>
+          {% elif active_count > 0 %}
+            <span class="badge badge-green" title="{{ active_count }} HĐ đang hiệu lực">{{ contract_count }}</span>
+          {% else %}
+            <span class="badge badge-red" title="Không có HĐ hiệu lực">{{ contract_count }}</span>
+          {% endif %}
+        </td>
+        <td>{% if c.is_active %}<span class="badge badge-green">Hoạt động</span>{% else %}<span class="badge badge-gray">Ngưng</span>{% endif %}</td>
+        <td>
+          <div class="flex gap-1">
+            <a href="/customers/{{ c.id }}/edit" class="btn btn-xs btn-outline" title="Sửa" onclick="event.stopPropagation()"><i class="bi bi-pencil"></i></a>
+            <a href="/customers/{{ c.id }}" class="btn btn-xs btn-outline-primary" title="Chi tiết" onclick="event.stopPropagation()"><i class="bi bi-eye"></i></a>
+            <button type="button" class="btn btn-xs btn-outline-danger" title="Xóa" onclick="event.stopPropagation();custDeleteOne({{ c.id }}, '{{ c.legal_name|replace("'","\\'")|replace('"','\\"') }}')"><i class="bi bi-trash3"></i></button>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% set _bp = "q="~filters.q~"&ward="~filters.ward~"&customer_type="~filters.customer_type~"&active_only="~(1 if filters.active_only else 0)~"&sort_by="~sort_by~"&sort_dir="~sort_dir %}
+  <div class="card-footer flex justify-between items-center flex-wrap gap-2">
+    <div class="flex items-center gap-2">
+      <span class="text-muted fs-12">Trang {{ page }}/{{ total_pages }} — {{ total }} bản ghi</span>
+      <div class="flex gap-1" style="font-size:11px">
+        {% for n in allowed_per_page %}<a href="?{{ _bp }}&per_page={{ n }}&page=1" class="page-btn {% if per_page==n %}active{% endif %}" style="min-width:24px;height:24px;font-size:11px">{{ n }}</a>{% endfor %}
+      </div>
+    </div>
+    {% if total_pages > 1 %}
+    <nav class="pagination">
+      <a href="?{{ _bp }}&per_page={{ per_page }}&page={{ page-1 }}" class="page-btn {% if page<=1 %}disabled{% endif %}">‹</a>
+      {% for p in range(1, total_pages+1) %}
+        {% if p==page or p==1 or p==total_pages or (p>=page-2 and p<=page+2) %}
+        <a href="?{{ _bp }}&per_page={{ per_page }}&page={{ p }}" class="page-btn {% if p==page %}active{% endif %}">{{ p }}</a>
+        {% elif p==page-3 or p==page+3 %}<span class="page-btn disabled">…</span>{% endif %}
+      {% endfor %}
+      <a href="?{{ _bp }}&per_page={{ per_page }}&page={{ page+1 }}" class="page-btn {% if page>=total_pages %}disabled{% endif %}">›</a>
+    </nav>
+    {% endif %}
+  </div>
+</div>
+{% else %}
+<div class="card"><div class="empty-state">
+  <i class="bi bi-people"></i><h3>Không tìm thấy khách hàng</h3>
+  <p>{% if filters.q or filters.ward or filters.customer_type %}Thử bỏ bộ lọc.{% else %}Thêm khách hàng đầu tiên.{% endif %}</p>
+  {% if filters.q or filters.ward %}<a href="/customers" class="btn btn-outline btn-sm">Xóa bộ lọc</a>{% else %}<a href="/customers/new" class="btn btn-primary btn-sm">Thêm khách hàng</a>{% endif %}
+</div></div>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+var cChkAll=document.getElementById('chk-cust-all');
+var cBar=document.getElementById('cust-bulk-bar');
+var cCnt=document.getElementById('cust-bulk-count');
+function getCustChecked(){return Array.from(document.querySelectorAll('.chk-cust-row:checked'));}
+function updateCustBar(){var n=getCustChecked().length,tot=document.querySelectorAll('.chk-cust-row').length;if(n>0){cBar.classList.add('visible');cCnt.textContent='Đã chọn '+n+' khách hàng';if(cChkAll){cChkAll.indeterminate=n<tot;cChkAll.checked=n===tot;}}else{cBar.classList.remove('visible');if(cChkAll){cChkAll.indeterminate=false;cChkAll.checked=false;}}}
+function clearCustSelection(){document.querySelectorAll('.chk-cust-row').forEach(function(c){c.checked=false;});updateCustBar();}
+if(cChkAll){cChkAll.addEventListener('change',function(){document.querySelectorAll('.chk-cust-row').forEach(function(c){c.checked=cChkAll.checked;});updateCustBar();});}
+document.querySelectorAll('.chk-cust-row').forEach(function(c){c.addEventListener('change',updateCustBar);});
+document.querySelectorAll('.cust-row').forEach(function(row){
+  row.addEventListener('click',function(e){if(e.target.tagName==='INPUT'||e.target.tagName==='A'||e.target.tagName==='BUTTON'||e.target.closest('a')||e.target.closest('button'))return;var c=row.querySelector('.chk-cust-row');if(c){c.checked=!c.checked;updateCustBar();}});
+});
+function doCustBulkDelete(){var checked=getCustChecked();if(!confirm('Xóa '+checked.length+' khách hàng? Không thể hoàn tác.'))return;var f=document.getElementById('form-cust-bulk');f.querySelectorAll('input[name="selected_ids"]').forEach(function(el){el.remove();});checked.forEach(function(c){var inp=document.createElement('input');inp.type='hidden';inp.name='selected_ids';inp.value=c.value;f.appendChild(inp);});f.submit();}
+function custDeleteOne(id,name){if(!confirm('Xóa khách hàng:\n'+name+'\n\nKhông thể hoàn tác.'))return;var f=document.getElementById('form-cust-del-one');f.action='/customers/'+id+'/delete';f.submit();}
+</script>
+{% endblock %}

@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- Stat cards -->
+<div class="row g-3 mb-4">
+  {% set cards = [
+    ("bi-journal-check",    "#e63946", "Hợp đồng hiệu lực", stats.contracts_active),
+    ("bi-clock-history",    "#f4a261", "Sắp hết hạn (60 ngày)", stats.contracts_expiring if stats.contracts_expiring else (expiring | length)),
+    ("bi-building",         "#457b9d", "Khách hàng", stats.customers),
+    ("bi-file-earmark-word","#2a9d8f", "Mẫu hợp đồng", stats.templates),
+  ] %}
+  {% for icon, color, label, value in cards %}
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body d-flex align-items-center gap-3">
+        <div style="width:48px;height:48px;border-radius:12px;background:{{ color }}22;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi {{ icon }}" style="color:{{ color }};font-size:1.4rem;"></i>
+        </div>
+        <div>
+          <div class="fw-bold fs-3 lh-1">{{ value }}</div>
+          <div class="text-muted" style="font-size:.78rem;">{{ label }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="row g-3 mb-4">
+
+  <!-- Sắp hết hạn -->
+  <div class="col-md-8">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white border-0 pt-3 pb-1 d-flex justify-content-between align-items-center">
+        <h6 class="fw-bold mb-0" style="font-size:.88rem;">
+          <i class="bi bi-alarm me-2 text-warning"></i>Hợp đồng sắp hết hạn (60 ngày)
+        </h6>
+        <a href="/contracts?status=Active" class="small text-muted text-decoration-none">Xem tất cả →</a>
+      </div>
+      <div class="card-body pt-1">
+        {% if expiring %}
+        <table class="table table-sm align-middle mb-0" style="font-size:.83rem;">
+          <thead class="text-muted" style="font-size:.75rem;">
+            <tr>
+              <th class="fw-normal px-0">Số HĐ</th>
+              <th class="fw-normal">Khách hàng</th>
+              <th class="fw-normal">Hết hạn</th>
+              <th class="fw-normal text-center">Còn lại</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in expiring %}
+            {% set c = item.contract %}
+            <tr>
+              <td class="px-0"><a href="/contracts/{{ c.id }}" class="text-decoration-none fw-semibold" style="color:var(--heading);" style="font-size:.82rem;">{{ c.contract_number }}</a></td>
+              <td class="text-muted">{{ item.customer_name }}</td>
+              <td>{{ c.end_date.strftime('%d/%m/%Y') if c.end_date else '—' }}</td>
+              <td class="text-center">
+                <span class="badge {% if item.days_left <= 14 %}bg-danger{% elif item.days_left <= 30 %}bg-warning text-dark{% else %}bg-info{% endif %} rounded-pill" style="font-size:.7rem;">
+                  {{ item.days_left }}d
+                </span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="text-center py-4 text-muted">
+          <i class="bi bi-calendar-check fs-2 d-block mb-2 opacity-25"></i>
+          <small>Không có hợp đồng nào sắp hết hạn trong 60 ngày tới</small>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick actions -->
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white border-0 pt-3 pb-1">
+        <h6 class="fw-bold mb-0" style="font-size:.88rem;">
+          <i class="bi bi-lightning me-2 text-danger"></i>Thao tác nhanh
+        </h6>
+      </div>
+      <div class="card-body pt-2 d-flex flex-column gap-2">
+        <a href="/contracts/new" class="btn btn-sm btn-danger">
+          <i class="bi bi-plus-lg me-2"></i>Tạo hợp đồng mới
+        </a>
+        <a href="/batch" class="btn btn-sm btn-outline-danger">
+          <i class="bi bi-layers me-2"></i>Sinh hàng loạt
+        </a>
+        <a href="/customers/new" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-building-add me-2"></i>Thêm khách hàng
+        </a>
+        <a href="/templates/new" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-upload me-2"></i>Upload mẫu hợp đồng
+        </a>
+        <hr class="my-1">
+        <a href="/customers" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-building me-2"></i>Danh sách khách hàng ({{ stats.customers }})
+        </a>
+        <a href="/contracts" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-journal-text me-2"></i>Tất cả hợp đồng
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Build progress tracker -->
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-white border-0 pt-3 pb-1">
+    <h6 class="fw-bold mb-0" style="font-size:.88rem;">
+      <i class="bi bi-rocket-takeoff me-2 text-danger"></i>Lộ trình xây dựng
+    </h6>
+  </div>
+  <div class="card-body">
+    <div class="row g-2">
+      {% set steps = [
+        (1, "Khung dự án", "FastAPI + SQLite + Hello World", True),
+        (2, "Database models", "Customer, Product, Template, Contract", True),
+        (3, "CRUD Khách hàng", "Danh sách, thêm, sửa, import Excel", True),
+        (4, "Upload template", "Phân tích placeholder .docx", True),
+        (5, "Sinh 1 hợp đồng", "Form → .docx → download", True),
+        (6, "Sinh hàng loạt", "N khách hàng → ZIP file", True),
+        (7, "Dashboard nhắc hạn", "Cảnh báo sắp hết hạn", False),
+      ] %}
+      {% for num, title, desc, done in steps %}
+      <div class="col-md-6 col-lg-3">
+        <div class="p-3 rounded-3 h-100"
+          style="background:{% if done %}#f0fdf4{% elif num==7 %}#eff6ff{% else %}#f8f9fa{% endif %};
+                 border:1px solid {% if done %}#bbf7d0{% elif num==7 %}#bfdbfe{% else %}#e9ecef{% endif %};">
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="badge rounded-pill" style="font-size:.7rem;background:{% if done %}#16a34a{% elif num==7 %}#2563eb{% else %}#94a3b8{% endif %};">
+              Bước {{ num }}
+            </span>
+            {% if done %}<i class="bi bi-check-circle-fill text-success" style="font-size:.85rem;"></i>{% endif %}
+          </div>
+          <div class="fw-semibold" style="font-size:.83rem;">{{ title }}</div>
+          <div class="text-muted" style="font-size:.73rem;">{{ desc }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

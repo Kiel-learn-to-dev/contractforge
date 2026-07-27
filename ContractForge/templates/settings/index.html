@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% if flash_msg %}
+<div class="alert alert-{{ flash_type }} d-flex align-items-center gap-2 mb-4" role="alert">
+  <i class="bi bi-{% if flash_type == 'success' %}check-circle-fill{% else %}exclamation-triangle-fill{% endif %}"></i>
+  <span>{{ flash_msg }}</span>
+  <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+{% if setup_required %}
+<div class="alert alert-info d-flex align-items-center gap-2 mb-4" role="alert">
+  <i class="bi bi-building-check"></i>
+  <span>Hãy hoàn tất thông tin tổ chức trước khi tạo hợp đồng đầu tiên.</span>
+</div>
+{% endif %}
+
+<div class="row g-4">
+
+  <!-- Card: Organization profile -->
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-building text-primary"></i>
+        <span class="fw-semibold">Thông tin tổ chức</span>
+      </div>
+      <div class="card-body">
+        <p class="text-muted small mb-3">
+          Thông tin sẽ tự động điền vào các hợp đồng khi sinh file.
+          Sau khi lưu, cần sinh lại file hợp đồng để áp dụng.
+        </p>
+        <form method="post" action="/settings/party-b" novalidate>
+
+          {# ── Section 1: Thông tin tổ chức ── #}
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <i class="bi bi-bank2 text-secondary" style="font-size:.9rem;"></i>
+            <span class="fw-semibold text-secondary" style="font-size:.82rem;text-transform:uppercase;letter-spacing:.4px;">Thông tin tổ chức</span>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Tên đơn vị</label>
+            <input type="text" name="party_b_name" class="form-control form-control-sm"
+                   value="{{ party_b.name }}"
+                   placeholder="VD: Công ty TNHH Mẫu" required>
+            <div class="form-text">Điền chỉ tên đơn vị — không kèm "Bên B:" hay "Bên cho thuê:"</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Địa chỉ</label>
+            <input type="text" name="party_b_address" class="form-control form-control-sm"
+                   value="{{ party_b.address }}">
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Mã số thuế</label>
+              <input type="text" name="party_b_tax_code" class="form-control form-control-sm"
+                     value="{{ party_b.tax_code }}">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Chức vụ người đại diện</label>
+              <input type="text" name="party_b_title" class="form-control form-control-sm"
+                     value="{{ party_b.title }}"
+                     placeholder="VD: Giám đốc">
+            </div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Số tài khoản ngân hàng</label>
+              <input type="text" name="party_b_bank_account" class="form-control form-control-sm"
+                     value="{{ party_b.bank_account }}">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Ngân hàng</label>
+              <input type="text" name="party_b_bank_name" class="form-control form-control-sm"
+                     value="{{ party_b.bank_name }}"
+                     placeholder="VD: Ngân hàng thương mại">
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label">Đơn vị thụ hưởng</label>
+            <input type="text" name="party_b_beneficiary" class="form-control form-control-sm"
+                   value="{{ party_b.beneficiary }}">
+            <div class="form-text">Điền cả tiền tố "Đơn vị thụ hưởng: ..." nếu cần</div>
+          </div>
+
+          <hr class="my-3">
+
+          {# ── Section 2: Giấy ủy quyền ── #}
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <i class="bi bi-file-earmark-text text-secondary" style="font-size:.9rem;"></i>
+            <span class="fw-semibold text-secondary" style="font-size:.82rem;text-transform:uppercase;letter-spacing:.4px;">Giấy ủy quyền ký hợp đồng</span>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Đại diện ký hợp đồng</label>
+            <input type="text" name="party_b_representative" class="form-control form-control-sm"
+                   value="{{ party_b.representative }}" required>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Số giấy ủy quyền</label>
+              <input type="text" name="party_b_authorization_number" class="form-control form-control-sm"
+                     value="{{ party_b.authorization_number }}">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Ngày ủy quyền</label>
+              <input type="text" name="party_b_authorization_date" class="form-control form-control-sm"
+                     value="{{ party_b.authorization_date }}"
+                     placeholder="VD: 09/07/2026">
+              <div class="form-text">Định dạng: ngày/tháng/năm</div>
+            </div>
+          </div>
+
+          <div class="d-flex gap-2 mt-3">
+            <button type="submit" class="btn btn-primary btn-sm">
+              <i class="bi bi-floppy me-1"></i>Lưu tất cả thay đổi
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card mb-3">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-palette2 text-primary"></i>
+        <span class="fw-semibold">Giao diện</span>
+      </div>
+      <div class="card-body">
+        <label class="form-label">Chế độ giao diện</label>
+        <select class="form-select" id="theme-sel">
+          <option value="light">☀ Sáng</option>
+          <option value="dark">🌙 Tối</option>
+          <option value="system">💻 Theo hệ thống</option>
+        </select>
+        <div class="form-text mt-2">Hoặc dùng nút ☀/🌙 ở thanh trên.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-info-circle text-primary"></i>
+        <span class="fw-semibold">Thông tin hệ thống</span>
+      </div>
+      <div class="card-body p-0">
+        {% for lbl, val in [("Phiên bản","v45"),("Database","SQLite (local)"),("Engine","FastAPI + Jinja2")] %}
+        <div class="d-flex justify-content-between px-3 py-2{% if not loop.last %} border-bottom{% endif %}">
+          <span class="text-muted small">{{ lbl }}</span>
+          <span class="fw-semibold small font-monospace">{{ val }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Card: Thùng rác khách hàng -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-trash3 text-danger"></i>
+        <span class="fw-semibold">Thùng rác — Khách hàng đã xóa</span>
+        {% if deleted_customers %}
+        <span class="badge bg-danger rounded-pill ms-auto">{{ deleted_customers|length }}</span>
+        {% endif %}
+      </div>
+      <div class="card-body p-0">
+        {% if not deleted_customers %}
+        <div class="text-center text-muted py-4">
+          <i class="bi bi-check-circle d-block fs-3 mb-2 opacity-25"></i>
+          <span style="font-size:.85rem;">Thùng rác trống</span>
+        </div>
+        {% else %}
+        <div class="soft-list">
+          {% for c in deleted_customers %}
+          <div class="soft-item d-flex align-items-center gap-3">
+            <div style="flex:1;min-width:0;">
+              <div class="fw-600 text-truncate">{{ c.short_name or c.legal_name }}</div>
+              <div class="text-muted" style="font-size:11px;">
+                <span class="mono badge badge-gray me-1">{{ c.code }}</span>
+                Xóa: {{ c.deleted_at.strftime('%d/%m/%Y %H:%M') if c.deleted_at else '—' }}
+              </div>
+            </div>
+            <form method="post" action="/customers/{{ c.id }}/restore" style="flex-shrink:0;">
+              <button type="submit" class="btn btn-sm btn-outline-success">
+                <i class="bi bi-arrow-counterclockwise me-1"></i>Khôi phục
+              </button>
+            </form>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+  var sel=document.getElementById('theme-sel');
+  if(!sel)return;
+  var cur=localStorage.getItem('cf-theme')||localStorage.getItem('cf-t')||'light';
+  sel.value=cur;
+  sel.addEventListener('change',function(){
+    var v=sel.value;
+    localStorage.setItem('cf-theme',v);localStorage.setItem('cf-t',v);
+    document.documentElement.setAttribute('data-theme',v);
+    var ic=document.getElementById('theme-icon')||document.getElementById('th-i');
+    if(ic)ic.className=v==='dark'?'bi bi-moon-stars':'bi bi-sun';
+  });
+})();
+</script>
+{% endblock %}

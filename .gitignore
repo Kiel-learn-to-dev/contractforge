@@ -1,0 +1,118 @@
+# =============================================================================
+# ContractForge — repository safety boundary
+# =============================================================================
+# This file is the first line of defense against committing private/runtime
+# data into public history. The public repository must contain ONLY neutral
+# source code, neutral sample assets, tests, build config, and docs.
+#
+# Rule of thumb: if it is user data, generated output, an upload, a log, a
+# build artifact, a cache, a virtual environment, or a local tool setting,
+# it must never be tracked. See OPEN_SOURCE_DESKTOP_PLAN.md §4.2 and §12.
+# =============================================================================
+
+# ── Runtime data directory (real database, uploads, generated outputs) ───────
+# The whole data/ tree is private per-user state and must never be committed.
+data/
+data/**
+
+# ── Databases (any location — defensive) ─────────────────────────────────────
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.sqlite-journal
+
+# ── Uploaded & generated documents (any location — defensive) ────────────────
+uploads/
+outputs/
+**/uploads/
+**/outputs/
+
+# Optional bundled templates are local/private inputs. Public users upload and
+# map their own DOCX files; keep only a possible .gitkeep in this directory.
+ContractForge/assets/default_templates/*.docx
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+logs/
+logs/**
+**/logs/
+
+# ── Backups ──────────────────────────────────────────────────────────────────
+backups/
+*.bak
+*.backup
+
+# ── Build artifacts: executables, archives, compiled binaries ────────────────
+*.exe
+*.dll
+*.pyd
+*.so
+*.dylib
+*.zip
+*.7z
+*.rar
+*.gz
+*.tar
+*.tgz
+*.msi
+
+# ── PyInstaller / build output folders ───────────────────────────────────────
+build/
+build/**
+dist/
+dist/**
+*.spec.bak
+
+# ── Python caches & bytecode ─────────────────────────────────────────────────
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# ── Virtual environments ─────────────────────────────────────────────────────
+venv/
+.venv/
+env/
+.env/
+**/venv/
+**/.venv/
+
+# ── Local AI / editor tool settings (private configuration) ──────────────────
+.claude/
+.claude/**
+.codex/
+.codex/
+.agents/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── Test / coverage artifacts (regenerated locally, not source) ──────────────
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# ── OS junk ──────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Local environment files (secrets, machine-specific paths) ────────────────
+.env
+*.env
+.env.local
+*.local
+
+# ── Misc runtime scratch ────────────────────────────────────────────────────
+*.tmp
+*.temp
+tmp/

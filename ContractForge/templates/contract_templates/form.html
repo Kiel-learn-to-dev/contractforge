@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block content %}
+
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb" style="font-size:0.82rem;">
+    <li class="breadcrumb-item"><a href="/templates" class="text-decoration-none">Mẫu hợp đồng</a></li>
+    <li class="breadcrumb-item active">{{ form_title }}</li>
+  </ol>
+</nav>
+
+{% if errors %}
+<div class="alert alert-danger alert-dismissible fade show mb-3">
+  <i class="bi bi-x-circle-fill me-2"></i>
+  {% for e in errors %}{{ e }}{% endfor %}
+  <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<form method="post" action="{{ action }}" enctype="multipart/form-data" novalidate>
+  <div class="row g-3">
+    <div class="col-lg-8">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom py-2 px-3">
+          <h6 class="mb-0 fw-semibold" style="font-size:0.85rem;">
+            <i class="bi bi-info-circle me-2 text-primary"></i>Thông tin mẫu
+          </h6>
+        </div>
+        <div class="card-body p-3">
+          <div class="row g-3">
+            <div class="col-md-3">
+              <label class="form-label form-label-sm">Mã template</label>
+              <input type="text" name="code" class="form-control form-control-sm"
+                     value="{{ prefill.code if prefill else (tpl.code if tpl else next_code) }}"
+                     {% if tpl %}readonly{% endif %}
+                     placeholder="{{ next_code }}">
+              {% if tpl %}<div class="form-text">Không thể đổi mã sau khi tạo</div>{% else %}<div class="form-text">Để trống → tự sinh</div>{% endif %}
+            </div>
+            <div class="col-md-9">
+              <label class="form-label form-label-sm">Tên mẫu <span class="text-danger">*</span></label>
+              <input type="text" name="name" class="form-control form-control-sm" required
+                     value="{{ prefill.name if prefill else (tpl.name if tpl else '') }}"
+                     placeholder="VD: HĐ Phần mềm YTCS (Trạm Y tế)">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label form-label-sm">Loại hợp đồng <span class="text-danger">*</span></label>
+              <select name="contract_type" class="form-select form-select-sm" required>
+                {% set cur = prefill.contract_type if prefill else (tpl.contract_type if tpl else '') %}
+                {% for ct in contract_types %}
+                <option value="{{ ct }}" {% if cur == ct %}selected{% endif %}>{{ ct }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-8">
+              <label class="form-label form-label-sm">Mô tả</label>
+              <input type="text" name="description" class="form-control form-control-sm"
+                     value="{{ prefill.description if prefill else (tpl.description if tpl else '') }}"
+                     placeholder="Ghi chú ngắn về mẫu này">
+            </div>
+
+            {% if not tpl %}
+            <!-- Upload field chỉ hiện khi TẠO MỚI -->
+            <div class="col-12">
+              <label class="form-label form-label-sm">File .docx <span class="text-danger">*</span></label>
+              <input type="file" name="file" class="form-control form-control-sm"
+                     accept=".docx" required>
+              <div class="form-text">
+                Chỉ chấp nhận .docx · Giới hạn 10 MB ·
+                Các placeholder phải ở dạng <code>{{"{{"}}TÊN_TRƯỜNG{{"}}"}}</code>
+              </div>
+            </div>
+            {% else %}
+            <!-- Khi edit: hiện file hiện tại -->
+            <div class="col-12">
+              <label class="form-label form-label-sm">File đính kèm</label>
+              <div class="d-flex align-items-center gap-2 p-2 rounded" style="background:#f8f9fa;border:1px solid #dee2e6;">
+                <i class="bi bi-file-earmark-word text-primary fs-5"></i>
+                <span style="font-size:0.85rem;">{{ tpl.file_name or "—" }}</span>
+                <a href="/templates/{{ tpl.id }}/download" class="btn btn-xs btn-outline-secondary ms-auto">
+                  <i class="bi bi-download me-1"></i>Tải về
+                </a>
+              </div>
+              <div class="form-text">Để thay file, hãy tạo template mới hoặc dùng nút Re-analyze.</div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body p-3">
+          <button type="submit" class="btn btn-danger w-100 mb-2">
+            <i class="bi bi-{% if tpl %}floppy{% else %}upload{% endif %} me-2"></i>
+            {% if tpl %}Lưu thay đổi{% else %}Upload & Phân tích{% endif %}
+          </button>
+          <a href="{% if tpl %}/templates/{{ tpl.id }}{% else %}/templates{% endif %}"
+             class="btn btn-outline-secondary w-100">
+            <i class="bi bi-x-lg me-1"></i>Hủy
+          </a>
+        </div>
+      </div>
+
+      {% if not tpl %}
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-3" style="font-size:0.8rem;">
+          <h6 class="fw-semibold mb-2" style="font-size:0.82rem;">
+            <i class="bi bi-lightbulb me-1 text-warning"></i>Yêu cầu định dạng
+          </h6>
+          <ul class="ps-3 mb-0 text-muted" style="line-height:1.9;">
+            <li>Placeholder: <code>{{"{{"}}TÊN_TRƯỜNG{{"}}"}}</code></li>
+            <li>Chỉ dùng chữ HOA, số, dấu <code>_</code></li>
+            <li>Ví dụ: <code>{{"{{"}}CONTRACT_NUMBER{{"}}"}}</code></li>
+            <li>Không nên để placeholder bị cắt đứt giữa 2 định dạng khác nhau trong Word</li>
+          </ul>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</form>
+
+<style>
+.form-label-sm { font-size:0.78rem; font-weight:500; color:#4a5568; margin-bottom:3px; }
+.btn-xs { padding: 2px 8px; font-size: 0.75rem; }
+</style>
+{% endblock %}

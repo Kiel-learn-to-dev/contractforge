@@ -1,0 +1,98 @@
+# =============================================================================
+# ContractForge — project + test configuration
+# =============================================================================
+# This file configures packaging metadata (PEP 621), the test runner, and lint.
+# It deliberately does NOT pin the application's runtime dependencies here in
+# detail — those live in ContractForge/requirements.txt and are inherited at
+# install time. A locked snapshot (requirements.lock) is produced for releases.
+# =============================================================================
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "contractforge"
+version = "0.8.0"
+description = "Neutral, single-user, offline-first desktop contract manager."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "ContractForge Contributors" }]
+keywords = ["contracts", "desktop", "fastapi", "sqlite", "webview"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Win32 (MS Windows)",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Office/Business",
+]
+dependencies = [
+    "fastapi>=0.100.0,<0.136.0",
+    "starlette>=0.40.0,<1.0.0",
+    "uvicorn[standard]>=0.20.0",
+    "jinja2>=3.1.0",
+    "python-multipart>=0.0.9",
+    "sqlalchemy>=2.0.0",
+    "python-docx>=1.0.0",
+    "openpyxl>=3.1.0",
+    "httpx>=0.24.0",
+]
+
+[project.optional-dependencies]
+desktop = [
+    "pywebview>=4.0",
+    "pystray>=0.19",
+    "pillow>=10.0",
+]
+dev = [
+    "pytest>=7.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/contractforge/contractforge"
+Documentation = "https://github.com/contractforge/contractforge#readme"
+Issues = "https://github.com/contractforge/contractforge/issues"
+
+# ─── Setuptools packaging (source layout) ────────────────────────────────────
+[tool.setuptools]
+package-dir = { "" = "ContractForge" }
+
+[tool.setuptools.packages.find]
+where = ["ContractForge"]
+
+# ─── Pytest ──────────────────────────────────────────────────────────────────
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+# Conftest injects an isolated temp data root for every test, but we also set a
+# belt-and-braces env var so app.paths can pick it up even before fixtures run.
+# The conftest fixture is authoritative; this is just the default for safety.
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "desktop: tests that require a desktop/windowing environment",
+]
+filterwarnings = [
+    "error",
+    # FastAPI/Starlette still emit DeprecationWarning for on_event; allow it.
+    "ignore::DeprecationWarning:fastapi.*",
+    "ignore::DeprecationWarning:starlette.*",
+    # Existing models use datetime.utcnow() (deprecated in Py3.12+). This is a
+    # pre-existing runtime concern tracked separately under business-correctness
+    # work; the test foundation must not be blocked on it.
+    'ignore:.*datetime.datetime.utcnow.*:DeprecationWarning',
+]

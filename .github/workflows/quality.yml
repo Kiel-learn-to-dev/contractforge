@@ -1,0 +1,43 @@
+name: Quality
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CONTRACTFORGE_PRIVATE_DENYLIST: ${{ secrets.CONTRACTFORGE_PRIVATE_DENYLIST }}
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r ContractForge/requirements.txt pytest
+
+      - name: Compile Python source
+        run: python -m compileall -q ContractForge scripts tests
+
+      - name: Run tests
+        env:
+          PYTHONPATH: ContractForge
+        run: python -m pytest -q
+
+      - name: Scan public repository content
+        run: python scripts/check_public_repo.py --root .

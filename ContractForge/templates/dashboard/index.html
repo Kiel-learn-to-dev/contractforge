@@ -1,0 +1,586 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% if update_counts and (update_counts.newly_expired > 0 or update_counts.newly_expiring_soon > 0) %}
+<div class="alert alert-warning alert-dismissible fade show mb-3 py-2" style="font-size:.82rem;">
+  <i class="bi bi-arrow-repeat me-2"></i>
+  <strong>Cập nhật tự động:</strong>
+  {% if update_counts.newly_expired %} {{ update_counts.newly_expired }} hợp đồng chuyển → <strong>Hết hạn</strong>.{% endif %}
+  {% if update_counts.newly_expiring_soon %} {{ update_counts.newly_expiring_soon }} hợp đồng chuyển → <strong>Sắp hết hạn</strong>.{% endif %}
+  <button type="button" class="btn-close btn-sm" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<!-- ── Action Items ──────────────────────────────────────────────────────── -->
+{% if action_items %}
+<div class="card border-0 shadow-sm mb-3 acc-a">
+  <div class="card-body py-2 px-3">
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <span class="fw-semibold flex-shrink-0" style="font-size:.78rem;color:var(--c-text-2);">
+        <i class="bi bi-lightning-charge-fill text-warning me-1"></i>Cần xử lý:
+      </span>
+      {% for item in action_items %}
+      <a href="{{ item.link }}" class="d-inline-flex align-items-center gap-1 text-decoration-none rounded-2 px-2 py-1 flex-shrink-0"
+         style="font-size:.75rem;font-weight:600;
+           background:{% if item.level=='high' %}var(--c-red-bg){% elif item.level=='medium' %}var(--c-amber-bg){% else %}var(--c-blue-bg){% endif %};
+           color:{% if item.level=='high' %}var(--c-red){% elif item.level=='medium' %}var(--c-amber){% else %}var(--c-blue){% endif %};">
+        <i class="bi {{ item.icon }}"></i>&nbsp;{{ item.message }}&nbsp;<i class="bi bi-arrow-right" style="font-size:.65rem;opacity:.6;"></i>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="d-flex align-items-center gap-2 mb-3" style="font-size:.78rem;color:var(--c-green);padding:0 2px;">
+  <i class="bi bi-check-circle-fill"></i>
+  <span>Không có việc tồn đọng — mọi hợp đồng đang trong tầm kiểm soát.</span>
+</div>
+{% endif %}
+
+<!-- ── Row 1: Stat cards ─────────────────────────────────────────────────── -->
+<div class="row g-3 mb-3">
+  {% set cards = [
+    ("bi-journal-check",     "#16a34a", "Đang hiệu lực",      summary.active + summary.invoiced + summary.expiring_soon, "/contracts?alert_filter=all_active",  "active"),
+    ("bi-pen-check",         "#0d9488", "Đã ký (chờ HĐ)",     summary.signed,                  "/contracts?status=Signed",      "signed"),
+    ("bi-alarm",             "#f59e0b", "Sắp hết hạn (≤30d)", summary.expiring_soon,           "/dashboard/expiring?days=30",   "expiring_soon"),
+    ("bi-x-circle",          "#dc2626", "Đã hết hạn",          summary.expired,                "/contracts?status=Expired",     "expired"),
+    ("bi-building",          "#3b82f6", "Khách hàng",          summary.total_customers,         "/customers",                    "customers"),
+    ("bi-file-earmark-text", "#6366f1", "Đã sinh file",        summary.generated,              "/contracts",                    "generated"),
+  ] %}
+  {% for icon, color, label, value, link, key in cards %}
+  <div class="col-6 col-md-4 col-lg-2">
+    <a href="{{ link }}" class="text-decoration-none">
+      <div class="card border-0 shadow-sm h-100 card-hover">
+        <div class="card-body py-3 px-3 text-center">
+          <div class="mb-1" style="color:{{ color }};">
+            <i class="bi {{ icon }}" style="font-size:1.5rem;"></i>
+          </div>
+          <div class="fw-bold" style="font-size:1.4rem;line-height:1.1;color:{{ color }};" data-stat="{{ key }}">{{ value }}</div>
+          <div class="text-muted" style="font-size:.7rem;margin-top:2px;">{{ label }}</div>
+        </div>
+      </div>
+    </a>
+  </div>
+  {% endfor %}
+</div>
+<div class="text-end mb-1 pe-1" style="font-size:.7rem;color:var(--c-text-4);">
+  <i class="bi bi-arrow-repeat"></i> Tự động làm mới mỗi 5 phút<span id="stat-refresh-time"></span>
+</div>
+
+<!-- ── F8: Monthly stats strip ───────────────────────────────────────────── -->
+<div class="card border-0 shadow-sm mb-3 acc-p">
+  <div class="card-body py-2 px-3">
+    <div class="d-flex align-items-center gap-3 flex-wrap" style="font-size:.78rem;">
+      <span class="fw-semibold flex-shrink-0" style="color:var(--c-primary);">
+        <i class="bi bi-calendar3 me-1"></i>{{ monthly_stats.month_label }}:
+      </span>
+      <span class="flex-shrink-0">
+        <strong>{{ monthly_stats.new_contracts }}</strong> HĐ mới tạo
+        {% if monthly_stats.vs_new > 0 %}
+          <span style="color:var(--c-green);font-size:.72rem;">▲{{ monthly_stats.vs_new }}</span>
+        {% elif monthly_stats.vs_new < 0 %}
+          <span style="color:var(--c-red);font-size:.72rem;">▼{{ monthly_stats.vs_new | abs }}</span>
+        {% endif %}
+      </span>
+      <span class="text-muted" style="font-size:.72rem;">|</span>
+      <span class="flex-shrink-0">
+        <strong>{{ monthly_stats.signed }}</strong> HĐ đã ký
+        {% if monthly_stats.vs_signed > 0 %}
+          <span style="color:var(--c-green);font-size:.72rem;">▲{{ monthly_stats.vs_signed }}</span>
+        {% elif monthly_stats.vs_signed < 0 %}
+          <span style="color:var(--c-red);font-size:.72rem;">▼{{ monthly_stats.vs_signed | abs }}</span>
+        {% endif %}
+      </span>
+      <span class="text-muted" style="font-size:.72rem;">|</span>
+      <span class="flex-shrink-0"><strong>{{ monthly_stats.expired_count }}</strong> HĐ hết hạn tháng này</span>
+      {% if monthly_stats.new_value_fmt != '0' %}
+      <span class="text-muted" style="font-size:.72rem;">|</span>
+      <span class="flex-shrink-0 text-muted">Giá trị mới: <strong style="color:var(--c-text);">{{ monthly_stats.new_value_fmt }}</strong> VNĐ</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- ── Row 2: Total value + status bar ──────────────────────────────────── -->
+<div class="row g-3 mb-3">
+
+  <!-- Tổng giá trị hiệu lực — chi tiết 3 nhóm -->
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body p-3 d-flex flex-column justify-content-between">
+
+        <!-- Tiêu đề + tổng -->
+        <div class="mb-2">
+          <div class="d-flex align-items-baseline gap-2 flex-wrap">
+            <span style="font-size:.72rem;color:var(--c-text-2);font-weight:600;letter-spacing:.04em;text-transform:uppercase;">
+              <i class="bi bi-currency-dollar me-1"></i>Tổng giá trị đang hiệu lực
+            </span>
+          </div>
+          <div class="fw-bold mt-1" style="font-size:1.35rem;line-height:1.15;color:var(--c-primary);word-break:break-all;">
+            {{ summary.total_value_fmt }}<span class="ms-1" style="font-size:.8rem;font-weight:500;color:var(--c-text-2);">VNĐ</span>
+          </div>
+          <div style="font-size:.72rem;color:var(--c-text-3);margin-top:2px;">
+            {{ summary.active + summary.signed + summary.invoiced + summary.expiring_soon }} hợp đồng đang hiệu lực
+          </div>
+        </div>
+
+        <!-- Đường kẻ -->
+        <div style="border-top:1px solid var(--surface-border);margin-bottom:.6rem;"></div>
+
+        <!-- 3 dòng breakdown -->
+        <div class="d-flex flex-column gap-2">
+
+          <!-- Đã thanh toán -->
+          <div class="d-flex align-items-center justify-content-between gap-2">
+            <div class="d-flex align-items-center gap-2 flex-shrink-0">
+              <span style="width:8px;height:8px;border-radius:50%;background:#16a34a;flex-shrink:0;display:inline-block;"></span>
+              <a href="/contracts?status=PaidActive" class="text-decoration-none" style="font-size:.78rem;color:var(--c-text-2);">Đã thanh toán</a>
+            </div>
+            <span class="fw-semibold text-end" style="font-size:.82rem;color:#16a34a;word-break:break-all;">
+              {{ summary.value_paid_fmt }}&thinsp;<span style="font-size:.68rem;font-weight:400;color:var(--c-text-3);">VNĐ</span>
+            </span>
+          </div>
+
+          <!-- Đã xuất hóa đơn -->
+          <div class="d-flex align-items-center justify-content-between gap-2">
+            <div class="d-flex align-items-center gap-2 flex-shrink-0">
+              <span style="width:8px;height:8px;border-radius:50%;background:#0891b2;flex-shrink:0;display:inline-block;"></span>
+              <a href="/contracts?status=Invoiced" class="text-decoration-none" style="font-size:.78rem;color:var(--c-text-2);">Đã xuất hóa đơn</a>
+            </div>
+            <span class="fw-semibold text-end" style="font-size:.82rem;color:#0891b2;word-break:break-all;">
+              {{ summary.value_invoiced_fmt }}&thinsp;<span style="font-size:.68rem;font-weight:400;color:var(--c-text-3);">VNĐ</span>
+            </span>
+          </div>
+
+          <!-- Chưa thanh toán -->
+          <div class="d-flex align-items-center justify-content-between gap-2">
+            <div class="d-flex align-items-center gap-2 flex-shrink-0">
+              <span style="width:8px;height:8px;border-radius:50%;background:#f59e0b;flex-shrink:0;display:inline-block;"></span>
+              <span style="font-size:.78rem;color:var(--c-text-2);">Chưa thanh toán</span>
+            </div>
+            <span class="fw-semibold text-end" style="font-size:.82rem;color:#f59e0b;word-break:break-all;">
+              {{ summary.value_unpaid_fmt }}&thinsp;<span style="font-size:.68rem;font-weight:400;color:var(--c-text-3);">VNĐ</span>
+            </span>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Phân bổ trạng thái -->
+  <div class="col-md-8">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header border-0 pt-3 pb-0">
+        <h6 class="fw-bold mb-0" style="font-size:.85rem;">
+          <i class="bi bi-bar-chart me-2 text-primary"></i>Phân bổ theo trạng thái
+        </h6>
+      </div>
+      <div class="card-body pt-2 pb-3">
+        {% set status_display = [
+          ("PaidActive",   "Đã thanh toán","#16a34a"),
+          ("Invoiced",     "Xuất hóa đơn", "#0891b2"),
+          ("Signed",       "Đã ký",        "#0d9488"),
+          ("ExpiringSoon", "Sắp hết hạn",  "#f59e0b"),
+          ("Generated",    "Đã sinh file", "#6366f1"),
+          ("Expired",      "Hết hạn",      "#dc2626"),
+          ("Terminated",   "Thanh lý",     "#6b7280"),
+          ("Draft",        "Nháp",         "#9ca3af"),
+          ("Sent",         "Đã gửi",       "#3b82f6"),
+          ("Active",       "Hiệu lực(cũ)", "#86efac"),
+        ] %}
+        {% set total_all = summary.total_contracts or 1 %}
+        {% for key, label, color in status_display %}
+        {% set cnt = status_counts[key] %}
+        {% if cnt > 0 %}
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <span style="width:80px;font-size:.75rem;color:var(--text-soft);flex-shrink:0;">{{ label }}</span>
+          <div class="flex-grow-1" style="background:var(--field-bg);border-radius:8px;height:14px;overflow:hidden;border:1px solid var(--surface-border);">
+            <div style="width:{{ [1, (cnt / total_all * 100)|int]|max }}%;height:100%;background:{{ color }};border-radius:4px;transition:width .6s;"></div>
+          </div>
+          <span class="fw-semibold" style="width:28px;text-align:right;font-size:.8rem;color:{{ color }};">{{ cnt }}</span>
+        </div>
+        {% endif %}
+        {% endfor %}
+        {% if total_all == 1 and summary.total_contracts == 0 %}
+        <div class="text-muted text-center py-2" style="font-size:.82rem;">Chưa có hợp đồng nào</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Row 2.5: Monthly expiry forecast ─────────────────────────────────── -->
+<div class="row g-3 mb-3">
+  <div class="col-12">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header border-0 pt-3 pb-1 d-flex justify-content-between align-items-center">
+        <h6 class="fw-bold mb-0" style="font-size:.85rem;">
+          <i class="bi bi-bar-chart-steps me-2 text-primary"></i>Dự báo hợp đồng hết hạn — 12 tháng tới
+        </h6>
+        <a href="/dashboard/expiring?days=365" class="text-muted text-decoration-none" style="font-size:.75rem;">Xem danh sách →</a>
+      </div>
+      <div class="card-body pt-2 pb-3" style="height:170px;">
+        <canvas id="expiryChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Row 3: Expiring + Product breakdown ──────────────────────────────── -->
+<div class="row g-3 mb-3">
+
+  <!-- Sắp hết hạn ≤30 ngày -->
+  <div class="col-md-7">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header border-0 pt-3 pb-1 d-flex justify-content-between align-items-center">
+        <h6 class="fw-bold mb-0" style="font-size:.85rem;">
+          <i class="bi bi-alarm-fill me-2 text-primary"></i>
+          Sắp hết hạn trong 30 ngày
+          {% if expiring_30 %}
+          <span class="badge bg-danger rounded-pill ms-1" style="font-size:.68rem;">{{ expiring_30|length }}</span>
+          {% endif %}
+        </h6>
+        <a href="/dashboard/expiring?days=60" class="small text-muted text-decoration-none" style="font-size:.75rem;">
+          Xem 60 ngày →
+        </a>
+      </div>
+      <div class="card-body p-0">
+        {% if expiring_30 %}
+        <table class="table table-sm align-middle mb-0" style="font-size:.82rem;">
+          <thead style="background:var(--surface-soft);">
+            <tr>
+              <th class="px-3 py-2" style="font-weight:500;color:#9ca3af;font-size:.72rem;">Số HĐ</th>
+              <th class="py-2" style="font-weight:500;color:#9ca3af;font-size:.72rem;">Khách hàng</th>
+              <th class="py-2" style="font-weight:500;color:#9ca3af;font-size:.72rem;">Hết hạn</th>
+              <th class="py-2 text-center" style="font-weight:500;color:#9ca3af;font-size:.72rem;">Còn lại</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in expiring_30 %}
+            <tr class="{% if item.urgency=='critical' %}table-danger{% elif item.urgency=='warning' %}table-warning{% endif %}">
+              <td class="px-3">
+                <a href="/contracts/{{ item.contract_id }}" class="text-decoration-none fw-semibold" style="color:var(--heading);">
+                  {{ item.contract_number }}
+                </a>
+              </td>
+              <td class="text-muted">{{ item.customer_name }}</td>
+              <td>{{ item.end_date.strftime('%d/%m/%Y') }}</td>
+              <td class="text-center">
+                <span class="badge rounded-pill
+                  {% if item.urgency=='critical' %}bg-danger
+                  {% elif item.urgency=='warning' %}bg-warning text-dark
+                  {% else %}bg-info text-dark{% endif %}"
+                  style="font-size:.7rem;min-width:44px;">
+                  {{ item.days_left }}d
+                </span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="text-center py-4 text-muted">
+          <i class="bi bi-calendar-check fs-3 d-block mb-2 opacity-20"></i>
+          <div style="font-size:.82rem;">Không có hợp đồng nào hết hạn trong 30 ngày tới</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Phân bổ theo sản phẩm + Quick actions -->
+  <div class="col-md-5">
+
+    <!-- By product — doughnut chart -->
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header border-0 pt-3 pb-1">
+        <h6 class="fw-bold mb-0" style="font-size:.85rem;">
+          <i class="bi bi-pie-chart me-2 text-primary"></i>Theo sản phẩm (đang hiệu lực)
+        </h6>
+      </div>
+      <div class="card-body pt-1 pb-2">
+        {% if by_product %}
+        <div style="height:155px;position:relative;">
+          <canvas id="productChart"></canvas>
+        </div>
+        {% else %}
+        <div class="text-muted text-center py-3" style="font-size:.8rem;">Chưa có hợp đồng hiệu lực</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Quick actions -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-header border-0 pt-3 pb-1">
+        <h6 class="fw-bold mb-0" style="font-size:.85rem;">
+          <i class="bi bi-lightning me-2 text-warning"></i>Thao tác nhanh
+        </h6>
+      </div>
+      <div class="card-body pt-2 pb-3 d-flex flex-column gap-2">
+        <a href="/contracts/new" class="btn btn-sm btn-primary">
+          <i class="bi bi-plus-lg me-2"></i>Tạo hợp đồng mới
+        </a>
+        <a href="/batch" class="btn btn-sm btn-outline-primary">
+          <i class="bi bi-layers me-2"></i>Sinh hàng loạt
+        </a>
+        <div class="d-flex gap-2">
+          <a href="/customers/new" class="btn btn-sm btn-outline-secondary flex-fill">
+            <i class="bi bi-building-add me-1"></i>Thêm KH
+          </a>
+          <a href="/templates/new" class="btn btn-sm btn-outline-secondary flex-fill">
+            <i class="bi bi-upload me-1"></i>Upload mẫu
+          </a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Row 4: Hoạt động + Sắp hết hạn 31-60 + Top khách hàng ───────────── -->
+<div class="row g-3">
+
+  <!-- Recent activity -->
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header border-0 pt-3 pb-1">
+        <h6 class="fw-bold mb-0" style="font-size:.85rem;">
+          <i class="bi bi-clock-history me-2 text-secondary"></i>Hoạt động gần đây
+        </h6>
+      </div>
+      <div class="card-body p-0" style="max-height:280px;overflow-y:auto;">
+        {% if recent_activity %}
+          {% for item in recent_activity %}
+          {% set ev_color = {
+            'created':'primary','generated':'success','status_changed':'warning',
+            'activated':'success','expired':'danger',
+          }.get(item.event_type, 'secondary') %}
+          <div class="d-flex gap-2 px-3 py-2 border-bottom" style="font-size:.78rem;">
+            <div class="flex-shrink-0 mt-1">
+              <span class="badge bg-{{ ev_color }}-subtle text-{{ ev_color }}" style="font-size:.65rem;padding:2px 5px;">
+                {{ {
+                  'created':'Tạo','generated':'Sinh file','status_changed':'TT',
+                  'activated':'Active','expired':'Hết hạn'
+                }.get(item.event_type, item.event_type[:6]) }}
+              </span>
+            </div>
+            <div class="flex-grow-1 min-width-0">
+              <div class="fw-semibold text-truncate">
+                <a href="/contracts/{{ item.contract_id }}" class="text-decoration-none" style="color:var(--heading);">{{ item.contract_number }}</a>
+              </div>
+              <div class="text-muted text-truncate" style="font-size:.73rem;">{{ item.customer_name }}</div>
+            </div>
+            <div class="flex-shrink-0 text-muted text-end" style="font-size:.7rem;white-space:nowrap;">
+              {{ item.occurred_at.strftime('%d/%m %H:%M') if item.occurred_at else '' }}
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="text-center py-4 text-muted" style="font-size:.82rem;">Chưa có hoạt động nào</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Sắp hết hạn 31-60 ngày -->
+  <div class="col-md-5">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header border-0 pt-3 pb-1 d-flex justify-content-between align-items-center">
+        <h6 class="fw-bold mb-0" style="font-size:.85rem;">
+          <i class="bi bi-calendar-event me-2 text-warning"></i>
+          Hết hạn trong 31–60 ngày
+          {% if expiring_31_60 %}
+          <span class="badge bg-warning text-dark rounded-pill ms-1" style="font-size:.68rem;">{{ expiring_31_60|length }}</span>
+          {% endif %}
+        </h6>
+        <a href="/dashboard/expiring?days=60" class="small text-muted text-decoration-none" style="font-size:.75rem;">Xem đầy đủ →</a>
+      </div>
+      <div class="card-body p-0">
+        {% if expiring_31_60 %}
+        <table class="table table-sm align-middle mb-0" style="font-size:.82rem;">
+          <thead style="background:var(--surface-soft);">
+            <tr>
+              <th class="px-3 py-2" style="font-weight:500;color:#9ca3af;font-size:.72rem;">Số HĐ</th>
+              <th class="py-2" style="font-weight:500;color:#9ca3af;font-size:.72rem;">Khách hàng</th>
+              <th class="py-2" style="font-weight:500;color:#9ca3af;font-size:.72rem;">Hết hạn</th>
+              <th class="py-2 text-center" style="font-weight:500;color:#9ca3af;font-size:.72rem;">Còn</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in expiring_31_60 %}
+            <tr>
+              <td class="px-3">
+                <a href="/contracts/{{ item.contract_id }}" class="text-decoration-none fw-semibold" style="color:var(--heading);">
+                  {{ item.contract_number }}
+                </a>
+              </td>
+              <td class="text-muted">{{ item.customer_name }}</td>
+              <td>{{ item.end_date.strftime('%d/%m/%Y') }}</td>
+              <td class="text-center">
+                <span class="badge bg-warning text-dark rounded-pill" style="font-size:.7rem;min-width:44px;">{{ item.days_left }}d</span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="text-center py-4 text-muted">
+          <i class="bi bi-calendar fs-3 d-block mb-2 opacity-20"></i>
+          <div style="font-size:.82rem;">Không có hợp đồng nào hết hạn trong 31–60 ngày tới</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Top 5 khách hàng nhiều HĐ nhất (F9) -->
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header border-0 pt-3 pb-1">
+        <h6 class="fw-bold mb-0" style="font-size:.85rem;">
+          <i class="bi bi-trophy me-2 text-warning"></i>Top khách hàng
+        </h6>
+      </div>
+      <div class="card-body p-0">
+        {% if top_customers %}
+          {% for cust in top_customers %}
+          <div class="list-row px-3 py-2" style="font-size:.8rem;">
+            <span class="fw-bold flex-shrink-0" style="width:18px;color:
+              {%- if loop.index0==0 %}#d97706{%- elif loop.index0==1 %}#64748b{%- elif loop.index0==2 %}#92400e{%- else %}var(--c-text-4){%- endif %};">
+              {{ loop.index }}
+            </span>
+            <a href="/customers/{{ cust.id }}" class="flex-grow-1 text-truncate text-decoration-none" style="color:var(--c-text);min-width:0;">
+              {{ cust.name }}
+            </a>
+            <span class="badge badge-primary flex-shrink-0 ms-1">{{ cust.count }}</span>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="text-center py-4 text-muted" style="font-size:.8rem;">Chưa có dữ liệu</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  'use strict';
+
+  /* ── F4: AJAX stat-card refresh ──────────────────────────────────────── */
+  function refreshStats() {
+    fetch('/api/stats')
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var cards = data.cards || {};
+        Object.keys(cards).forEach(function (key) {
+          var el = document.querySelector('[data-stat="' + key + '"]');
+          if (el) el.textContent = cards[key];
+        });
+        var ts = document.getElementById('stat-refresh-time');
+        if (ts) ts.textContent = ' · ' + new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+      })
+      .catch(function () {});
+  }
+  setInterval(refreshStats, 5 * 60 * 1000);
+
+  /* ── F6: Monthly expiry bar chart ────────────────────────────────────── */
+  var monthlyData = {{ monthly_forecast_json | safe }};
+  var expiryCtx = document.getElementById('expiryChart');
+  if (expiryCtx && monthlyData.length) {
+    var barColors = monthlyData.map(function (d, i) {
+      if (i < 2)  return '#dc2626';   /* 1-2 tháng: đỏ */
+      if (i < 4)  return '#d97706';   /* 3-4 tháng: vàng */
+      if (i < 7)  return '#2563eb';   /* 5-7 tháng: xanh dương */
+      return '#94a3b8';                /* 8-12 tháng: xám */
+    });
+    new Chart(expiryCtx, {
+      type: 'bar',
+      data: {
+        labels: monthlyData.map(function (d) { return d.label; }),
+        datasets: [{
+          data:            monthlyData.map(function (d) { return d.count; }),
+          backgroundColor: barColors,
+          borderRadius:    4,
+          borderSkipped:   false,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function (ctx) { return ctx.parsed.y + ' hợp đồng hết hạn'; }
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { stepSize: 1, font: { size: 10 }, color: '#9ca3af' },
+            grid:  { color: 'rgba(0,0,0,0.05)' },
+            border:{ dash: [3, 3] }
+          },
+          x: {
+            ticks: { font: { size: 10 }, color: '#6b7280' },
+            grid:  { display: false }
+          }
+        }
+      }
+    });
+  }
+
+  /* ── F7: Product doughnut chart ──────────────────────────────────────── */
+  var productData = {{ by_product_json | safe }};
+  var productCtx  = document.getElementById('productChart');
+  if (productCtx && productData.length) {
+    var palette = ['#003fb1','#0d9488','#2563eb','#d97706','#7c3aed','#94a3b8'];
+    var total   = productData.reduce(function (s, d) { return s + d.count; }, 0);
+    new Chart(productCtx, {
+      type: 'doughnut',
+      data: {
+        labels:   productData.map(function (d) { return d.name; }),
+        datasets: [{
+          data:            productData.map(function (d) { return d.count; }),
+          backgroundColor: productData.map(function (_, i) { return palette[i % palette.length]; }),
+          borderWidth:     2,
+          borderColor:     '#ffffff',
+          hoverOffset:     4,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              font:     { size: 10 },
+              boxWidth: 10,
+              padding:  6,
+              color:    '#6b7280',
+            }
+          },
+          tooltip: {
+            callbacks: {
+              label: function (ctx) {
+                var pct = total > 0 ? Math.round(ctx.parsed / total * 100) : 0;
+                return ctx.label + ': ' + ctx.parsed + ' HĐ (' + pct + '%)';
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+})();
+</script>
+{% endblock %}

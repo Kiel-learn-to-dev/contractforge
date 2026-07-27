@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ app_name }}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <style>
+    body { background-color: #f0f4f8; font-family: "Segoe UI", sans-serif; }
+    .hero { background: linear-gradient(135deg, #cc0000 0%, #990000 100%); color: white; padding: 3rem 2rem 2.5rem; border-radius: 0 0 1.5rem 1.5rem; margin-bottom: 2rem; }
+    .hero h1 { font-size: 1.9rem; font-weight: 700; margin-bottom: 0.3rem; }
+    .hero p { opacity: 0.85; font-size: 0.95rem; }
+    .badge-version { background: rgba(255,255,255,0.2); color: white; font-size: 0.75rem; padding: 0.25rem 0.6rem; border-radius: 1rem; }
+    .module-card { background: white; border-radius: 1rem; padding: 1.4rem 1.2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.07); transition: transform 0.15s, box-shadow 0.15s; text-align: center; }
+    .module-card:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.1); }
+    .module-card .icon { font-size: 2.2rem; margin-bottom: 0.5rem; }
+    .module-card .name { font-weight: 600; font-size: 0.95rem; color: #222; }
+    .module-card .status { display: inline-block; margin-top: 0.4rem; font-size: 0.72rem; background: #fff3cd; color: #856404; padding: 0.15rem 0.5rem; border-radius: 0.5rem; }
+    .ok-banner { background: #d1fae5; border: 1px solid #6ee7b7; border-radius: 0.75rem; padding: 0.9rem 1.2rem; color: #065f46; font-size: 0.88rem; }
+    footer { color: #aaa; font-size: 0.8rem; margin-top: 3rem; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="hero">
+    <div class="container">
+      <div class="d-flex align-items-center gap-3 mb-1">
+        <h1>🗂 {{ app_name }}</h1>
+        <span class="badge-version">v{{ version }}</span>
+      </div>
+      <p>Hệ thống quản lý hợp đồng nội bộ</p>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="ok-banner mb-4">
+      ✅ &nbsp;<strong>Server đang chạy!</strong> &nbsp;·&nbsp;
+      FastAPI + Jinja2 + SQLite đã khởi tạo thành công.
+      &nbsp;·&nbsp;
+      <a href="/health" class="text-success fw-semibold">/health</a>
+      &nbsp;|&nbsp;
+      <a href="/docs" class="text-success fw-semibold">/docs (Swagger API)</a>
+    </div>
+
+    <h5 class="text-muted mb-3 fw-semibold">CÁC MODULE</h5>
+    <div class="row g-3">
+      {% for m in modules %}
+      <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+        <a href="{{ m.href }}" class="text-decoration-none">
+          <div class="module-card">
+            <div class="icon">{{ m.icon }}</div>
+            <div class="name">{{ m.name }}</div>
+            <span class="status">{{ m.status }}</span>
+          </div>
+        </a>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="mt-5">
+      <h5 class="text-muted fw-semibold mb-3">LỘ TRÌNH BUILD</h5>
+      <div class="list-group">
+        <div class="list-group-item list-group-item-success fw-semibold">✅ Bước 1 — Khung dự án chạy được (FastAPI + HTML + SQLite trống)</div>
+        <div class="list-group-item text-muted">⬜ Bước 2 — Database models + CRUD khách hàng</div>
+        <div class="list-group-item text-muted">⬜ Bước 3 — Module template + đọc placeholder từ .docx</div>
+        <div class="list-group-item text-muted">⬜ Bước 4 — Sinh hợp đồng 1 file từ template</div>
+        <div class="list-group-item text-muted">⬜ Bước 5 — Sinh hàng loạt + export ZIP</div>
+        <div class="list-group-item text-muted">⬜ Bước 6 — Dashboard + nhắc hạn</div>
+      </div>
+    </div>
+
+    <footer class="pb-4">Bước 1 hoàn thành · {{ app_name }} v{{ version }}</footer>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

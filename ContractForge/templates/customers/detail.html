@@ -1,0 +1,377 @@
+{% extends "base.html" %}
+{% block content %}
+
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb" style="font-size:0.82rem;">
+    <li class="breadcrumb-item"><a href="/customers" class="text-decoration-none">Khách hàng</a></li>
+    <li class="breadcrumb-item active">{{ customer.short_name or customer.legal_name }}</li>
+  </ol>
+</nav>
+
+{% if flash_msg %}
+<div class="alert alert-{{ flash_type }} alert-dismissible fade show mb-3">
+  <i class="bi bi-{% if flash_type == 'success' %}check-circle{% elif flash_type == 'warning' %}exclamation-triangle{% else %}x-circle{% endif %}-fill me-2"></i>
+  {{ flash_msg }}
+  <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+{# ── Macro: slot giấy tờ cố định (CCCD/Quyết định) ── #}
+{% macro doc_slot(doc, dtype, dlabel, cid) %}
+<div class="mb-3">
+  <div class="text-muted mb-1 fw-semibold" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;">
+    {{ dlabel }}
+  </div>
+  {% if doc %}
+    <div class="d-flex align-items-start gap-2 mb-2">
+      <i class="bi bi-file-earmark-{% if doc.mime_hint=='pdf' %}pdf text-danger{% else %}image text-primary{% endif %} flex-shrink-0" style="font-size:1.5rem;margin-top:2px;"></i>
+      <div style="min-width:0;">
+        <div class="fw-semibold text-truncate" style="font-size:.83rem;" title="{{ doc.file_name }}">{{ doc.file_name }}</div>
+        <div class="text-muted" style="font-size:.75rem;">{{ doc.uploaded_at.strftime('%d/%m/%Y %H:%M') if doc.uploaded_at else '' }}</div>
+      </div>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="/customers/{{ cid }}/docs/{{ doc.id }}/view" target="_blank"
+         class="btn btn-sm btn-outline-primary" style="flex:1;">
+        <i class="bi bi-eye me-1"></i>Xem
+      </a>
+      <a href="/customers/{{ cid }}/docs/{{ doc.id }}/view?dl=1"
+         class="btn btn-sm btn-outline-success" title="Tải xuống">
+        <i class="bi bi-download"></i>
+      </a>
+      <form method="post" action="/customers/{{ cid }}/docs/{{ doc.id }}/delete"
+            onsubmit="return confirm('Xóa giấy tờ này? Hành động không thể hoàn tác.')">
+        <button type="submit" class="btn btn-sm btn-outline-secondary" title="Xóa">
+          <i class="bi bi-trash"></i>
+        </button>
+      </form>
+    </div>
+  {% else %}
+    <div class="text-muted mb-2" style="font-size:.8rem;">
+      <i class="bi bi-file-earmark-arrow-up d-block opacity-25" style="font-size:1.5rem;"></i>
+      Chưa có file
+    </div>
+    <form method="post" action="/customers/{{ cid }}/docs/upload" enctype="multipart/form-data">
+      <input type="hidden" name="doc_type" value="{{ dtype }}">
+      <div class="mb-1">
+        <input type="file" name="doc_file" accept=".pdf,.jpg,.jpeg,.png" required
+               class="form-control form-control-sm" style="font-size:.8rem;">
+      </div>
+      <button type="submit" class="btn btn-sm btn-outline-primary w-100">
+        <i class="bi bi-upload me-1"></i>Upload
+      </button>
+    </form>
+    <div class="text-muted mt-1" style="font-size:.73rem;">PDF / JPG / PNG, tối đa 5 MB</div>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{# ── Phân loại docs ── #}
+{% set doc_cccd_front = docs | selectattr("doc_type","equalto","cccd_front")    | list | first | default(none) %}
+{% set doc_cccd_back  = docs | selectattr("doc_type","equalto","cccd_back")     | list | first | default(none) %}
+{% set doc_estab      = docs | selectattr("doc_type","equalto","establishment") | list | first | default(none) %}
+{% set docs_other     = docs | selectattr("doc_type","equalto","other")         | list %}
+
+<div class="bento-grid">
+  <div class="span-8">
+
+    {# ── Header card ── #}
+    <div class="card card-hero mb-3">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+          <div>
+            <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
+              <code class="card-hero-code">{{ customer.code }}</code>
+              <span class="badge rounded-pill badge-type">{{ customer.customer_type }}</span>
+              {% if customer.is_active %}
+              <span class="badge badge-green">Đang hoạt động</span>
+              {% else %}
+              <span class="badge bg-secondary-subtle text-secondary">Ngưng hoạt động</span>
+              {% endif %}
+              {% if docs | length %}
+              <span class="badge badge-primary" title="{{ docs|length }} giấy tờ">
+                <i class="bi bi-paperclip me-1"></i>{{ docs|length }}
+              </span>
+              {% endif %}
+            </div>
+            <h4 class="fw-bold mb-1 card-hero-title">{{ customer.legal_name }}</h4>
+            {% if customer.short_name and customer.short_name != customer.legal_name %}
+            <div class="card-hero-sub">{{ customer.short_name }}</div>
+            {% endif %}
+          </div>
+          <div class="d-flex gap-2 flex-wrap">
+            <a href="/contracts/new?customer_id={{ customer.id }}" class="btn btn-sm btn-primary">
+              <i class="bi bi-plus-circle me-1"></i>Tạo hợp đồng
+            </a>
+            <a href="/customers/{{ customer.id }}/edit" class="btn btn-sm btn-outline-primary">
+              <i class="bi bi-pencil me-1"></i>Sửa
+            </a>
+            <a href="/customers/{{ customer.id }}/export-info"
+               class="btn btn-sm btn-outline-secondary"
+               title="Xuất file tổng hợp thông tin khách hàng (.md)">
+              <i class="bi bi-file-text me-1"></i>Xuất thông tin
+            </a>
+            <a href="/customers/{{ customer.id }}/download-bundle"
+               class="btn btn-sm btn-outline-dark"
+               title="Đóng gói toàn bộ thông tin + file đính kèm thành ZIP">
+              <i class="bi bi-archive me-1"></i>Tải tất cả
+            </a>
+            <form method="post" action="/customers/{{ customer.id }}/toggle" class="d-inline">
+              <button type="submit"
+                      class="btn btn-sm {% if customer.is_active %}btn-outline-warning{% else %}btn-outline-success{% endif %}"
+                      onclick="return confirm('{% if customer.is_active %}Tạm ngưng{% else %}Kích hoạt lại{% endif %} khách hàng này?')">
+                <i class="bi bi-{% if customer.is_active %}pause-circle{% else %}play-circle{% endif %} me-1"></i>
+                {% if customer.is_active %}Tạm ngưng{% else %}Kích hoạt{% endif %}
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# ── Địa chỉ & pháp lý ── #}
+    <div class="card mb-3">
+      <div class="card-header">
+        <h6 class="mb-1 fw-semibold"><i class="bi bi-geo-alt me-2 text-primary"></i>Địa chỉ và pháp lý</h6>
+      </div>
+      <div class="card-body">
+        {% macro kv(label, value) %}
+        <div>
+          <div class="text-muted" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">{{ label }}</div>
+          <div class="fw-600" style="font-size:13px;">{{ value or '—' }}</div>
+        </div>
+        {% endmacro %}
+        <div class="row g-3 mb-3">
+          <div class="col-12">{{ kv('Địa chỉ chi tiết', customer.address) }}</div>
+          <div class="col-6">{{ kv('Xã / Phường / Đặc khu', customer.ward) }}</div>
+          <div class="col-6">{{ kv('Tỉnh / Thành phố', customer.province) }}</div>
+          <div class="col-4">{{ kv('Mã số thuế', customer.tax_code) }}</div>
+          <div class="col-4">{{ kv('Mã QHNS', customer.budget_relation_code) }}</div>
+          <div class="col-4">{{ kv('Mã cơ sở KCB BHYT', customer.kcb_code) }}</div>
+          <div class="col-4">{{ kv('Số QĐ thành lập', customer.establishment_decision) }}</div>
+          <div class="col-4">{{ kv('Ngày thành lập', customer.establishment_date.strftime('%d/%m/%Y') if customer.establishment_date else '') }}</div>
+          <div class="col-4">{{ kv('Đại diện pháp lý', customer.representative_name) }}</div>
+          <div class="col-4">{{ kv('Giới tính đại diện', '(Ông) — Nam' if customer.representative_gender == 'Nam' else ('(Bà) — Nữ' if customer.representative_gender == 'Nữ' else '')) }}</div>
+          <div class="col-4">{{ kv('Chức vụ', customer.representative_title) }}</div>
+        </div>
+        <div class="panel-note">
+          <i class="bi bi-clipboard2-check me-1"></i>
+          Địa chỉ render vào hợp đồng: <strong>{{ customer.full_address() or '—' }}</strong>
+        </div>
+      </div>
+    </div>
+
+    {# ── Hồ sơ giấy tờ ── #}
+    <div class="card mb-3">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <h6 class="mb-0 fw-semibold">
+          <i class="bi bi-folder2-open me-2 text-warning"></i>Hồ sơ giấy tờ
+        </h6>
+        {% if docs %}
+        <span class="badge badge-primary">{{ docs|length }} file</span>
+        {% endif %}
+      </div>
+      <div class="card-body">
+
+        {# ── 3 slot cố định ── #}
+        {{ doc_slot(doc_cccd_front, "cccd_front", "CCCD mặt trước (người đại diện)", customer.id) }}
+        <hr style="border-color:var(--c-border,#e5e7eb);margin:4px 0 12px;">
+        {{ doc_slot(doc_cccd_back,  "cccd_back",  "CCCD mặt sau (người đại diện)",   customer.id) }}
+        <hr style="border-color:var(--c-border,#e5e7eb);margin:4px 0 12px;">
+        {{ doc_slot(doc_estab, "establishment", "Quyết định thành lập",              customer.id) }}
+
+        {# ── Giấy tờ khác ── #}
+        <div style="border-top:2px solid var(--c-border,#e5e7eb);margin:16px 0 12px;"></div>
+        <div class="text-muted mb-2 fw-semibold" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;">
+          Giấy tờ khác
+        </div>
+
+        {% if docs_other %}
+        <div class="soft-list mb-3">
+          {% for d in docs_other %}
+          <div class="soft-item d-flex align-items-center gap-2">
+            <i class="bi bi-file-earmark-{% if d.mime_hint=='pdf' %}pdf text-danger{% else %}image text-primary{% endif %} flex-shrink-0"></i>
+            <div style="flex:1;min-width:0;">
+              <div class="fw-semibold text-truncate" style="font-size:.83rem;" title="{{ d.file_name }}">
+                {{ d.label or d.file_name }}
+              </div>
+              <div class="text-muted" style="font-size:.75rem;">
+                {{ d.file_name }} · {{ d.uploaded_at.strftime('%d/%m/%Y') if d.uploaded_at else '' }}
+              </div>
+            </div>
+            <a href="/customers/{{ customer.id }}/docs/{{ d.id }}/view" target="_blank"
+               class="btn btn-sm btn-outline-primary" title="Xem">
+              <i class="bi bi-eye"></i>
+            </a>
+            <a href="/customers/{{ customer.id }}/docs/{{ d.id }}/view?dl=1"
+               class="btn btn-sm btn-outline-success" title="Tải xuống">
+              <i class="bi bi-download"></i>
+            </a>
+            <form method="post" action="/customers/{{ customer.id }}/docs/{{ d.id }}/delete"
+                  onsubmit="return confirm('Xóa « {{ d.label or d.file_name }} »?')">
+              <button type="submit" class="btn btn-sm btn-outline-secondary" title="Xóa">
+                <i class="bi bi-trash"></i>
+              </button>
+            </form>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        {# ── Form upload giấy tờ khác ── #}
+        <form method="post" action="/customers/{{ customer.id }}/docs/upload"
+              enctype="multipart/form-data">
+          <input type="hidden" name="doc_type" value="other">
+          <div class="row g-2 align-items-end">
+            <div class="col-5">
+              <label class="form-label" style="font-size:.78rem;margin-bottom:3px;">Tên giấy tờ</label>
+              <input type="text" name="label" class="form-control form-control-sm"
+                     placeholder="VD: Giấy ủy quyền…" required style="font-size:.8rem;">
+            </div>
+            <div class="col-5">
+              <label class="form-label" style="font-size:.78rem;margin-bottom:3px;">File</label>
+              <input type="file" name="doc_file" accept=".pdf,.jpg,.jpeg,.png" required
+                     class="form-control form-control-sm" style="font-size:.8rem;">
+            </div>
+            <div class="col-2">
+              <button type="submit" class="btn btn-sm btn-outline-primary w-100">
+                <i class="bi bi-upload"></i>
+              </button>
+            </div>
+          </div>
+          <div class="text-muted mt-1" style="font-size:.73rem;">PDF / JPG / PNG, tối đa 5 MB</div>
+        </form>
+
+      </div>
+    </div>
+
+    {# ── Hợp đồng liên quan ── #}
+    <div class="card mb-3">
+      <div class="card-header">
+        <h6 class="mb-0 fw-semibold"><i class="bi bi-journal-text me-2 text-danger"></i>Hợp đồng liên quan</h6>
+        <span class="badge bg-secondary rounded-pill">{{ contract_count }}</span>
+      </div>
+      <div class="card-body text-center text-muted">
+        {% if contract_count == 0 %}
+        <i class="bi bi-journal-x fs-3 d-block mb-2 opacity-25"></i>
+        <div class="mb-3">Chưa có hợp đồng nào gắn với khách hàng này.</div>
+        <a href="/contracts/new?customer_id={{ customer.id }}" class="btn btn-sm btn-primary">
+          <i class="bi bi-plus-circle me-1"></i>Tạo hợp đồng ngay
+        </a>
+        {% else %}
+        Có {{ contract_count }} hợp đồng liên quan.
+        <div class="mt-3">
+          <a href="/contracts?customer_id={{ customer.id }}" class="btn btn-sm btn-outline-danger">
+            Xem danh sách hợp đồng
+          </a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# ── Cơ sở tính phí ── #}
+    <div class="card mb-3">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <h6 class="mb-0 fw-semibold"><i class="bi bi-check2-square me-2 text-primary"></i>Cơ sở tính phí hợp đồng</h6>
+        <span class="badge badge-primary">{{ customer.total_units }} cơ sở</span>
+      </div>
+      <div class="card-body">
+        <p class="text-muted mb-3" style="font-size:12px;">
+          Tick vào những đơn vị thực sự sử dụng dịch vụ và được tính vào số cơ sở hợp đồng.
+          Trạm chỉ đại diện ký hợp đồng mà không khám bệnh thì bỏ tick.
+        </p>
+        <form method="post" action="/customers/{{ customer.id }}/billing">
+          <div class="soft-list mb-3">
+            <label class="soft-item d-flex align-items-center gap-3" style="cursor:pointer;user-select:none;">
+              <input type="checkbox" name="bill_main" value="1"
+                     {% if customer.bill_main_station %}checked{% endif %}
+                     class="form-check-input" style="width:16px;height:16px;flex-shrink:0;">
+              <div>
+                <div class="fw-600">{{ customer.short_name or customer.legal_name }}</div>
+                <div class="text-muted" style="font-size:11px;">Trạm chính (đại diện ký hợp đồng)</div>
+              </div>
+            </label>
+            {% for u in sub_units %}{% if u.is_active %}
+            <label class="soft-item d-flex align-items-center gap-3" style="cursor:pointer;user-select:none;">
+              <input type="checkbox" name="unit_{{ u.id }}" value="1"
+                     {% if u.include_in_billing %}checked{% endif %}
+                     class="form-check-input" style="width:16px;height:16px;flex-shrink:0;">
+              <div>
+                <div class="fw-600">{{ u.name }}</div>
+                <div class="text-muted" style="font-size:11px;">{{ u.unit_type }}</div>
+              </div>
+            </label>
+            {% endif %}{% endfor %}
+            {% if not sub_units %}
+            <div class="text-muted" style="font-size:12px;">Không có điểm trạm con.</div>
+            {% endif %}
+          </div>
+          <button type="submit" class="btn btn-sm btn-primary">
+            <i class="bi bi-check-lg me-1"></i>Lưu cấu hình
+          </button>
+        </form>
+      </div>
+    </div>
+
+  </div>{# /span-8 #}
+
+  {# ── Sidebar span-4 ── #}
+  <div class="span-4">
+    {% macro kv2(label, value) %}
+    <div>
+      <div class="text-muted" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">{{ label }}</div>
+      <div class="fw-600" style="font-size:13px;">{{ value or '—' }}</div>
+    </div>
+    {% endmacro %}
+
+    <div class="card mb-3">
+      <div class="card-header">
+        <h6 class="mb-0 fw-semibold"><i class="bi bi-person-lines-fill me-2 text-success"></i>Liên hệ &amp; Ngân hàng</h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-12">{{ kv2('Đầu mối liên hệ', customer.contact_name) }}</div>
+          <div class="col-6">{{ kv2('Điện thoại', customer.phone) }}</div>
+          <div class="col-6">{{ kv2('Email', customer.email) }}</div>
+        </div>
+        <hr style="border-color:var(--c-border);margin:12px 0;">
+        <div class="row g-3">
+          <div class="col-12">{{ kv2('Số tài khoản', customer.bank_account) }}</div>
+          <div class="col-12">{{ kv2('Ngân hàng', customer.bank_name) }}</div>
+          <div class="col-12">{{ kv2('Tên thụ hưởng', customer.beneficiary_name) }}</div>
+        </div>
+      </div>
+    </div>
+
+    {% if customer.notes %}
+    <div class="card mb-3">
+      <div class="card-header">
+        <h6 class="mb-1 fw-semibold"><i class="bi bi-sticky me-2 text-primary"></i>Ghi chú</h6>
+      </div>
+      <div class="card-body">
+        <div class="panel-note" style="white-space:pre-wrap;">{{ customer.notes }}</div>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="card">
+      <div class="card-header">
+        <h6 class="mb-1 fw-semibold">Thông tin hệ thống</h6>
+      </div>
+      <div class="card-body">
+        <div class="soft-list">
+          <div class="soft-item">
+            <div class="text-muted small mb-1">Ngày tạo</div>
+            <div class="fw-600">{{ customer.created_at.strftime('%d/%m/%Y %H:%M') if customer.created_at else '—' }}</div>
+          </div>
+          <div class="soft-item">
+            <div class="text-muted small mb-1">Cập nhật lần cuối</div>
+            <div class="fw-600">{{ customer.updated_at.strftime('%d/%m/%Y %H:%M') if customer.updated_at else '—' }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,449 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% if flash_msg %}
+<div class="alert alert-{{ flash_type }} alert-dismissible fade show mb-3">
+  <i class="bi bi-{% if flash_type=='success' %}check-circle{% elif flash_type=='danger' %}x-circle{% else %}exclamation-triangle{% endif %}-fill me-2"></i>
+  {{ flash_msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+{# Base query strings — all filter params (no page, no sort) #}
+{%- set _F = "q=" ~ q ~ "&status=" ~ sel_status ~ "&customer_id=" ~ sel_customer_id ~ "&product_id=" ~ sel_product_id ~ "&alert_filter=" ~ sel_alert ~ "&year=" ~ sel_year ~ "&date_from=" ~ sel_date_from ~ "&date_to=" ~ sel_date_to ~ "&date_field=" ~ sel_date_field ~ "&per_page=" ~ per_page -%}
+{%- set _S = "&sort_by=" ~ sort_by ~ "&sort_dir=" ~ sort_dir -%}
+{# Without alert_filter — for "remove alert" link #}
+{%- set _Fna = "q=" ~ q ~ "&status=" ~ sel_status ~ "&customer_id=" ~ sel_customer_id ~ "&product_id=" ~ sel_product_id ~ "&year=" ~ sel_year ~ "&date_from=" ~ sel_date_from ~ "&date_to=" ~ sel_date_to ~ "&date_field=" ~ sel_date_field ~ "&per_page=" ~ per_page ~ _S -%}
+{# Without year — for year pill links (year appended per pill) #}
+{%- set _Fny = "q=" ~ q ~ "&status=" ~ sel_status ~ "&customer_id=" ~ sel_customer_id ~ "&product_id=" ~ sel_product_id ~ "&alert_filter=" ~ sel_alert ~ "&date_from=" ~ sel_date_from ~ "&date_to=" ~ sel_date_to ~ "&date_field=" ~ sel_date_field ~ "&per_page=" ~ per_page ~ _S -%}
+
+{# Sort-column header macro — _F must be passed explicitly (Jinja2 macros don't inherit set-vars) #}
+{% macro th_sort(label, col, f, extra_style="") %}
+<th class="py-2" style="white-space:nowrap;{{ extra_style }}">
+  <a href="?{{ f }}&sort_by={{ col }}&sort_dir={{ 'asc' if sort_by == col and sort_dir == 'desc' else 'desc' }}"
+     class="text-decoration-none" style="color:inherit;">
+    {{ label }}
+    {% if sort_by == col %}
+    <i class="bi bi-arrow-{{ 'up' if sort_dir == 'asc' else 'down' }}-short"></i>
+    {% else %}
+    <i class="bi bi-arrow-down-up text-muted" style="font-size:.65rem;opacity:.3;"></i>
+    {% endif %}
+  </a>
+</th>
+{% endmacro %}
+
+{# Header row #}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <div style="font-size:0.83rem;color:var(--text-faint);">
+    <strong style="color:var(--heading);">{{ total }}</strong> hợp đồng
+    {% if filtered_total_amount > 0 %}
+    <span class="ms-3 fw-semibold" style="color:var(--c-success,#198754);">
+      <i class="bi bi-calculator me-1"></i>{{ '{:,.0f}'.format(filtered_total_amount).replace(',','.') }} VNĐ
+    </span>
+    {% endif %}
+  </div>
+  <div class="d-flex gap-2">
+    <a href="/contracts/export?{{ _F }}{{ _S }}" class="btn btn-sm btn-outline-success">
+      <i class="bi bi-file-earmark-excel me-1"></i>Xuất Excel
+    </a>
+    <a href="/contracts/new" class="btn btn-sm btn-primary">
+      <i class="bi bi-plus-lg me-1"></i>Tạo hợp đồng mới
+    </a>
+  </div>
+</div>
+
+{# Alert filter badges #}
+<div class="d-flex gap-2 mb-3 flex-wrap">
+  <a href="/contracts?alert_filter=unsent_10d"
+     class="btn btn-sm {% if sel_alert == 'unsent_10d' %}btn-warning{% else %}btn-outline-warning{% endif %}">
+    <i class="bi bi-clock-history me-1"></i>Đã gửi chưa ký >10 ngày
+    {% if cnt_unsent > 0 %}<span class="badge bg-warning text-dark ms-1">{{ cnt_unsent }}</span>{% endif %}
+  </a>
+  <a href="/contracts?alert_filter=expiring_60"
+     class="btn btn-sm {% if sel_alert == 'expiring_60' %}btn-danger{% else %}btn-outline-danger{% endif %}">
+    <i class="bi bi-alarm me-1"></i>Sắp hết hạn ≤60 ngày
+    {% if cnt_expiring > 0 %}<span class="badge bg-danger ms-1">{{ cnt_expiring }}</span>{% endif %}
+  </a>
+  {% if sel_alert %}
+  <a href="/contracts?{{ _Fna }}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-x-lg me-1"></i>Bỏ lọc cảnh báo
+  </a>
+  {% endif %}
+</div>
+
+{# Year quick-filter pills #}
+{% if available_years %}
+<div class="d-flex gap-2 mb-3 flex-wrap align-items-center">
+  <span style="font-size:.8rem;color:var(--text-faint);">Năm:</span>
+  {% for yr in available_years %}
+  <a href="/contracts?{{ _Fny }}&year={{ yr }}"
+     class="btn btn-sm {% if sel_year == yr %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+     style="padding:2px 10px;font-size:.8rem;">{{ yr }}</a>
+  {% endfor %}
+  {% if sel_year %}
+  <a href="/contracts?{{ _Fny }}&year=0" class="btn btn-sm btn-link text-muted p-0 ms-1" style="font-size:.8rem;">
+    <i class="bi bi-x-circle"></i> Tất cả năm
+  </a>
+  {% endif %}
+</div>
+{% endif %}
+
+{# Filter bar #}
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body py-2 px-3">
+    <form method="get" id="filter-form">
+      <input type="hidden" name="alert_filter" value="{{ sel_alert }}">
+      <input type="hidden" name="year" value="{{ sel_year }}">
+      <input type="hidden" name="sort_by" value="{{ sort_by }}">
+      <input type="hidden" name="sort_dir" value="{{ sort_dir }}">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-3">
+          <div class="input-group input-group-sm">
+            <span class="input-group-text"><i class="bi bi-search" style="color:var(--text-faint);"></i></span>
+            <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Tìm số HĐ, tên khách hàng…">
+          </div>
+        </div>
+        <div class="col-md-2">
+          <select name="customer_id" class="form-select form-select-sm" data-native-select="true">
+            <option value="0">— Tất cả khách hàng —</option>
+            {% for cust in customers %}
+            <option value="{{ cust.id }}" {% if sel_customer_id == cust.id %}selected{% endif %}>
+              {{ cust.short_name or cust.legal_name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <select name="status" class="form-select form-select-sm" data-native-select="true">
+            <option value="">— Tất cả trạng thái —</option>
+            {% for s in statuses %}
+            <option value="{{ s }}" {% if sel_status == s %}selected{% endif %}>
+              {{ status_labels[s][1] if s in status_labels else s }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <select name="product_id" class="form-select form-select-sm" data-native-select="true">
+            <option value="">— Tất cả sản phẩm —</option>
+            {% for p in products %}
+            <option value="{{ p.id }}" {% if sel_product_id == p.id %}selected{% endif %}>
+              {{ p.code }} — {{ p.name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3 d-flex gap-2">
+          <button type="submit" class="btn btn-sm btn-primary flex-fill">Lọc</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-adv"
+                  onclick="toggleAdv(this)">
+            <i class="bi bi-sliders me-1"></i>Nâng cao{% if sel_date_from or sel_date_to %}<span class="badge bg-primary ms-1" style="font-size:.65rem;">●</span>{% endif %}
+          </button>
+          <a href="/contracts" class="btn btn-sm btn-outline-secondary" title="Xóa toàn bộ bộ lọc"><i class="bi bi-x-lg"></i></a>
+        </div>
+      </div>
+
+      {# Advanced: date range filter #}
+      <div id="adv-filters" class="mt-2 pt-2 border-top{% if not sel_date_from and not sel_date_to %} d-none{% endif %}">
+        <div class="row g-2 align-items-center">
+          <div class="col-auto" style="font-size:.82rem;color:var(--text-faint);">Từ ngày</div>
+          <div class="col-auto">
+            <input type="date" name="date_from" value="{{ sel_date_from }}" class="form-control form-control-sm">
+          </div>
+          <div class="col-auto" style="font-size:.82rem;color:var(--text-faint);">đến</div>
+          <div class="col-auto">
+            <input type="date" name="date_to" value="{{ sel_date_to }}" class="form-control form-control-sm">
+          </div>
+          <div class="col-auto ms-2">
+            <div class="d-flex gap-3" style="font-size:.84rem;">
+              <label class="d-flex align-items-center gap-1" style="cursor:pointer;">
+                <input type="radio" name="date_field" value="sign_date"
+                       {% if sel_date_field != 'end_date' %}checked{% endif %}> Ngày ký
+              </label>
+              <label class="d-flex align-items-center gap-1" style="cursor:pointer;">
+                <input type="radio" name="date_field" value="end_date"
+                       {% if sel_date_field == 'end_date' %}checked{% endif %}> Ngày hết hạn
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# Bulk action toolbar #}
+<div id="bulk-toolbar" class="card border-0 shadow-sm mb-2 d-none">
+  <div class="card-body py-2 px-3 d-flex align-items-center gap-3 flex-wrap">
+    <span id="bulk-count" class="fw-semibold text-primary" style="font-size:.84rem;min-width:90px;"></span>
+    <div class="d-flex align-items-center gap-1" style="font-size:.84rem;">
+      <i class="bi bi-calculator text-success me-1"></i>
+      <span class="text-muted">Tổng:</span>
+      <strong id="bulk-total" class="text-success ms-1">0</strong>
+      <span class="text-muted ms-1" style="font-size:.75rem;">VNĐ</span>
+    </div>
+    <div class="vr mx-1"></div>
+    <form id="form-bulk" method="post" action="/contracts/bulk-action" class="d-flex align-items-center gap-2 flex-wrap">
+      <input type="hidden" name="bulk_action" id="inp-bulk-action" value="">
+      <select name="bulk_status" id="sel-bulk-status" class="form-select form-select-sm"
+              style="width:auto;min-width:160px;" data-native-select="true">
+        <option value="">— Chọn trạng thái —</option>
+        {% for s in statuses %}
+        <option value="{{ s }}">{{ status_labels[s][1] if s in status_labels else s }}</option>
+        {% endfor %}
+      </select>
+      <button type="button" class="btn btn-sm btn-outline-primary" onclick="doBulkStatus()">
+        <i class="bi bi-arrow-repeat me-1"></i>Cập nhật trạng thái
+      </button>
+      <div class="vr mx-1"></div>
+      <button type="button" class="btn btn-sm btn-outline-danger" onclick="doBulkDelete()">
+        <i class="bi bi-trash3 me-1"></i>Xóa đã chọn
+      </button>
+    </form>
+  </div>
+</div>
+
+{# Main table — form-select wraps only the table (not footer) to avoid nested-form POST bug #}
+<div class="card border-0 shadow-sm">
+<form id="form-select" method="post">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0" style="font-size:0.84rem;">
+      <thead>
+        <tr>
+          <th class="px-3 py-2" style="width:36px;">
+            <input type="checkbox" id="chk-all" class="form-check-input" title="Chọn tất cả" style="cursor:pointer;">
+          </th>
+          {{ th_sort("Số hợp đồng", "contract_number", _F) }}
+          <th class="py-2">Khách hàng</th>
+          {{ th_sort("Ngày ký", "sign_date", _F) }}
+          {{ th_sort("Hết hạn", "end_date", _F) }}
+          {{ th_sort("Giá trị (VNĐ)", "total_amount", _F, "width:130px;") }}
+          {{ th_sort("Trạng thái", "status", _F, "width:120px;") }}
+          <th class="py-2" style="width:70px;">Cảnh báo</th>
+          <th class="py-2" style="width:100px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if contracts_data %}
+          {% for item in contracts_data %}
+          {% set c = item.contract %}
+          {% set sl = status_labels.get(c.status.value, ('secondary','?')) %}
+          <tr class="cf-row" data-id="{{ c.id }}" data-amount="{{ item.total_amount }}">
+            <td class="px-3">
+              <input type="checkbox" name="selected_ids" value="{{ c.id }}"
+                     class="form-check-input chk-row" style="cursor:pointer;">
+            </td>
+            <td class="fw-semibold">
+              <a href="/contracts/{{ c.id }}" class="text-decoration-none" style="color:var(--heading);">{{ c.contract_number }}</a>
+            </td>
+            <td class="text-muted">{{ item.customer_name }}</td>
+            <td>{{ c.sign_date.strftime('%d/%m/%Y') if c.sign_date else '—' }}</td>
+            <td class="{{ 'text-danger fw-semibold' if c.is_expiring_soon else '' }}">
+              {{ c.end_date.strftime('%d/%m/%Y') if c.end_date else '—' }}
+            </td>
+            <td class="text-end pe-3">
+              {% if c.total_amount %}{{ '{:,.0f}'.format(c.total_amount).replace(',','.') }}{% else %}—{% endif %}
+            </td>
+            <td>
+              <span class="badge bg-{{ sl[0] }}" style="font-size:0.72rem;">{{ sl[1] }}</span>
+            </td>
+            <td class="text-center">
+              {% if item.flag_unsent %}
+              <span class="badge bg-warning text-dark" style="font-size:0.68rem;" title="Đã gửi nhưng chưa ký hơn 10 ngày">
+                <i class="bi bi-clock-history"></i> Chờ ký
+              </span>
+              {% elif item.flag_expiring %}
+              <span class="badge bg-danger" style="font-size:0.68rem;" title="Còn ≤60 ngày hết hạn">
+                <i class="bi bi-alarm"></i> Sắp hết
+              </span>
+              {% else %}
+              <span class="text-muted" style="font-size:.72rem;">—</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="d-flex gap-1 justify-content-end pe-2">
+                <a href="/contracts/{{ c.id }}" class="btn btn-xs btn-outline-primary" title="Chi tiết"><i class="bi bi-eye"></i></a>
+                {% if c.output_file_path %}
+                <a href="/contracts/{{ c.id }}/download" class="btn btn-xs btn-outline-success" title="Tải về"><i class="bi bi-download"></i></a>
+                {% endif %}
+                <button type="button" class="btn btn-xs btn-outline-danger"
+                        title="Xóa" onclick="deleteOne({{ c.id }}, '{{ c.contract_number }}')">
+                  <i class="bi bi-trash3"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="9" class="text-center py-5 text-muted">
+            <i class="bi bi-journal-x fs-2 d-block mb-2 opacity-25"></i>
+            Chưa có hợp đồng nào.
+            {% if not sel_alert %}<a href="/contracts/new" class="small">Tạo hợp đồng đầu tiên</a>{% endif %}
+          </td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</form>
+
+{# Footer: pagination + per-page — outside form-select to avoid nested-form POST #}
+  <div class="card-footer py-2 px-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <small class="text-muted">
+      {% if total_pages > 1 %}Trang {{ page }}/{{ total_pages }}{% else %}{{ total }} hợp đồng{% endif %}
+    </small>
+
+    {% if total_pages > 1 %}
+    <nav><ul class="pagination pagination-sm mb-0">
+      <li class="page-item {% if page<=1 %}disabled{% endif %}">
+        <a class="page-link" href="?{{ _F }}{{ _S }}&page={{ page-1 }}">‹</a></li>
+      {% for p in range(1, total_pages+1) %}
+        {% if p==page or p==1 or p==total_pages or (p>=page-2 and p<=page+2) %}
+        <li class="page-item {% if p==page %}active{% endif %}">
+          <a class="page-link" href="?{{ _F }}{{ _S }}&page={{ p }}">{{ p }}</a></li>
+        {% elif p==page-3 or p==page+3 %}
+        <li class="page-item disabled"><span class="page-link">…</span></li>
+        {% endif %}
+      {% endfor %}
+      <li class="page-item {% if page>=total_pages %}disabled{% endif %}">
+        <a class="page-link" href="?{{ _F }}{{ _S }}&page={{ page+1 }}">›</a></li>
+    </ul></nav>
+    {% else %}
+    <span></span>
+    {% endif %}
+
+    {# Per-page selector #}
+    <form method="get" class="d-flex align-items-center gap-2">
+      <input type="hidden" name="q" value="{{ q }}">
+      <input type="hidden" name="status" value="{{ sel_status }}">
+      <input type="hidden" name="customer_id" value="{{ sel_customer_id }}">
+      <input type="hidden" name="product_id" value="{{ sel_product_id }}">
+      <input type="hidden" name="alert_filter" value="{{ sel_alert }}">
+      <input type="hidden" name="year" value="{{ sel_year }}">
+      <input type="hidden" name="date_from" value="{{ sel_date_from }}">
+      <input type="hidden" name="date_to" value="{{ sel_date_to }}">
+      <input type="hidden" name="date_field" value="{{ sel_date_field }}">
+      <input type="hidden" name="sort_by" value="{{ sort_by }}">
+      <input type="hidden" name="sort_dir" value="{{ sort_dir }}">
+      <input type="hidden" name="page" value="1">
+      <span class="text-muted" style="font-size:.82rem;">Hiển thị:</span>
+      <select name="per_page" onchange="this.form.submit()" class="form-select form-select-sm"
+              style="width:auto;" data-native-select="true">
+        {% for n in [10, 25, 50, 100] %}
+        <option value="{{ n }}" {% if per_page == n %}selected{% endif %}>{{ n }}/trang</option>
+        {% endfor %}
+      </select>
+    </form>
+  </div>
+</div>
+
+<form id="form-delete-one" method="post" style="display:none;">
+  <input type="hidden" name="bulk_action" value="delete">
+</form>
+
+<style>
+.btn-xs{padding:2px 8px;font-size:.75rem;}
+.cf-row.selected td{background:rgba(var(--bs-primary-rgb),.06);}
+#bulk-toolbar{border-left:3px solid var(--bs-primary);}
+#adv-filters input[type="radio"]{accent-color:var(--c-primary,#0d6efd);}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+var chkAll  = document.getElementById('chk-all');
+var toolbar = document.getElementById('bulk-toolbar');
+var countEl = document.getElementById('bulk-count');
+var totalEl = document.getElementById('bulk-total');
+
+function fmt(n) {
+  return n.toLocaleString('vi-VN');
+}
+
+function getChecked() {
+  return Array.from(document.querySelectorAll('.chk-row:checked'));
+}
+
+function updateToolbar() {
+  var checked = getChecked();
+  var n = checked.length;
+  if (n > 0) {
+    toolbar.classList.remove('d-none');
+    countEl.textContent = 'Đã chọn ' + n + ' hợp đồng';
+    var sum = 0;
+    checked.forEach(function(chk) {
+      var row = chk.closest('.cf-row');
+      var amt = row ? parseFloat(row.dataset.amount || '0') : 0;
+      sum += amt;
+    });
+    if (totalEl) totalEl.textContent = fmt(Math.round(sum));
+    var total = document.querySelectorAll('.chk-row').length;
+    chkAll.indeterminate = n > 0 && n < total;
+    chkAll.checked = n === total;
+  } else {
+    toolbar.classList.add('d-none');
+    chkAll.indeterminate = false;
+    chkAll.checked = false;
+  }
+  document.querySelectorAll('.cf-row').forEach(function(row) {
+    var chk = row.querySelector('.chk-row');
+    row.classList.toggle('selected', chk && chk.checked);
+  });
+}
+
+chkAll.addEventListener('change', function() {
+  document.querySelectorAll('.chk-row').forEach(function(c) { c.checked = chkAll.checked; });
+  updateToolbar();
+});
+
+document.querySelectorAll('.chk-row').forEach(function(chk) {
+  chk.addEventListener('change', updateToolbar);
+});
+
+document.querySelectorAll('.cf-row').forEach(function(row) {
+  row.addEventListener('click', function(e) {
+    if (e.target.tagName==='INPUT'||e.target.tagName==='A'||e.target.tagName==='BUTTON'||
+        e.target.closest('a')||e.target.closest('button')) return;
+    var chk = row.querySelector('.chk-row');
+    if (chk) { chk.checked = !chk.checked; updateToolbar(); }
+  });
+  row.style.cursor = 'pointer';
+});
+
+function submitBulk(action) {
+  var form = document.getElementById('form-bulk');
+  form.querySelectorAll('input[name="selected_ids"]').forEach(function(el) { el.remove(); });
+  getChecked().forEach(function(chk) {
+    var inp = document.createElement('input');
+    inp.type='hidden'; inp.name='selected_ids'; inp.value=chk.value;
+    form.appendChild(inp);
+  });
+  document.getElementById('inp-bulk-action').value = action;
+  form.submit();
+}
+
+function doBulkStatus() {
+  var s = document.getElementById('sel-bulk-status').value;
+  if (!s) { alert('Vui lòng chọn trạng thái cần cập nhật.'); return; }
+  var n = getChecked().length;
+  if (!confirm('Cập nhật trạng thái cho ' + n + ' hợp đồng?')) return;
+  submitBulk('update_status');
+}
+
+function doBulkDelete() {
+  var n = getChecked().length;
+  if (!confirm('Xóa ' + n + ' hợp đồng đã chọn?\n\nHành động này không thể hoàn tác.')) return;
+  submitBulk('delete');
+}
+
+function deleteOne(id, number) {
+  if (!confirm('Xóa hợp đồng:\n' + number + '\n\nHành động này không thể hoàn tác.')) return;
+  var form = document.getElementById('form-delete-one');
+  form.action = '/contracts/' + id + '/delete';
+  form.submit();
+}
+
+function toggleAdv(btn) {
+  var el = document.getElementById('adv-filters');
+  el.classList.toggle('d-none');
+}
+</script>
+{% endblock %}

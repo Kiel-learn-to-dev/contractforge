@@ -1,0 +1,847 @@
+{% extends "base.html" %}
+{% block content %}
+<nav aria-label="breadcrumb" class="">
+  <ol class="breadcrumb" style="font-size:0.82rem;">
+    <li class="breadcrumb-item"><a href="/contracts" class="">Hợp đồng</a></li>
+    <li class="breadcrumb-item active">Tạo mới</li>
+  </ol>
+</nav>
+
+{% if errors %}
+<div class="al al-d ">
+  <i class="bi bi-x-circle-fill "></i>{% for e in errors %}{{ e }}{% endfor %}
+  <button class="al-x">×</button>
+</div>
+{% endif %}
+
+{% macro pv(field, default='') %}{{ prefill.get(field, default) if prefill else default }}{% endmacro %}
+
+<form method="post" action="/contracts/new" novalidate>
+  <div class="row g-3">
+
+    <!-- LEFT -->
+    <div class="col-lg-8">
+
+      <!-- Thông tin cơ bản -->
+      <div class="card mb12">
+        <div class="card-h">
+          <h6 class=" fw-semibold" style="font-size:.85rem;"><i class="bi bi-journal-text text-danger"></i>Thông tin hợp đồng</h6>
+        </div>
+        <div class="card-b">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="lbl">Số hợp đồng <span class="text-danger">*</span></label>
+              <input type="text" name="contract_number" class="fc fc-sm" required
+                     value="{{ pv('contract_number') }}" id="inp-contract-number"
+                     placeholder="Tự động điền khi chọn khách hàng">
+              <div class="form-text" id="contract-number-hint" style="font-size:.7rem;color:#6c757d;display:none;">
+                Gợi ý — có thể sửa tay
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="lbl">Địa điểm ký</label>
+              <input type="text" name="sign_location" class="fc fc-sm"
+                     value="{{ pv('sign_location') }}" id="inp-sign-location"
+                     placeholder="Tự điền khi chọn khách hàng">
+            </div>
+            <div class="col-md-12">
+              <label class="lbl">Khách hàng (Bên A) <span class="text-danger">*</span></label>
+              <select name="customer_id" class="fs fs-sm" required id="sel-customer" data-native-select="true" size="1">
+                <option value="">— Chọn khách hàng —</option>
+                {% for c in customers %}
+                <option value="{{ c.id }}"
+                  {% if (prefill and prefill.get('customer_id')|string == c.id|string) or (sel_customer and sel_customer.id == c.id) %}selected{% endif %}
+                  data-rep="{{ c.representative_name or '' }}"
+                  data-title="{{ c.representative_title or '' }}"
+                  data-addr="{{ c.full_address() }}"
+                  data-name="{{ c.legal_name }}"
+                  data-search="{{ c.code }} {{ c.short_name or '' }} {{ c.legal_name }} {{ c.ward or '' }}">
+                  {{ c.code }} — {{ c.short_name or c.legal_name }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="mb-0" style="margin-top:-4px;">
+              <input type="text" id="inp-cust-filter" class="fc fc-sm"
+                     placeholder="🔍 Lọc nhanh theo tên hoặc mã..."
+                     autocomplete="off" style="font-size:11px;padding:3px 8px;color:var(--tx-m);">
+            </div>
+            <div class="col-md-6">
+              <label class="lbl">Sản phẩm / Dịch vụ</label>
+              <select name="product_id" class="fs fs-sm" id="sel-product" data-native-select="true">
+                <option value="">— Chọn sản phẩm —</option>
+                {% for p in products %}
+                <option value="{{ p.id }}"
+                  {% if prefill and prefill.get('product_id')|string == p.id|string %}selected{% endif %}
+                  data-code="{{ p.code }}"
+                  data-price="{{ p.default_price or '' }}"
+                  data-vat="{{ p.default_vat_rate or 0 }}"
+                  data-months=""
+                  data-template="{{ p.default_template_id or '' }}"
+                  data-shortname="{% if 'YTCS' in p.code %}Y tế cơ sở{% elif 'HSSK' in p.code %}Hồ sơ sức khỏe cá nhân{% else %}{{ p.name }}{% endif %}">
+                  {% if 'YTCS' in p.code %}Y tế cơ sở (YTCS){% elif 'HSSK' in p.code %}Hồ sơ sức khỏe cá nhân (HSSK){% else %}{{ p.code }} — {{ p.name }}{% endif %}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="lbl">Mẫu hợp đồng <span class="text-danger">*</span></label>
+              <select name="template_id" class="fs fs-sm" id="sel-template" disabled data-native-select="true">
+                <option value="">— Chọn sản phẩm trước —</option>
+                {% for t in templates %}
+                <option value="{{ t.id }}"
+                  {% if (prefill and prefill.get('template_id')|string == t.id|string) or (sel_template and sel_template.id == t.id) %}selected{% endif %}
+                  data-product-code="{% if 'YTCS' in t.code %}SW-YTCS{% elif 'HSSK' in t.code %}SW-HSSK{% else %}{% endif %}">
+                  {{ t.name }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ngày tháng -->
+      <div class="card mb12">
+        <div class="card-h">
+          <h6 class=" fw-semibold" style="font-size:.85rem;"><i class="bi bi-calendar3 text-primary"></i>Thời hạn</h6>
+        </div>
+        <div class="card-b">
+          <div class="row g-3">
+            <div class="col-md-3">
+              <label class="lbl">Ngày ký</label>
+              <input type="date" name="sign_date" class="fc fc-sm"
+                     value="{{ pv('sign_date') }}" id="inp-sign">
+            </div>
+            <div class="col-md-3">
+              <label class="lbl">Ngày bắt đầu</label>
+              <input type="date" name="start_date" class="fc fc-sm"
+                     value="{{ pv('start_date') }}" id="inp-start">
+            </div>
+            <div class="col-md-2">
+              <label class="lbl">Số tháng</label>
+              <input type="number" name="month_count" class="fc fc-sm"
+                     value="{{ pv('month_count') }}" min="1" id="inp-months-time">
+            </div>
+            <div class="col-md-4">
+              <label class="lbl">Ngày kết thúc <span class="muted" style="font-weight:400;">(tự tính)</span></label>
+              <input type="date" name="end_date" class="fc fc-sm"
+                     value="{{ pv('end_date') }}" id="inp-end">
+            </div>
+            <div class="col-md-4">
+              <label class="lbl">Ngày nghiệm thu <span class="muted" style="font-weight:400;">(tự tính)</span></label>
+              <input type="date" name="acceptance_date" class="fc fc-sm"
+                     value="{{ pv('acceptance_date') }}" id="inp-acceptance">
+            </div>
+            <div class="col-md-4">
+              <label class="lbl">Ngày thanh lý <span class="muted" style="font-weight:400;">(= ngày kết thúc)</span></label>
+              <input type="date" name="liquidation_date" class="fc fc-sm"
+                     value="{{ pv('liquidation_date') }}" id="inp-liquidation">
+            </div>
+            <div class="col-12" id="date-warnings-wrap" style="display:none;">
+              <div id="date-warnings" class="alert alert-warning" style="font-size:.78rem;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Giá trị -->
+      <div class="card mb12">
+        <div class="card-h">
+          <h6 class=" fw-semibold" style="font-size:.85rem;"><i class="bi bi-currency-dollar text-success"></i>Giá trị hợp đồng</h6>
+        </div>
+        <div class="card-b">
+          <div class="row g-3">
+            <div class="col-md-3">
+              <label class="lbl">Đơn giá chưa VAT <span class="text-danger">*</span></label>
+              <input type="text" name="unit_price_pre_vat" class="fc fc-sm"
+                     value="{{ pv('unit_price_pre_vat') }}" placeholder="VD: 500000" id="inp-price-pre">
+            </div>
+            <div class="col-md-2">
+              <label class="lbl">VAT (%)</label>
+              <input type="number" name="vat_rate" class="fc fc-sm"
+                     value="{{ pv('vat_rate', '0') }}" min="0" max="100" id="inp-vat">
+            </div>
+            <div class="col-md-3">
+              <label class="lbl">Đơn giá có VAT</label>
+              <input type="text" name="unit_price_vat" class="form-control form-control-sm bg-light"
+                     value="{{ pv('unit_price_vat') }}" id="inp-price-vat" readonly
+                     placeholder="Tự tính" tabindex="-1">
+            </div>
+            <div class="col-md-2">
+              <label class="lbl">Số cơ sở</label>
+              <input type="number" name="unit_count" class="fc fc-sm"
+                     value="{{ pv('unit_count', '1') }}" min="1" id="inp-units">
+            </div>
+            <div class="col-md-2">
+              <label class="lbl">Số tháng</label>
+              <input type="number" name="month_count" class="fc fc-sm"
+                     value="{{ pv('month_count') }}" min="1" id="inp-months">
+            </div>
+            <div class="col-md-4">
+              <label class="lbl">Số lượng gói (số cơ sở × số tháng)</label>
+              <input type="text" name="quantity" class="form-control form-control-sm bg-light"
+                     value="{{ pv('quantity') }}" id="inp-qty" readonly tabindex="-1">
+            </div>
+            <div class="col-md-8">
+              <label class="lbl">Tổng giá trị (VNĐ)</label>
+              <input type="text" name="total_amount" class="form-control form-control-sm fw-bold"
+                     value="{{ pv('total_amount') }}" id="inp-total"
+                     placeholder="Tự tính từ đơn giá × cơ sở × tháng">
+            </div>
+
+            <!-- Cơ sở áp dụng — chọn cơ sở nào sẽ mua (mặc định tích tất cả) -->
+            <div class="col-12" id="facility-wrap" style="display:none;">
+              <div class="d-flex justify-content-between align-items-center" style="margin-bottom:4px;">
+                <label class="lbl" style="margin-bottom:0;">
+                  <i class="bi bi-hospital text-danger"></i>
+                  Cơ sở áp dụng <span class="muted" id="facility-count-label" style="font-weight:400;"></span>
+                </label>
+                <div style="font-size:.72rem;">
+                  <a href="#" id="facility-check-all" class="text-decoration-none">Chọn tất cả</a>
+                  <span class="text-muted">·</span>
+                  <a href="#" id="facility-uncheck-all" class="text-decoration-none">Bỏ chọn</a>
+                </div>
+              </div>
+              <div id="facility-list" class="border rounded p-2"
+                   style="max-height:170px;overflow-y:auto;background:#fff;"></div>
+              <div class="form-text" style="font-size:.7rem;color:#6c757d;">
+                Mặc định tích tất cả cơ sở đang tính phí. Bỏ tích cơ sở không mua —
+                số cơ sở &amp; tổng giá trị tự cập nhật theo cơ sở đã chọn.
+              </div>
+              <input type="hidden" name="selected_units" id="inp-selected-units"
+                     value="{{ pv('selected_units') }}">
+            </div>
+
+            <div class="col-12">
+              <label class="lbl">Số tiền bằng chữ</label>
+              <input type="text" name="amount_text" class="fc fc-sm"
+                     value="{{ pv('amount_text') }}" id="inp-amttext"
+                     placeholder="Tự sinh — có thể sửa tay">
+            </div>
+            <div class="col-12">
+              <label class="lbl">Mô tả cách tính giá ({{"{{"}}PRICING_DESCRIPTION{{"}}"}})</label>
+              <textarea name="pricing_description" class="fc fc-sm" rows="2"
+                        id="inp-pricing-desc"
+                        placeholder="VD: 500.000 VNĐ/đơn vị/tháng × 10 đơn vị × 12 tháng">{{ pv('pricing_description') }}</textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /col-lg-8 -->
+
+    <!-- RIGHT -->
+    <div class="col-lg-4">
+
+      <!-- Bên B -->
+      <div class="card mb12">
+        <div class="card-h">
+          <h6 class=" fw-semibold" style="font-size:.85rem;"><i class="bi bi-building-check "></i>Bên B (Viettel)</h6>
+        </div>
+        <div class="card-b">
+          {% set _pbd = party_b_defaults() %}
+          <div class="">
+            <label class="lbl">Đại diện Bên B</label>
+            <input type="text" name="party_b_representative" class="fc fc-sm"
+                   value="{{ pv('party_b_representative', _pbd.representative) }}">
+          </div>
+          <div class="">
+            <label class="lbl">Số giấy uỷ quyền</label>
+            <input type="text" name="party_b_authorization_number" class="fc fc-sm"
+                   value="{{ pv('party_b_authorization_number', _pbd.authorization_number) }}">
+          </div>
+          <div>
+            <label class="lbl">Ngày uỷ quyền</label>
+            <input type="text" name="party_b_authorization_date" class="fc fc-sm"
+                   value="{{ pv('party_b_authorization_date', _pbd.authorization_date) }}">
+          </div>
+        </div>
+      </div>
+
+
+      <!-- Ghi chú -->
+      <div class="card mb12">
+        <div class="card-b">
+          <label class="lbl">Ghi chú nội bộ</label>
+          <textarea name="notes" class="fc fc-sm" rows="3">{{ pv('notes') }}</textarea>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="card">
+        <div class="card-b">
+          <button type="submit" class="btn btn-danger w-100 ">
+            <i class="bi bi-plus-lg "></i>Tạo hợp đồng
+          </button>
+          <a href="/contracts" class="btn btn-outline-secondary w-100">
+            <i class="bi bi-x-lg "></i>Hủy
+          </a>
+          <div class=" p-2 rounded" style="background:#fff8e1;font-size:.75rem;color:#856404;">
+            <i class="bi bi-info-circle "></i>
+            Nếu mẫu hợp đồng hợp lệ, hệ thống sẽ tự sinh file .docx ngay sau khi tạo. Nếu chưa sinh được file, màn hình chi tiết sẽ báo rõ lý do.
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</form>
+
+<style>
+.form-label-sm{font-size:.78rem;font-weight:500;color:#4a5568;margin-bottom:3px;}
+</style>
+{% endblock %}
+{% block scripts %}
+<script>
+// ============================================================
+// contracts/form.html — Viết lại hoàn toàn
+// Không dùng TomSelect (data-native-select="true" đã chặn)
+// Root causes đã xác định:
+//   1. months=12: data-months hardcode "" + không gọi syncMonths trong onProductChange
+//   2. contract number: native addEventListener trên sel-customer → suggestNumber
+//   3. end date: Flatpickr altInput — phải dùng fp.setDate() không phải .value=
+// ============================================================
+
+// Helper
+function gid(id) { return document.getElementById(id); }
+
+// Đặt ngày cho field có Flatpickr (cập nhật cả hidden + altInput hiển thị)
+// Nếu không có Flatpickr, set .value bình thường
+function setDateField(id, isoValue) {
+  var el = gid(id);
+  if (!el) return;
+  if (el._flatpickr) {
+    el._flatpickr.setDate(isoValue, false); // false = không fire change event
+  } else {
+    el.value = isoValue;
+  }
+}
+
+// ─── TÍNH NGÀY KẾT THÚC / NGHIỆM THU / THANH LÝ ─────────────────────────────
+function toISO(d) { return d.toISOString().split('T')[0]; }
+
+function calcEndDate() {
+  var startEl = gid('inp-start');
+  var months  = parseInt((gid('inp-months-time') && gid('inp-months-time').value) ||
+                         (gid('inp-months')      && gid('inp-months').value) || '') || 0;
+  if (!startEl || !startEl.value || months < 1) return;
+
+  var start = new Date(startEl.value + 'T00:00:00');
+  if (isNaN(start.getTime())) return;
+
+  var endEl = gid('inp-end');
+  var accEl = gid('inp-acceptance');
+  var liqEl = gid('inp-liquidation');
+
+  // Kết thúc = bắt đầu + tháng - 1 ngày
+  if (endEl && !endEl.dataset.manualEnd) {
+    var e = new Date(start);
+    e.setMonth(e.getMonth() + months);
+    e.setDate(e.getDate() - 1);
+    setDateField('inp-end', toISO(e));
+    if (liqEl && !liqEl.dataset.manualLiquid) setDateField('inp-liquidation', toISO(e));
+  }
+  // Nghiệm thu = bắt đầu + 2 ngày
+  if (accEl && !accEl.dataset.manualAccept) {
+    var a = new Date(start);
+    a.setDate(a.getDate() + 2);
+    setDateField('inp-acceptance', toISO(a));
+  }
+  setTimeout(checkDateWarnings, 30);
+}
+
+// Listeners override thủ công trên output dates
+var _endEl = gid('inp-end'), _accEl = gid('inp-acceptance'), _liqEl = gid('inp-liquidation');
+if (_endEl) _endEl.addEventListener('change', function() {
+  this.dataset.manualEnd = this.value ? '1' : '';
+  if (_liqEl && !_liqEl.dataset.manualLiquid) setDateField('inp-liquidation', this.value);
+});
+if (_accEl) _accEl.addEventListener('change', function() { this.dataset.manualAccept = this.value ? '1' : ''; });
+if (_liqEl) _liqEl.addEventListener('change', function() { this.dataset.manualLiquid = this.value ? '1' : ''; });
+
+// Sync 2 ô số tháng (Thời hạn + Giá trị)
+function syncMonths(val) {
+  var t = gid('inp-months-time'), v = gid('inp-months');
+  if (t) t.value = val;
+  if (v) v.value = val;
+  calcEndDate();
+  recalcPrice();
+}
+var _mT = gid('inp-months-time'), _mV = gid('inp-months');
+if (_mT) _mT.addEventListener('input', function() { syncMonths(this.value); });
+if (_mV) _mV.addEventListener('input', function() { syncMonths(this.value); });
+
+// ─── TÍNH GIÁ TRỊ ─────────────────────────────────────────────────────────────
+var ONES  = ['','một','hai','ba','bốn','năm','sáu','bảy','tám','chín'];
+var TEENS = ['mười','mười một','mười hai','mười ba','mười bốn','mười lăm',
+             'mười sáu','mười bảy','mười tám','mười chín'];
+function sayThree(n) {
+  if (!n) return '';
+  var h = Math.floor(n/100), r = n%100, p = [];
+  if (h) p.push(ONES[h] + ' trăm');
+  if (r) {
+    if (r < 10 && h)   p.push('không mươi ' + ONES[r]);
+    else if (r < 10)   p.push(ONES[r]);
+    else if (r < 20)   p.push(TEENS[r-10]);
+    else {
+      var c = Math.floor(r/10), d = r%10, s = ONES[c] + ' mươi';
+      if (d===1) s+=' mốt'; else if (d===5&&c>1) s+=' lăm'; else if (d) s+=' '+ONES[d];
+      p.push(s);
+    }
+  }
+  return p.join(' ');
+}
+function amtToWords(n) {
+  n = Math.floor(Number(n)||0);
+  if (!n) return 'Không đồng';
+  var parts = [], t=Math.floor(n/1e9), tr=Math.floor((n%1e9)/1e6),
+      ng=Math.floor((n%1e6)/1e3), dv=n%1e3;
+  if (t)  parts.push(sayThree(t)  + ' tỷ');
+  if (tr) parts.push(sayThree(tr) + ' triệu');
+  if (ng) parts.push(sayThree(ng) + ' nghìn');
+  if (dv) parts.push(sayThree(dv));
+  var s = parts.join(', ') + ' đồng';
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+function fmtN(n) { return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.'); }
+function parseN(s) { return parseFloat(String(s).replace(/\./g,'').replace(',','.'))||0; }
+
+var PRICES = {
+  'SW-YTCS': {pre:500000, vat:0,  post:500000},
+  'SW-HSSK': {pre:440909, vat:8,  post:476182}
+};
+
+function recalcPrice() {
+  var pre = parseN(gid('inp-price-pre') && gid('inp-price-pre').value);
+  if (!pre) return;
+  var vat = parseN(gid('inp-vat') && gid('inp-vat').value);
+  var u   = parseN(gid('inp-units') && gid('inp-units').value) || 1;
+  var m   = parseN(gid('inp-months') && gid('inp-months').value) || 1;
+  var evEl = gid('inp-price-vat');
+  var post = (evEl && evEl.dataset.fixed ? Number(evEl.dataset.fixed) : 0) || pre*(1+vat/100);
+  if (evEl) evEl.value = fmtN(post);
+  var qty = u * m;
+  var qEl = gid('inp-qty'); if (qEl) qEl.value = qty;
+  var total = post * u * m;
+  var tEl = gid('inp-total');
+  if (tEl) { tEl.value = fmtN(total); tEl.dataset.raw = Math.round(total); }
+  var wEl = gid('inp-amttext');
+  if (wEl && !wEl.dataset.manual) wEl.value = amtToWords(Math.round(total));
+  var dEl = gid('inp-pricing-desc');
+  if (dEl && !dEl.dataset.manual) {
+    var unitDetail = (typeof _customerUnitNames !== 'undefined' && _customerUnitNames.length > 1)
+      ? ' (' + _customerUnitNames.join('; ') + ')' : '';
+    dEl.value = 'Số tiền = Đơn giá có VAT (' + fmtN(Math.round(post)) + ' VNĐ) × ' + u + ' cơ sở' + unitDetail + ' × ' + m + ' tháng = ' + fmtN(Math.round(total)) + ' VNĐ';
+  }
+}
+// Nếu user sửa tay số cơ sở → đánh dấu manual, không ghi đè lại
+var _unitsInput = gid('inp-units');
+if (_unitsInput) _unitsInput.addEventListener('input', function() {
+  this.dataset.manualUnits = '1';
+});
+
+['inp-price-pre','inp-vat','inp-units'].forEach(function(id) {
+  var el = gid(id); if (el) el.addEventListener('input', recalcPrice);
+});
+var _wEl = gid('inp-amttext');    if (_wEl) _wEl.addEventListener('input', function() { this.dataset.manual = this.value ? '1' : ''; });
+var _dEl = gid('inp-pricing-desc'); if (_dEl) _dEl.addEventListener('input', function() { this.dataset.manual = this.value ? '1' : ''; });
+
+// ─── LỌC MẪU HỢP ĐỒNG (native select) ────────────────────────────────────────
+var _allTpl = [];
+(function() {
+  var opts = document.querySelectorAll('#sel-template option');
+  for (var i = 0; i < opts.length; i++) {
+    var o = opts[i];
+    if (o.value) _allTpl.push({value:o.value, text:o.text, code:o.dataset.productCode||''});
+  }
+})();
+
+function filterTemplates(code) {
+  var sel = gid('sel-template'); if (!sel) return;
+  var ok = _allTpl.filter(function(t) { return !code || t.code === code; });
+  sel.disabled = false;
+  for (var i = 0; i < sel.options.length; i++) {
+    var o = sel.options[i];
+    o.style.display = (!o.value || ok.some(function(t) { return t.value === o.value; })) ? '' : 'none';
+  }
+  sel.value = ok.length ? ok[0].value : '';
+}
+function lockTemplate() {
+  var sel = gid('sel-template'); if (!sel) return;
+  sel.disabled = true; sel.value = '';
+  for (var i = 0; i < sel.options.length; i++) sel.options[i].style.display = '';
+}
+
+// ─── XỬ LÝ KHI CHỌN SẢN PHẨM ─────────────────────────────────────────────────
+function onProductChange() {
+  var sel = gid('sel-product');
+  if (!sel || !sel.value) { lockTemplate(); return; }
+  var opt  = sel.options[sel.selectedIndex];
+  var code = opt && opt.dataset.code || '';
+  // Điền giá
+  var fixed = PRICES[code];
+  if (fixed) {
+    var eP = gid('inp-price-pre'); if (eP) eP.value = fmtN(fixed.pre);
+    var eR = gid('inp-vat');       if (eR) eR.value = fixed.vat;
+    var eV = gid('inp-price-vat');
+    if (eV) { eV.value = fmtN(fixed.post); eV.dataset.fixed = fixed.post; }
+  }
+  // LỌC mẫu — KHÔNG set months (user tự nhập)
+  filterTemplates(code);
+  // Reset text tính toán
+  var wEl = gid('inp-amttext'),    dEl = gid('inp-pricing-desc');
+  if (wEl) { wEl.dataset.manual=''; wEl.value=''; }
+  if (dEl) { dEl.dataset.manual=''; dEl.value=''; }
+  recalcPrice();
+  // Cập nhật gợi ý số HĐ nếu đã chọn khách hàng
+  var custId = gid('sel-customer') && gid('sel-customer').value;
+  if (custId) setTimeout(function() { suggestContractNumber(custId); }, 50);
+}
+var _selProd = gid('sel-product');
+if (_selProd) _selProd.addEventListener('change', onProductChange);
+
+// ─── GỢI Ý SỐ HỢP ĐỒNG ────────────────────────────────────────────────────────
+var _customerUnitNames = [];  // danh sách tên đơn vị của KH đang chọn
+
+// ─── CHỌN CƠ SỞ ÁP DỤNG KHI CHỌN KHÁCH HÀNG ─────────────────────────────────
+// Prefill (sau lỗi validation): danh sách cơ sở đã chọn lần submit trước.
+var _prefillUnits = (function() {
+  var el = gid('inp-selected-units');
+  if (!el || !el.value) return null;
+  try { var a = JSON.parse(el.value); return Array.isArray(a) ? a : null; }
+  catch (e) { return null; }
+})();
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+                  .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Cập nhật: số cơ sở, danh sách tên, hidden field, nhãn đếm, tính lại giá
+function updateFacilitySelection() {
+  var boxes = document.querySelectorAll('.facility-cb');
+  var names = [];
+  boxes.forEach(function(cb) { if (cb.checked) names.push(cb.dataset.name); });
+
+  _customerUnitNames = names;
+  var unitsEl = gid('inp-units');
+  if (unitsEl) { unitsEl.value = names.length; unitsEl.readOnly = true; }
+  var hid = gid('inp-selected-units');
+  if (hid) hid.value = JSON.stringify(names);
+  var lbl = gid('facility-count-label');
+  if (lbl) lbl.textContent = '— đã chọn ' + names.length + '/' + boxes.length + ' cơ sở';
+  recalcPrice();
+}
+
+function renderFacilities(facilities) {
+  var wrap = gid('facility-wrap');
+  var list = gid('facility-list');
+  if (!wrap || !list) return;
+
+  if (!facilities || !facilities.length) {
+    // Không có cơ sở → ẩn checklist, cho phép nhập tay số cơ sở (fallback)
+    wrap.style.display = 'none';
+    list.innerHTML = '';
+    var u = gid('inp-units'); if (u) u.readOnly = false;
+    return;
+  }
+
+  var html = '';
+  facilities.forEach(function(f, i) {
+    // Nếu có prefill → tích theo prefill; ngược lại theo mặc định của cơ sở
+    var checked = _prefillUnits ? (_prefillUnits.indexOf(f.name) >= 0) : !!f.checked;
+    html += '<label class="d-flex align-items-center gap-2" '
+          + 'style="font-size:.8rem;padding:3px 4px;cursor:pointer;border-radius:4px;">'
+          + '<input type="checkbox" class="facility-cb" data-name="' + escapeHtml(f.name) + '"'
+          + (checked ? ' checked' : '') + '>'
+          + '<span style="flex:1;">' + escapeHtml(f.name) + '</span>'
+          + '<span class="badge bg-light text-muted" style="font-weight:400;">'
+          + escapeHtml(f.type || '') + '</span>'
+          + '</label>';
+  });
+  list.innerHTML = html;
+  wrap.style.display = '';
+
+  document.querySelectorAll('.facility-cb').forEach(function(cb) {
+    cb.addEventListener('change', updateFacilitySelection);
+  });
+  _prefillUnits = null;        // chỉ áp dụng prefill cho lần render đầu
+  updateFacilitySelection();
+}
+
+function fetchCustomerUnits(customerId) {
+  if (!customerId) return;
+  fetch('/contracts/customer-units?customer_id=' + customerId)
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d && d.facilities) {
+        renderFacilities(d.facilities);
+      } else if (d && d.total_units) {
+        // Fallback nếu API cũ: chỉ điền số
+        var unitsEl = gid('inp-units');
+        if (unitsEl) unitsEl.value = d.total_units;
+        _customerUnitNames = d.unit_names || [];
+        recalcPrice();
+      }
+    })
+    .catch(function(err) { console.warn('customer-units lỗi:', err); });
+}
+
+// Nút "Chọn tất cả" / "Bỏ chọn"
+(function() {
+  var allEl = gid('facility-check-all'), noneEl = gid('facility-uncheck-all');
+  function setAll(state, ev) {
+    ev.preventDefault();
+    document.querySelectorAll('.facility-cb').forEach(function(cb) { cb.checked = state; });
+    updateFacilitySelection();
+  }
+  if (allEl)  allEl.addEventListener('click',  function(e) { setAll(true,  e); });
+  if (noneEl) noneEl.addEventListener('click', function(e) { setAll(false, e); });
+})();
+
+function updatePricingDesc() {
+  var priceEl = gid('inp-price-pre');
+  if (priceEl && priceEl.value) recalcPrice();
+}
+
+function suggestContractNumber(customerId) {
+  if (!customerId) return;
+  var numEl = gid('inp-contract-number'); if (!numEl) return;
+  // Không ghi đè nếu user đã nhập tay
+  if (numEl.value && !numEl.dataset.autoFilled) return;
+  var selProd = gid('sel-product');
+  var code = (selProd && selProd.value && selProd.options[selProd.selectedIndex])
+    ? (selProd.options[selProd.selectedIndex].dataset.code || '') : '';
+  var type = code.indexOf('HSSK') >= 0 ? 'HSSK' : 'YTCS';
+  fetch('/contracts/suggest-number?customer_id=' + customerId + '&contract_type=' + type)
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d && d.number) {
+        numEl.value = d.number;
+        numEl.dataset.autoFilled = '1';
+        var h = gid('contract-number-hint');
+        if (h) { h.style.display = 'block'; h.textContent = 'Gợi ý — có thể sửa tay'; }
+      }
+    })
+    .catch(function(err) { console.warn('suggest-number lỗi:', err); });
+}
+
+var _numInput = gid('inp-contract-number');
+if (_numInput) _numInput.addEventListener('input', function() {
+  delete this.dataset.autoFilled;
+  var h = gid('contract-number-hint'); if (h) h.style.display = 'none';
+});
+
+// Nếu user sửa tay địa điểm → không ghi đè lại
+var _locInput = gid('inp-sign-location');
+if (_locInput) _locInput.addEventListener('input', function() {
+  if (this.value && !this.dataset.autoFilled) this.dataset.manualLoc = '1';
+  else if (!this.value) { delete this.dataset.manualLoc; delete this.dataset.autoFilled; }
+});
+
+// KHI CHỌN KHÁCH HÀNG → gợi ý số HĐ + điền địa điểm ký + lấy số đơn vị
+var _selCust = gid('sel-customer');
+if (_selCust) _selCust.addEventListener('change', function() {
+  if (this.value) {
+    suggestContractNumber(this.value);
+    autoFillSignLocation(this);
+    fetchCustomerUnits(this.value);
+  }
+});
+
+function autoFillSignLocation(selectEl) {
+  var locEl = gid('inp-sign-location');
+  if (!locEl || locEl.dataset.manualLoc) return;  // đã nhập tay → không ghi đè
+  var opt = selectEl.options[selectEl.selectedIndex];
+  if (!opt || !opt.value) return;
+  var legalName = opt.dataset.name || '';
+  if (legalName) {
+    // Hiển thị tên đơn vị, chữ đầu lowercase: "Trạm y tế xã Phước An"
+    locEl.value = legalName.charAt(0).toLowerCase() + legalName.slice(1);
+    locEl.dataset.autoFilled = '1';
+  }
+}
+
+// ─── LỌC NHANH KHÁCH HÀNG THEO TÊN/MÃ ────────────────────────────────────────
+(function() {
+  var filterEl = gid('inp-cust-filter');
+  var selEl    = gid('sel-customer');
+  if (!filterEl || !selEl) return;
+
+  // Normalize tiếng Việt: bỏ dấu để so sánh không phân biệt dấu
+  // "Đồng Tâm" → "dong tam", "dong tam" → "dong tam" (đều khớp)
+  function normalize(s) {
+    if (!s) return '';
+    // Chuyển Đ/đ trước (không qua NFD được)
+    s = s.replace(/Đ/g, 'D').replace(/đ/g, 'd');
+    // NFD → loại combining marks → bỏ dấu
+    if (String.prototype.normalize) {
+      s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    }
+    return s.toLowerCase();
+  }
+
+  // Lưu toàn bộ options gốc (trừ placeholder option đầu tiên)
+  var _allOpts = Array.from(selEl.options);
+
+  filterEl.addEventListener('input', function() {
+    var kw = normalize(this.value.trim());
+    var currentVal = selEl.value;
+
+    // Xóa tất cả options trừ placeholder
+    while (selEl.options.length > 1) selEl.remove(1);
+
+    _allOpts.forEach(function(opt) {
+      if (!opt.value) return; // skip placeholder
+      var searchText = normalize(opt.dataset.search || opt.text);
+      if (!kw || searchText.includes(kw)) {
+        selEl.add(opt.cloneNode(true));
+      }
+    });
+
+    // Khôi phục giá trị đã chọn nếu vẫn còn trong danh sách
+    if (currentVal) {
+      for (var i = 0; i < selEl.options.length; i++) {
+        if (selEl.options[i].value === currentVal) { selEl.value = currentVal; break; }
+      }
+    }
+
+    // Tự động chọn nếu chỉ còn 1 kết quả thực
+    var realOpts = Array.from(selEl.options).filter(function(o) { return o.value; });
+    if (kw && realOpts.length === 1 && !selEl.value) {
+      selEl.value = realOpts[0].value;
+      selEl.dispatchEvent(new Event('change'));
+    }
+  });
+
+  // Khi chọn từ select → clear filter để thấy full list
+  selEl.addEventListener('change', function() {
+    if (this.value && filterEl.value) {
+      filterEl.value = '';
+      filterEl.dispatchEvent(new Event('input'));
+    }
+  });
+})();
+// Flatpickr khởi tạo trong DOMContentLoaded của base.html (chạy trước handler này)
+// Dùng onClose + setDate() theo flatpickr #1551 để bắt cả click lịch + gõ tay
+// ─── NGÀY KÝ → TỰ ĐIỀN NGÀY HIỆU LỰC ────────────────────────────────────────
+function onSignDateChange() {
+  var signEl = gid('inp-sign');
+  var startEl = gid('inp-start');
+  if (!signEl || !signEl.value || !startEl) return;
+  if (startEl.value && startEl.dataset.manualStart) return;
+  if (startEl._flatpickr) {
+    startEl._flatpickr.setDate(signEl.value, true);
+  } else {
+    startEl.value = signEl.value;
+    calcEndDate();
+  }
+}
+
+// ─── CẢNH BÁO NGÀY KHÔNG HỢP LỆ ─────────────────────────────────────────────
+function checkDateWarnings() {
+  var warnings = [];
+  function toD(id) {
+    var el = gid(id); var v = el && el.value;
+    return v ? new Date(v + 'T00:00:00') : null;
+  }
+  function fmt(id) { var el = gid(id); return el && el.value || '?'; }
+  var dSign  = toD('inp-sign');
+  var dStart = toD('inp-start');
+  var dAcc   = toD('inp-acceptance');
+  var dLiq   = toD('inp-liquidation');
+  var dEnd   = toD('inp-end');
+
+  if (dAcc  && dStart && dAcc  < dStart) warnings.push('⚠ Ngày nghiệm thu (' + fmt('inp-acceptance')  + ') sớm hơn ngày bắt đầu (' + fmt('inp-start') + ')');
+  if (dLiq  && dEnd   && dLiq  < dEnd)   warnings.push('⚠ Ngày thanh lý ('   + fmt('inp-liquidation') + ') sớm hơn ngày kết thúc (' + fmt('inp-end')   + ')');
+  if (dLiq  && dAcc   && dLiq  < dAcc)   warnings.push('⚠ Ngày thanh lý ('   + fmt('inp-liquidation') + ') sớm hơn ngày nghiệm thu (' + fmt('inp-acceptance') + ')');
+  if (dSign && dStart && dSign  > dStart) warnings.push('⚠ Ngày ký ('        + fmt('inp-sign')        + ') muộn hơn ngày hiệu lực ('  + fmt('inp-start')      + ')');
+
+  var warnEl = gid('date-warnings');
+  var wrapEl = gid('date-warnings-wrap');
+  if (!warnEl) return;
+  if (warnings.length) {
+    warnEl.innerHTML = warnings.join('<br>');
+    if (wrapEl) wrapEl.style.display = 'block';
+  } else {
+    if (wrapEl) wrapEl.style.display = 'none';
+    warnEl.innerHTML = '';
+  }
+}
+
+// Đánh dấu khi user tự sửa ngày hiệu lực
+var _startInputEl = gid('inp-start');
+if (_startInputEl) _startInputEl.addEventListener('change', function() {
+  this.dataset.manualStart = this.value ? '1' : '';
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+
+  // Hook Flatpickr trên inp-sign (ngày ký) → tự điền ngày hiệu lực
+  var signEl2 = gid('inp-sign');
+  if (signEl2 && signEl2._flatpickr) {
+    var fpSign = signEl2._flatpickr;
+    if (Array.isArray(fpSign.config.onChange))
+      fpSign.config.onChange.push(function() { onSignDateChange(); });
+    if (Array.isArray(fpSign.config.onClose))
+      fpSign.config.onClose.push(function(s, str, inst) {
+        var v = inst.altInput && inst.altInput.value;
+        if (v) inst.setDate(v, true, inst.config.altFormat);
+      });
+  } else if (signEl2) {
+    signEl2.addEventListener('change', onSignDateChange);
+  }
+
+  // Hook Flatpickr trên inp-start
+  var startEl = gid('inp-start');
+  if (startEl && startEl._flatpickr) {
+    var fp = startEl._flatpickr;
+    // Calendar pick: onChange fires → calcEndDate đọc startEl.value (đã được fp set)
+    if (Array.isArray(fp.config.onChange)) {
+      fp.config.onChange.push(function() { calcEndDate(); });
+    }
+    // Manual type: onClose → setDate(altInput.value) → triggers onChange → calcEndDate
+    if (Array.isArray(fp.config.onClose)) {
+      fp.config.onClose.push(function(sel, str, inst) {
+        var v = inst.altInput && inst.altInput.value;
+        if (v) inst.setDate(v, true, inst.config.altFormat);
+      });
+    }
+    // Nếu đã có giá trị khi load (prefill)
+    if (startEl.value) calcEndDate();
+  } else if (startEl) {
+    startEl.addEventListener('change', calcEndDate);
+  }
+
+  // Hook inp-acceptance và inp-liquidation cho cảnh báo
+  ['inp-acceptance', 'inp-liquidation'].forEach(function(fid) {
+    var fel = gid(fid);
+    if (fel && fel._flatpickr) {
+      if (Array.isArray(fel._flatpickr.config.onClose))
+        fel._flatpickr.config.onClose.push(function(s, str, inst) {
+          var v = inst.altInput && inst.altInput.value;
+          if (v) inst.setDate(v, true, inst.config.altFormat);
+        });
+    }
+  });
+
+  // Init trạng thái ban đầu
+  var sp = gid('sel-product');
+  if (sp && sp.value) {
+    onProductChange();
+  } else {
+    lockTemplate();
+  }
+  var sc = gid('sel-customer');
+  if (sc && sc.value) {
+    suggestContractNumber(sc.value);
+    fetchCustomerUnits(sc.value);
+    if (!gid('inp-sign-location') || !gid('inp-sign-location').value) {
+      autoFillSignLocation(sc);
+    }
+  }
+  if (gid('inp-price-pre') && gid('inp-price-pre').value) recalcPrice();
+});
+</script>
+{% endblock %}

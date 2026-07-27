@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb" style="font-size:.82rem;">
+    <li class="breadcrumb-item"><a href="/batch" class="text-decoration-none">Sinh hàng loạt</a></li>
+    <li class="breadcrumb-item active">Kết quả</li>
+  </ol>
+</nav>
+
+{% set total = succeeded + failed %}
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body px-4 py-3">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+      <div>
+        <h5 class="fw-bold mb-1">
+          {% if succeeded > 0 and failed == 0 %}
+            <i class="bi bi-check-circle-fill text-success me-2"></i>Hoàn thành
+          {% elif succeeded > 0 %}
+            <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>Hoàn thành một phần
+          {% else %}
+            <i class="bi bi-x-circle-fill text-danger me-2"></i>Thất bại
+          {% endif %}
+        </h5>
+        <div class="text-muted" style="font-size:.85rem;">Job ID: <code>{{ job_id }}</code></div>
+      </div>
+      <div class="d-flex gap-3 text-center">
+        <div><div class="fw-bold fs-3 text-success">{{ succeeded }}</div><div class="text-muted small">Thành công</div></div>
+        <div><div class="fw-bold fs-3 {% if failed > 0 %}text-danger{% else %}text-muted{% endif %}">{{ failed }}</div><div class="text-muted small">Thất bại</div></div>
+        <div><div class="fw-bold fs-3">{{ total }}</div><div class="text-muted small">Tổng</div></div>
+      </div>
+    </div>
+
+    {% if zip_path and zip_name %}
+    <hr class="my-3">
+    <div class="d-flex align-items-center gap-3">
+      <i class="bi bi-file-zip text-warning fs-2"></i>
+      <div>
+        <div class="fw-semibold">{{ zip_name }}</div>
+        <div class="text-muted small">Chứa {{ succeeded }} file .docx</div>
+      </div>
+      <a href="/batch/download/{{ zip_name }}" class="btn btn-success ms-auto">
+        <i class="bi bi-download me-2"></i>Tải xuống ZIP
+      </a>
+    </div>
+    {% elif succeeded > 0 %}
+    <div class="alert alert-warning mt-3 mb-0">
+      <i class="bi bi-exclamation-triangle me-2"></i>Không tìm thấy file ZIP. Có thể đã bị xoá.
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="d-flex gap-2 mb-3">
+  <a href="/batch" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Sinh lại
+  </a>
+  <a href="/contracts" class="btn btn-sm btn-outline-primary">
+    <i class="bi bi-journal-text me-1"></i>Xem danh sách hợp đồng
+  </a>
+</div>
+
+{% endblock %}

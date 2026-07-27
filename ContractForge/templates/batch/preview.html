@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% if errors %}
+<div class="alert alert-danger mb-3">
+  {% for e in errors %}{{ e }} {% endfor %}
+</div>
+{% endif %}
+
+<div class="page-intro">
+  <div>
+    <h5 class="mb-1">Sinh hợp đồng hàng loạt — Xem trước</h5>
+    <p>Kiểm tra số hợp đồng và các ngày tháng. Có thể chỉnh sửa trực tiếp trước khi sinh.</p>
+  </div>
+  <a href="/batch" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Quay lại
+  </a>
+</div>
+
+<!-- Step indicator -->
+<div class="d-flex align-items-center gap-2 mb-4" style="font-size:.83rem;">
+  <span class="badge bg-secondary rounded-pill px-3 py-2">1 Tham số chung</span>
+  <span class="text-muted">→</span>
+  <span class="badge bg-primary rounded-pill px-3 py-2">2 Xem trước</span>
+  <span class="text-muted">→</span>
+  <span class="badge bg-secondary rounded-pill px-3 py-2">3 Sinh hàng loạt</span>
+</div>
+
+<!-- Summary bar -->
+<div class="d-flex align-items-center justify-content-between mb-3 p-3 rounded"
+     style="background:var(--surface-strong);border:1px solid var(--surface-border);font-size:.84rem;">
+  <div class="d-flex align-items-center gap-3 flex-wrap">
+    <span><i class="bi bi-people me-1 text-success"></i><strong>{{ preview_rows|length }}</strong> khách hàng</span>
+    <span class="text-muted">|</span>
+    <span><i class="bi bi-calendar3 me-1 text-primary"></i>
+      Ngày ký: <strong>{{ sign_date or '—' }}</strong>
+    </span>
+    <span><i class="bi bi-clock me-1 text-warning"></i>
+      {{ month_count }} tháng
+    </span>
+  </div>
+  <div class="d-flex gap-2">
+    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAll(true)">Chọn tất cả</button>
+    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAll(false)">Bỏ hết</button>
+  </div>
+</div>
+
+<!-- Pass shared_params as hidden form context -->
+<form method="post" action="/batch" id="preview-form">
+  <!-- Shared params (from step 1) -->
+  {% for k, v in shared_params.items() %}
+    {% if k != 'customer_ids' %}
+  <input type="hidden" name="{{ k }}" value="{{ v }}">
+    {% endif %}
+  {% endfor %}
+
+  <!-- Preview table -->
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0" style="font-size:.83rem;">
+        <thead>
+          <tr>
+            <th class="px-3" style="width:36px;">
+              <input type="checkbox" id="chk-all-prev" class="form-check-input" checked>
+            </th>
+            <th>Khách hàng</th>
+            <th>Số hợp đồng</th>
+            <th>Ngày ký</th>
+            <th>Ngày HLực</th>
+            <th>Ngày KThúc</th>
+            <th>Nghiệm thu</th>
+            <th>Thanh lý</th>
+            <th style="width:60px;">Cơ sở</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in preview_rows %}
+          <tr class="prev-row" data-idx="{{ loop.index0 }}">
+            <td class="px-3">
+              <input type="checkbox" class="form-check-input chk-prev" checked
+                     data-idx="{{ loop.index0 }}">
+            </td>
+            <td class="fw-semibold" style="color:var(--heading);">
+              {{ row.customer_name }}
+            </td>
+            <td>
+              <input type="text" class="form-control form-control-sm"
+                     name="row_contract_number_{{ loop.index0 }}"
+                     value="{{ row.contract_number }}"
+                     style="min-width:220px;font-size:.78rem;">
+              <input type="hidden" name="row_customer_id_{{ loop.index0 }}" value="{{ row.customer_id }}">
+            </td>
+            <td>
+              <input type="date" class="form-control form-control-sm"
+                     name="row_sign_date_{{ loop.index0 }}"
+                     value="{{ row.sign_date }}" style="min-width:130px;">
+            </td>
+            <td>
+              <input type="date" class="form-control form-control-sm"
+                     name="row_start_date_{{ loop.index0 }}"
+                     value="{{ row.start_date }}" style="min-width:130px;">
+            </td>
+            <td>
+              <input type="date" class="form-control form-control-sm"
+                     name="row_end_date_{{ loop.index0 }}"
+                     value="{{ row.end_date }}" style="min-width:130px;">
+            </td>
+            <td>
+              <input type="date" class="form-control form-control-sm"
+                     name="row_acceptance_date_{{ loop.index0 }}"
+                     value="{{ row.acceptance_date }}" style="min-width:130px;">
+            </td>
+            <td>
+              <input type="date" class="form-control form-control-sm"
+                     name="row_liquidation_date_{{ loop.index0 }}"
+                     value="{{ row.liquidation_date }}" style="min-width:130px;">
+            </td>
+            <td class="text-center">
+              <input type="number" class="form-control form-control-sm text-center"
+                     name="row_unit_count_{{ loop.index0 }}"
+                     value="{{ row.unit_count }}" min="1" style="width:60px;">
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Hidden: row count -->
+  <input type="hidden" name="row_count" value="{{ preview_rows|length }}">
+
+  <!-- Submit bar -->
+  <div class="d-flex justify-content-between align-items-center p-3 rounded"
+       style="background:var(--surface-strong);border:1px solid var(--surface-border);">
+    <span id="confirm-count" class="text-muted" style="font-size:.83rem;"></span>
+    <button type="submit" class="btn btn-danger" id="btn-run">
+      <i class="bi bi-lightning-charge-fill me-2"></i>Sinh hợp đồng hàng loạt
+    </button>
+  </div>
+</form>
+
+<style>
+.prev-row.deselected td { opacity:.4; }
+.prev-row.deselected input { pointer-events:none; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+var totalRows = {{ preview_rows|length }};
+
+function selectAll(v) {
+  document.querySelectorAll('.chk-prev').forEach(function(c) { c.checked = v; toggleRow(c); });
+  document.getElementById('chk-all-prev').checked = v;
+  updateConfirm();
+}
+
+function toggleRow(chk) {
+  var row = chk.closest('.prev-row');
+  if (row) row.classList.toggle('deselected', !chk.checked);
+}
+
+document.getElementById('chk-all-prev').addEventListener('change', function() {
+  selectAll(this.checked);
+});
+
+document.querySelectorAll('.chk-prev').forEach(function(c) {
+  toggleRow(c);
+  c.addEventListener('change', function() { toggleRow(this); updateConfirm(); });
+});
+
+function updateConfirm() {
+  var n = document.querySelectorAll('.chk-prev:checked').length;
+  document.getElementById('confirm-count').textContent = 'Sẽ sinh ' + n + '/' + totalRows + ' hợp đồng';
+  document.getElementById('btn-run').disabled = n === 0;
+}
+updateConfirm();
+
+// Intercept form submit: remove deselected rows from submission
+document.getElementById('preview-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  // Disable inputs in deselected rows so they won't be submitted
+  document.querySelectorAll('.prev-row.deselected input').forEach(function(inp) {
+    inp.disabled = true;
+  });
+  // Add a hidden input listing selected row indices
+  var selected = [];
+  document.querySelectorAll('.chk-prev:checked').forEach(function(c) {
+    selected.push(c.dataset.idx);
+  });
+  var inp = document.createElement('input');
+  inp.type = 'hidden'; inp.name = 'selected_rows'; inp.value = selected.join(',');
+  this.appendChild(inp);
+  this.submit();
+});
+</script>
+{% endblock %}

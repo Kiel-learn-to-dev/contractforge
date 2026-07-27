@@ -1,0 +1,480 @@
+{% extends "base.html" %}
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb" style="font-size:.82rem;">
+    <li class="breadcrumb-item"><a href="/contracts" class="text-decoration-none">Hợp đồng</a></li>
+    {% if customer %}
+    <li class="breadcrumb-item"><a href="/customers/{{ customer.id }}" class="text-decoration-none">{{ customer.short_name or customer.legal_name }}</a></li>
+    {% endif %}
+    <li class="breadcrumb-item active">{{ c.contract_number }}</li>
+  </ol>
+</nav>
+
+{% if flash_msg %}
+<div class="alert alert-{{ flash_type }} alert-dismissible fade show mb-3">
+  <i class="bi bi-{% if flash_type=='success' %}check-circle{% elif flash_type=='danger' %}x-circle{% else %}exclamation-triangle{% endif %}-fill me-2"></i>
+  {{ flash_msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+{% set sl = status_labels.get(c.status.value, ('secondary','?')) %}
+
+<!-- Header -->
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body px-4 py-3">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+      <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <span class="badge bg-{{ sl[0] }}" style="font-size:.75rem;">{{ sl[1] }}</span>
+          {% if c.is_expiring_soon %}
+          <span class="badge bg-warning text-dark" style="font-size:.72rem;"><i class="bi bi-alarm me-1"></i>Sắp hết hạn</span>
+          {% endif %}
+          {% if c.signed_pdf_path %}
+          <span class="badge bg-success" style="font-size:.72rem;"><i class="bi bi-file-earmark-check me-1"></i>Đã có scan</span>
+          {% endif %}
+        </div>
+        <h4 class="fw-bold mb-0">{{ c.contract_number }}</h4>
+        {% if customer %}<div class="text-muted" style="font-size:.85rem;">{{ customer.legal_name }}</div>{% endif %}
+      </div>
+      <div class="d-flex gap-2 flex-wrap align-items-center">
+        <!-- Generate button -->
+        {% if c.template_id %}
+        <form method="post" action="/contracts/{{ c.id }}/generate">
+          <button type="submit" class="btn btn-sm btn-danger"
+            onclick="return confirm('Sinh file .docx? File cũ (nếu có) sẽ bị ghi đè.')">
+            <i class="bi bi-magic me-1"></i>Sinh file .docx
+          </button>
+        </form>
+        {% endif %}
+        {% if c.output_file_path %}
+        <a href="/contracts/{{ c.id }}/download" class="btn btn-sm btn-success">
+          <i class="bi bi-download me-1"></i>Tải về
+        </a>
+        {% endif %}
+        <!-- Sinh biểu mẫu 08A (Bảng xác định giá trị KLCV hoàn thành) -->
+        <a href="/contracts/{{ c.id }}/form-08a" class="btn btn-sm btn-outline-primary"
+           title="Sinh Mẫu số 08a — Bảng xác định giá trị khối lượng công việc hoàn thành">
+          <i class="bi bi-file-earmark-spreadsheet me-1"></i>Biểu mẫu 08A
+        </a>
+        <!-- Đổi trạng thái: toggle button only.
+              Menu được JS tạo và appendChild(body) — thoát backdrop-filter stacking context.
+              Pattern giống theme-picker trong base.html (đang hoạt động). -->
+         {% if allowed_next %}
+         {# Hidden POST forms #}
+         {% for ns in allowed_next %}
+         <form id="cf-sf-{{ ns }}-{{ c.id }}" method="post"
+               action="/contracts/{{ c.id }}/status" style="display:none;">
+           <input type="hidden" name="new_status" value="{{ ns }}">
+         </form>
+         {% endfor %}
+         <button type="button" class="btn btn-sm btn-outline-secondary"
+                 id="cf-st-btn-{{ c.id }}"
+                 aria-haspopup="true" aria-expanded="false">
+           <i class="bi bi-arrow-right-circle me-1"></i>Đổi trạng thái
+           <i class="bi bi-chevron-down ms-1" style="font-size:.7rem;"></i>
+         </button>
+         {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-8">
+
+    <!-- Thông tin cơ bản -->
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body px-4 py-3">
+        <div class="row g-0">
+          <div class="col-md-6 pe-md-4">
+            <h6 class="text-muted mb-3" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.5px;">Bên A — Khách hàng</h6>
+            {% macro ri(label,val) %}{% if val %}<div class="d-flex mb-2"><span class="text-muted me-2" style="min-width:90px;font-size:.8rem;">{{ label }}</span><span style="font-size:.85rem;">{{ val }}</span></div>{% endif %}{% endmacro %}
+            {{ ri("Tên đơn vị", customer.legal_name if customer else '—') }}
+            {{ ri("Địa chỉ", customer.full_address() if customer else '') }}
+            {{ ri("Đại diện", customer.representative_name if customer else '') }}
+            {{ ri("Chức vụ", customer.representative_title if customer else '') }}
+            {% if customer %}
+            <div class="mt-2">
+              <a href="/customers/{{ customer.id }}" class="btn btn-sm btn-outline-primary" style="font-size:.78rem;">
+                <i class="bi bi-person-lines-fill me-1"></i>Xem hồ sơ khách hàng
+              </a>
+            </div>
+            {% endif %}
+          </div>
+          <div class="col-md-6 ps-md-4 mt-3 mt-md-0">
+            <h6 class="text-muted mb-3" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.5px;">Thời hạn</h6>
+            {{ ri("Ngày ký", c.sign_date.strftime('%d/%m/%Y') if c.sign_date else '—') }}
+            {{ ri("Bắt đầu", c.start_date.strftime('%d/%m/%Y') if c.start_date else '—') }}
+            {{ ri("Kết thúc", c.end_date.strftime('%d/%m/%Y') if c.end_date else '—') }}
+            {{ ri("Số tháng", c.month_count|string if c.month_count else '') }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Giá trị -->
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-white border-bottom py-2 px-3">
+        <h6 class="mb-0 fw-semibold" style="font-size:.85rem;"><i class="bi bi-currency-dollar me-2 text-success"></i>Giá trị hợp đồng</h6>
+      </div>
+      <div class="card-body px-4 py-3">
+        <div class="row g-2" style="font-size:.85rem;">
+          {% macro gv(label,val) %}
+          <div class="col-md-6 d-flex justify-content-between border-bottom py-1">
+            <span class="text-muted">{{ label }}</span><span class="fw-semibold">{{ val or '—' }}</span>
+          </div>
+          {% endmacro %}
+          {% set fmt_amt = '{:,.0f}'.format(c.total_amount).replace(',','.') if c.total_amount else '—' %}
+          {{ gv("Số đơn vị", c.unit_count) }}
+          {{ gv("Số tháng", c.month_count) }}
+          {{ gv("Đơn giá chưa VAT", ('{:,.0f}'.format(c.unit_price_pre_vat).replace(',','.') + ' VNĐ') if c.unit_price_pre_vat else '—') }}
+          {{ gv("VAT", (c.vat_rate|string + '%') if c.vat_rate is not none else '—') }}
+          {{ gv("Đơn giá có VAT", ('{:,.0f}'.format(c.unit_price_vat).replace(',','.') + ' VNĐ') if c.unit_price_vat else '—') }}
+          {{ gv("Số lượng (qty)", c.quantity) }}
+          {% if c.selected_unit_names %}
+          <div class="col-12 mt-2">
+            <div class="text-muted mb-1" style="font-size:.78rem;">
+              <i class="bi bi-hospital me-1"></i>Cơ sở áp dụng ({{ c.selected_unit_names|length }}):
+            </div>
+            <div class="d-flex flex-wrap gap-1">
+              {% for nm in c.selected_unit_names %}
+              <span class="badge bg-light text-dark border" style="font-weight:400;font-size:.72rem;">{{ nm }}</span>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+          <div class="col-12 mt-2 p-2 rounded" style="background:#f0fdf4;">
+            <div class="d-flex justify-content-between">
+              <span class="fw-semibold">Tổng giá trị</span>
+              <span class="fw-bold text-success fs-5">{{ fmt_amt }} VNĐ</span>
+            </div>
+            {% if c.amount_text %}
+            <div class="text-muted" style="font-size:.78rem;"><em>{{ c.amount_text }}</em></div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /col-lg-8 -->
+
+  <!-- Sidebar -->
+  <div class="col-lg-4">
+
+    <!-- Card: Files hợp đồng (gộp .docx + scan PDF) -->
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body p-3">
+
+        <!-- ── File .docx sinh tự động ── -->
+        <h6 class="text-muted mb-2" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.5px;">
+          <i class="bi bi-file-earmark-word me-1"></i>File hợp đồng (.docx)
+        </h6>
+        {% if c.output_file_path %}
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <i class="bi bi-file-earmark-word text-primary fs-3"></i>
+          <div style="min-width:0;">
+            <div class="fw-semibold text-truncate" style="font-size:.83rem;" title="{{ c.output_file_name }}">{{ c.output_file_name }}</div>
+            <a href="/contracts/{{ c.id }}/download" class="small text-success"><i class="bi bi-download me-1"></i>Tải về</a>
+          </div>
+        </div>
+        {% else %}
+        <div class="text-muted text-center py-2" style="font-size:.82rem;">
+          <i class="bi bi-file-earmark-x d-block fs-3 mb-1 opacity-25"></i>Chưa có file — nhấn "Sinh file .docx"
+        </div>
+        {% endif %}
+        {% if template %}
+        <div style="font-size:.78rem;" class="text-muted mt-1">
+          <i class="bi bi-file-earmark-word me-1"></i>Mẫu:
+          <a href="/templates/{{ template.id }}" class="text-decoration-none">{{ template.name }}</a>
+        </div>
+        {% endif %}
+
+        <hr class="my-3">
+
+        <!-- ── Scan hợp đồng đã ký (PDF) ── -->
+        <h6 class="text-muted mb-2" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.5px;">
+          <i class="bi bi-file-earmark-check me-1"></i>Scan hợp đồng đã ký (PDF)
+        </h6>
+
+        {% if c.signed_pdf_path %}
+          {# ── Đã có scan — hiện info + nút xem + nút xóa ── #}
+          <div class="d-flex align-items-start gap-2 mb-2">
+            <i class="bi bi-file-earmark-pdf text-danger flex-shrink-0" style="font-size:1.6rem;margin-top:2px;"></i>
+            <div style="min-width:0;">
+              <div class="fw-semibold text-truncate" style="font-size:.83rem;" title="{{ c.signed_pdf_name }}">
+                {{ c.signed_pdf_name }}
+              </div>
+              {% if c.signed_pdf_uploaded_at %}
+              <div class="text-muted" style="font-size:.75rem;">
+                Upload: {{ c.signed_pdf_uploaded_at.strftime('%d/%m/%Y %H:%M') }}
+              </div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="d-flex gap-2">
+            <a href="/contracts/{{ c.id }}/signed-pdf"
+               target="_blank"
+               class="btn btn-sm btn-outline-danger flex-fill">
+              <i class="bi bi-eye me-1"></i>Xem PDF
+            </a>
+            <form method="post" action="/contracts/{{ c.id }}/delete-scan"
+                  onsubmit="return confirm('Xóa file scan này? Hành động không thể hoàn tác.')">
+              <button type="submit" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-trash"></i>
+              </button>
+            </form>
+          </div>
+
+        {% else %}
+          {# ── Chưa có scan — hiện form upload ── #}
+          <div class="text-muted text-center py-1 mb-2" style="font-size:.8rem;">
+            <i class="bi bi-file-earmark-arrow-up d-block opacity-25" style="font-size:1.6rem;"></i>
+            Chưa có file scan
+          </div>
+          <form method="post"
+                action="/contracts/{{ c.id }}/upload-scan"
+                enctype="multipart/form-data">
+            <div class="mb-2">
+              <input type="file"
+                     name="scan_file"
+                     accept=".pdf"
+                     required
+                     class="form-control form-control-sm"
+                     style="font-size:.8rem;">
+            </div>
+            <button type="submit" class="btn btn-sm btn-outline-primary w-100">
+              <i class="bi bi-upload me-1"></i>Upload scan PDF
+            </button>
+          </form>
+          <div class="text-muted mt-1" style="font-size:.73rem;">Chỉ PDF, tối đa 5 MB</div>
+        {% endif %}
+
+      </div>
+    </div><!-- /card files -->
+
+    <!-- Card: Hóa đơn & Ủy nhiệm chi -->
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body p-3">
+
+        <!-- ── Hóa đơn ── -->
+        <h6 class="text-muted mb-2" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.5px;">
+          <i class="bi bi-receipt me-1"></i>Hóa đơn
+        </h6>
+
+        {% if c.invoice_pdf_path %}
+          <div class="d-flex align-items-start gap-2 mb-1">
+            <i class="bi bi-file-earmark-pdf text-danger flex-shrink-0" style="font-size:1.6rem;margin-top:2px;"></i>
+            <div style="min-width:0;">
+              <div class="fw-semibold text-truncate" style="font-size:.83rem;" title="{{ c.invoice_pdf_name }}">
+                {{ c.invoice_pdf_name }}
+              </div>
+              {% if c.invoice_date %}
+              <div class="text-muted" style="font-size:.75rem;">Ngày xuất: {{ c.invoice_date.strftime('%d/%m/%Y') }}</div>
+              {% endif %}
+              {% if c.invoice_pdf_uploaded_at %}
+              <div class="text-muted" style="font-size:.73rem;">Upload: {{ c.invoice_pdf_uploaded_at.strftime('%d/%m/%Y %H:%M') }}</div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="d-flex gap-2 mb-1">
+            <a href="/contracts/{{ c.id }}/invoice-pdf" target="_blank"
+               class="btn btn-sm btn-outline-danger flex-fill">
+              <i class="bi bi-eye me-1"></i>Xem hóa đơn
+            </a>
+            <form method="post" action="/contracts/{{ c.id }}/delete-invoice"
+                  onsubmit="return confirm('Xóa file hóa đơn này? Hành động không thể hoàn tác.')">
+              <button type="submit" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-trash"></i>
+              </button>
+            </form>
+          </div>
+          {# Cho phép upload lại hóa đơn mới #}
+          <details class="mt-1">
+            <summary style="font-size:.75rem;cursor:pointer;color:#6c757d;">Thay hóa đơn mới...</summary>
+            <form method="post" action="/contracts/{{ c.id }}/upload-invoice"
+                  enctype="multipart/form-data" class="mt-2">
+              <div class="mb-2">
+                <label class="form-label" style="font-size:.75rem;">Ngày xuất hóa đơn</label>
+                <input type="date" name="invoice_date" class="form-control form-control-sm"
+                       value="{{ c.invoice_date.strftime('%Y-%m-%d') if c.invoice_date else '' }}">
+              </div>
+              <div class="mb-2">
+                <input type="file" name="invoice_file" accept=".pdf" required
+                       class="form-control form-control-sm" style="font-size:.8rem;">
+              </div>
+              <button type="submit" class="btn btn-sm btn-outline-primary w-100">
+                <i class="bi bi-upload me-1"></i>Upload hóa đơn mới
+              </button>
+            </form>
+          </details>
+        {% else %}
+          <div class="text-muted text-center py-1 mb-2" style="font-size:.8rem;">
+            <i class="bi bi-receipt d-block opacity-25" style="font-size:1.6rem;"></i>
+            Chưa có hóa đơn
+          </div>
+          <form method="post" action="/contracts/{{ c.id }}/upload-invoice"
+                enctype="multipart/form-data">
+            <div class="mb-2">
+              <label class="form-label" style="font-size:.75rem;">Ngày xuất hóa đơn</label>
+              <input type="date" name="invoice_date" class="form-control form-control-sm">
+            </div>
+            <div class="mb-2">
+              <input type="file" name="invoice_file" accept=".pdf" required
+                     class="form-control form-control-sm" style="font-size:.8rem;">
+            </div>
+            <button type="submit" class="btn btn-sm btn-outline-primary w-100">
+              <i class="bi bi-upload me-1"></i>Upload hóa đơn PDF
+            </button>
+          </form>
+          <div class="text-muted mt-1" style="font-size:.73rem;">Chỉ PDF, tối đa 5 MB</div>
+        {% endif %}
+
+        <hr class="my-3">
+
+        <!-- ── Ủy nhiệm chi ── -->
+        <h6 class="text-muted mb-2" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.5px;">
+          <i class="bi bi-bank me-1"></i>Ủy nhiệm chi
+        </h6>
+
+        {% if c.payment_slip_path %}
+          {% set slip_ext = c.payment_slip_name.rsplit('.',1)[-1].lower() if c.payment_slip_name else '' %}
+          <div class="d-flex align-items-start gap-2 mb-1">
+            <i class="bi bi-{% if slip_ext == 'pdf' %}file-earmark-pdf text-danger{% else %}file-earmark-image text-primary{% endif %} flex-shrink-0"
+               style="font-size:1.6rem;margin-top:2px;"></i>
+            <div style="min-width:0;">
+              <div class="fw-semibold text-truncate" style="font-size:.83rem;" title="{{ c.payment_slip_name }}">
+                {{ c.payment_slip_name }}
+              </div>
+              {% if c.payment_date %}
+              <div class="text-muted" style="font-size:.75rem;">Ngày TT: {{ c.payment_date.strftime('%d/%m/%Y') }}</div>
+              {% endif %}
+              {% if c.payment_slip_uploaded_at %}
+              <div class="text-muted" style="font-size:.73rem;">Upload: {{ c.payment_slip_uploaded_at.strftime('%d/%m/%Y %H:%M') }}</div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="d-flex gap-2 mb-1">
+            <a href="/contracts/{{ c.id }}/payment-slip" target="_blank"
+               class="btn btn-sm btn-outline-primary flex-fill">
+              <i class="bi bi-eye me-1"></i>Xem ủy nhiệm chi
+            </a>
+            <form method="post" action="/contracts/{{ c.id }}/delete-payment-slip"
+                  onsubmit="return confirm('Xóa file ủy nhiệm chi này? Hành động không thể hoàn tác.')">
+              <button type="submit" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-trash"></i>
+              </button>
+            </form>
+          </div>
+          <details class="mt-1">
+            <summary style="font-size:.75rem;cursor:pointer;color:#6c757d;">Thay ủy nhiệm chi mới...</summary>
+            <form method="post" action="/contracts/{{ c.id }}/upload-payment-slip"
+                  enctype="multipart/form-data" class="mt-2">
+              <div class="mb-2">
+                <label class="form-label" style="font-size:.75rem;">Ngày thanh toán</label>
+                <input type="date" name="payment_date" class="form-control form-control-sm"
+                       value="{{ c.payment_date.strftime('%Y-%m-%d') if c.payment_date else '' }}">
+              </div>
+              <div class="mb-2">
+                <input type="file" name="slip_file" accept=".pdf,.jpg,.jpeg,.png" required
+                       class="form-control form-control-sm" style="font-size:.8rem;">
+              </div>
+              <button type="submit" class="btn btn-sm btn-outline-primary w-100">
+                <i class="bi bi-upload me-1"></i>Upload ủy nhiệm chi mới
+              </button>
+            </form>
+          </details>
+        {% else %}
+          <div class="text-muted text-center py-1 mb-2" style="font-size:.8rem;">
+            <i class="bi bi-bank d-block opacity-25" style="font-size:1.6rem;"></i>
+            Chưa có ủy nhiệm chi
+          </div>
+          <form method="post" action="/contracts/{{ c.id }}/upload-payment-slip"
+                enctype="multipart/form-data">
+            <div class="mb-2">
+              <label class="form-label" style="font-size:.75rem;">Ngày thanh toán</label>
+              <input type="date" name="payment_date" class="form-control form-control-sm">
+            </div>
+            <div class="mb-2">
+              <input type="file" name="slip_file" accept=".pdf,.jpg,.jpeg,.png" required
+                     class="form-control form-control-sm" style="font-size:.8rem;">
+            </div>
+            <button type="submit" class="btn btn-sm btn-outline-primary w-100">
+              <i class="bi bi-upload me-1"></i>Upload ủy nhiệm chi
+            </button>
+          </form>
+          <div class="text-muted mt-1" style="font-size:.73rem;">PDF, JPG hoặc PNG — tối đa 5 MB</div>
+        {% endif %}
+
+      </div>
+    </div><!-- /card invoice & payment -->
+
+    <!-- Timeline -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white border-bottom py-2 px-3">
+        <h6 class="mb-0 fw-semibold" style="font-size:.82rem;"><i class="bi bi-clock-history me-1"></i>Lịch sử</h6>
+      </div>
+      <div class="card-body p-2" style="max-height:280px;overflow-y:auto;">
+        {% if events %}
+        {% for ev in events | reverse %}
+        <div class="d-flex gap-2 px-1 py-2 border-bottom" style="font-size:.78rem;">
+          {% if ev.event_type in ('scan_uploaded', 'invoice_uploaded', 'payment_slip_uploaded') %}
+          <i class="bi bi-circle-fill text-danger" style="font-size:.5rem;margin-top:5px;flex-shrink:0;"></i>
+          {% elif ev.event_type == 'created' %}
+          <i class="bi bi-circle-fill text-primary" style="font-size:.5rem;margin-top:5px;flex-shrink:0;"></i>
+          {% elif ev.event_type == 'generated' %}
+          <i class="bi bi-circle-fill text-success" style="font-size:.5rem;margin-top:5px;flex-shrink:0;"></i>
+          {% elif ev.event_type in ('invoice_deleted', 'payment_slip_deleted', 'scan_deleted') %}
+          <i class="bi bi-circle-fill text-warning" style="font-size:.5rem;margin-top:5px;flex-shrink:0;"></i>
+          {% else %}
+          <i class="bi bi-circle-fill text-secondary" style="font-size:.5rem;margin-top:5px;flex-shrink:0;"></i>
+          {% endif %}
+          <div>
+            <div class="fw-semibold">{{ ev.description[:80] }}</div>
+            <div class="text-muted">{{ ev.occurred_at.strftime('%d/%m/%Y %H:%M') if ev.occurred_at else '' }}</div>
+          </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="text-center text-muted py-3 small">Chưa có sự kiện</div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+
+
+{% block scripts %}
+{% if allowed_next %}
+<script>
+/* Status-change dropdown using window.CfPortalMenu (defined in base.html).
+   Portal pattern: menu appended to <body>, thoát stacking context của .card
+   ancestor có backdrop-filter + overflow:hidden. */
+document.addEventListener('DOMContentLoaded', function () {
+  var toggleBtn = document.getElementById('cf-st-btn-{{ c.id }}');
+  if (!toggleBtn || typeof window.CfPortalMenu !== 'function') return;
+
+  var items = [
+    {% for ns in allowed_next %}
+    {% set nsl = status_labels.get(ns, ('secondary', ns)) %}
+    {
+      label:      'Chuyển sang {{ nsl[1] }}',
+      badgeText:  '{{ nsl[1] }}',
+      badgeClass: 'bg-{{ nsl[0] }}',
+      onClick: (function (formId) {
+        return function () {
+          var form = document.getElementById(formId);
+          if (form) form.submit();
+        };
+      })('cf-sf-{{ ns }}-{{ c.id }}')
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ];
+
+  window.CfPortalMenu(toggleBtn, items, { minWidth: 220 });
+});
+</script>
+{% endif %}
+{% endblock %}

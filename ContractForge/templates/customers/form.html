@@ -1,0 +1,451 @@
+{% extends "base.html" %}
+{% block content %}
+
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb" style="font-size:0.82rem;">
+    <li class="breadcrumb-item"><a href="/customers" class="text-decoration-none">Khách hàng</a></li>
+    <li class="breadcrumb-item active">{{ form_title }}</li>
+  </ol>
+</nav>
+
+{% if errors %}
+<div class="alert alert-danger">
+  <i class="bi bi-x-circle-fill me-2"></i>
+  {% for e in errors %}{{ e }}{% endfor %}
+  <button class="alert-dismiss">×</button>
+</div>
+{% endif %}
+
+<div class="page-intro">
+  <div>
+    <h5 class="mb-1">{{ form_title }}</h5>
+    <p>Mẫu nhập liệu đã bỏ cấp huyện để phù hợp hệ thống chính quyền địa phương 2 cấp hiện hành.</p>
+  </div>
+</div>
+
+<form method="post" action="{{ action }}" novalidate>
+  <div class="d-flex gap-4 align-items-start">
+
+    <!-- CỘT TRÁI: tất cả các card form -->
+    <div class="flex-grow-1" style="min-width:0;">
+      <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <div>
+            <h6 class="mb-1 fw-semibold"><i class="bi bi-id-card me-2 text-danger"></i>Thông tin nhận diện</h6>
+            <div class="text-muted small">Tên pháp lý là dữ liệu gốc dùng khi render hợp đồng.</div>
+          </div>
+          <span class="badge text-bg-light">Mã tự sinh nếu để trống</span>
+        </div>
+        <div class="card-body">
+          <div class="grid-2">
+            <div class="col-md-3">
+              <label class="form-label">Mã KH</label>
+              <input type="text" name="code" class="form-control form-control-sm"
+                     value="{{ prefill.code if prefill else (customer.code if customer else next_code) }}"
+                     placeholder="{{ next_code }}">
+              <div class="form-text">Để trống để hệ thống cấp mã kế tiếp.</div>
+            </div>
+            <div class="col-md-9">
+              <label class="form-label">Tên pháp lý <span class="text-danger">*</span></label>
+              <input type="text" name="legal_name" class="form-control form-control-sm" required
+                     value="{{ prefill.legal_name if prefill else (customer.legal_name if customer else '') }}"
+                     placeholder="Tên đầy đủ dùng trong hợp đồng">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Tên ngắn</label>
+              <input type="text" name="short_name" class="form-control form-control-sm"
+                     value="{{ prefill.short_name if prefill else ((customer.short_name or '') if customer else '') }}"
+                     placeholder="Ví dụ: TYT Đại Phước">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Loại đơn vị</label>
+              <select name="customer_type" class="form-select form-select-sm" data-native-select="true">
+                {% set cur_type = prefill.customer_type if prefill else (customer.customer_type if customer else 'Trạm y tế') %}
+                {% for t in customer_types %}
+                <option value="{{ t }}" {% if cur_type == t %}selected{% endif %}>{{ t }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header">
+          <h6 class="mb-1 fw-semibold"><i class="bi bi-geo-alt me-2 text-primary"></i>Địa chỉ theo đơn vị hành chính mới</h6>
+        </div>
+        <div class="card-body">
+          <div class="grid-2">
+            <div class="col-12">
+              <label class="form-label">Địa chỉ chi tiết</label>
+              <input type="text" name="address" class="form-control form-control-sm"
+                     value="{{ prefill.address if prefill else ((customer.address or '') if customer else '') }}"
+                     placeholder="Số nhà, đường, ấp, khu phố…">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Tỉnh / Thành phố</label>
+              <select name="province" class="form-select form-select-sm" id="sel-province" data-native-select="true">
+                <option value="">— Chọn tỉnh / thành phố —</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Xã / Phường / Đặc khu</label>
+              <select name="ward" class="form-select form-select-sm" id="sel-ward" data-native-select="true">
+                <option value="">— Chọn xã / phường —</option>
+              </select>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header">
+          <h6 class="mb-1 fw-semibold"><i class="bi bi-person-vcard me-2 text-warning"></i>Pháp lý, liên hệ &amp; ngân hàng</h6>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Mã số thuế</label>
+              <input type="text" name="tax_code" class="form-control form-control-sm"
+                     value="{{ prefill.tax_code if prefill else ((customer.tax_code or '') if customer else '') }}">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Mã QHNS <span class="text-muted" style="font-size:10px;font-weight:400;">(Quan hệ ngân sách)</span></label>
+              <input type="text" name="budget_relation_code" class="form-control form-control-sm"
+                     value="{{ prefill.budget_relation_code if prefill else ((customer.budget_relation_code or '') if customer else '') }}"
+                     placeholder="VD: 1073573">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Mã cơ sở KCB BHYT</label>
+              <input type="text" name="kcb_code" class="form-control form-control-sm"
+                     value="{{ prefill.kcb_code if prefill else ((customer.kcb_code or '') if customer else '') }}"
+                     placeholder="VD: 7502345">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Số QĐ thành lập</label>
+              <input type="text" name="establishment_decision" class="form-control form-control-sm"
+                     value="{{ prefill.establishment_decision if prefill else ((customer.establishment_decision or '') if customer else '') }}"
+                     placeholder="VD: 1234/QĐ-UBND">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Ngày thành lập</label>
+              <input type="date" name="establishment_date" class="form-control form-control-sm"
+                     value="{{ (prefill.establishment_date.strftime('%Y-%m-%d') if prefill.establishment_date else '') if prefill else ((customer.establishment_date.strftime('%Y-%m-%d') if customer.establishment_date else '') if customer else '') }}">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Đại diện pháp lý</label>
+              <input type="text" name="representative_name" class="form-control form-control-sm"
+                     value="{{ prefill.representative_name if prefill else ((customer.representative_name or '') if customer else '') }}">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Giới tính đại diện</label>
+              <select name="representative_gender" class="form-select form-select-sm" data-native-select="true">
+                {% set _cur_gender = (prefill.representative_gender if prefill else (customer.representative_gender if customer else '')) or '' %}
+                <option value="" {% if not _cur_gender %}selected{% endif %}>(Chưa chọn)</option>
+                <option value="Nam" {% if _cur_gender == 'Nam' %}selected{% endif %}>Nam (Ông)</option>
+                <option value="Nữ" {% if _cur_gender == 'Nữ' %}selected{% endif %}>Nữ (Bà)</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Chức vụ</label>
+              <input type="text" name="representative_title" class="form-control form-control-sm"
+                     value="{{ prefill.representative_title if prefill else ((customer.representative_title or '') if customer else '') }}">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Đầu mối liên hệ</label>
+              <input type="text" name="contact_name" class="form-control form-control-sm"
+                     value="{{ prefill.contact_name if prefill else ((customer.contact_name or '') if customer else '') }}">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Điện thoại</label>
+              <input type="text" name="phone" class="form-control form-control-sm"
+                     value="{{ prefill.phone if prefill else ((customer.phone or '') if customer else '') }}">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Email</label>
+              <input type="email" name="email" class="form-control form-control-sm"
+                     value="{{ prefill.email if prefill else ((customer.email or '') if customer else '') }}">
+            </div>
+            <div class="col-12"><hr style="border-color:var(--c-border);margin:4px 0 0;"></div>
+            <div class="col-md-4">
+              <label class="form-label">Số tài khoản</label>
+              <input type="text" name="bank_account" class="form-control form-control-sm"
+                     value="{{ prefill.bank_account if prefill else ((customer.bank_account or '') if customer else '') }}">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Ngân hàng</label>
+              <input type="text" name="bank_name" class="form-control form-control-sm"
+                     value="{{ prefill.bank_name if prefill else ((customer.bank_name or '') if customer else '') }}">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Tên thụ hưởng</label>
+              <input type="text" name="beneficiary_name" class="form-control form-control-sm"
+                     value="{{ prefill.beneficiary_name if prefill else ((customer.beneficiary_name or '') if customer else '') }}">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Ghi chú</label>
+              <textarea name="notes" rows="3" class="form-control">{{ prefill.notes if prefill else ((customer.notes or '') if customer else '') }}</textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /cột trái -->
+
+    <!-- CỘT PHẢI: sidebar sticky -->
+    <div style="width:280px; flex-shrink:0; position:sticky; top:80px;">
+      <div class="card card-hero mb-3">
+        <div class="card-body">
+          <div class="metric-label">Kiểm tra trước khi lưu</div>
+          <div class="soft-list mt-3">
+            <div class="soft-item">
+              <strong>1.</strong> Tên pháp lý chính xác theo hồ sơ pháp nhân.
+            </div>
+            <div class="soft-item">
+              <strong>2.</strong> Địa chỉ chỉ dùng 2 cấp hành chính hiện hành.
+            </div>
+            <div class="soft-item">
+              <strong>3.</strong> Đại diện và chức vụ đủ để điền hợp đồng.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h6 class="mb-1 fw-semibold"><i class="bi bi-lightning-charge me-2 text-danger"></i>Thao tác</h6>
+        </div>
+        <div class="card-body d-grid gap-2">
+          <button type="submit" class="btn btn-danger">
+            <i class="bi bi-check2-circle me-2"></i>Lưu khách hàng
+          </button>
+          <a href="/customers" class="btn btn-outline">
+            <i class="bi bi-arrow-left me-2"></i>Quay lại danh sách
+          </a>
+        </div>
+      </div>
+    </div><!-- /cột phải -->
+
+  </div><!-- /flex container -->
+
+  <!-- ĐƠN VỊ CON — full width -->
+
+    <!-- ĐƠN VỊ CON -->
+    <div>
+      <div class="card mb-3" id="sub-units-section">
+        <div class="card-header">
+          <div>
+            <h6 class="mb-1 fw-semibold">
+              <i class="bi bi-diagram-3 me-2 text-warning"></i>Đơn vị con (điểm trạm)
+            </h6>
+            <div class="text-muted small">Quản lý điểm trạm và chọn cơ sở tính phí hợp đồng.</div>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <span id="unit-count-badge" class="badge bg-primary-subtle text-primary" style="font-size:.78rem;">
+              {% if customer %}{{ customer.total_units }}{% else %}{% set active_count = sub_units|selectattr('is_active')|list|length if sub_units else 0 %}{{ 1 + active_count }}{% endif %} cơ sở tính phí
+            </span>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="btn-add-unit">
+              <i class="bi bi-plus-lg me-1"></i>Thêm điểm trạm
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <!-- Trạm chính + checkbox tính phí -->
+          <label class="d-flex align-items-center gap-3 mb-3 p-2 rounded" style="background:rgba(var(--bs-primary-rgb),.06);font-size:.84rem;cursor:pointer;">
+            <input type="checkbox" name="bill_main_station" value="1"
+                   {% if customer and customer.bill_main_station %}checked{% elif not customer %}checked{% endif %}
+                   class="form-check-input flex-shrink-0" style="width:16px;height:16px;"
+                   id="chk-bill-main">
+            <div>
+              <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-hospital text-primary"></i>
+                <span class="fw-semibold text-primary">Trạm chính:</span>
+                <span id="main-unit-name" class="text-muted">
+                  {{ (customer.short_name or customer.legal_name) if customer else '(tên sẽ hiển thị sau khi nhập)' }}
+                </span>
+              </div>
+              <div class="text-muted" style="font-size:11px;margin-top:2px;">Bỏ tick nếu trạm chính chỉ đại diện ký hợp đồng, không sử dụng dịch vụ</div>
+            </div>
+          </label>
+
+          <!-- Sub-units list -->
+          <div id="sub-units-list">
+            {% for u in sub_units %}
+            <div class="sub-unit-row card mb-2 border-0 shadow-sm" data-idx="{{ loop.index0 }}">
+              <div class="card-body py-2 px-3">
+                <input type="hidden" name="sub_unit_id" value="{{ u.id }}">
+                <div class="row g-2 align-items-end">
+                  <div class="col-md-4">
+                    <label class="form-label">Tên điểm trạm <span class="text-danger">*</span></label>
+                    <input type="text" name="sub_unit_name" class="form-control form-control-sm sub-unit-name"
+                           value="{{ u.name }}" placeholder="VD: Điểm trạm Bàu Hàm 2" required>
+                  </div>
+                  <div class="col-md-2">
+                    <label class="form-label">Loại</label>
+                    <select name="sub_unit_type" class="form-select form-select-sm" data-native-select="true">
+                      {% for t in unit_types %}
+                      <option value="{{ t }}" {% if u.unit_type == t %}selected{% endif %}>{{ t }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label">Địa chỉ</label>
+                    <input type="text" name="sub_unit_address" class="form-control form-control-sm"
+                           value="{{ u.address or '' }}" placeholder="Địa chỉ điểm trạm">
+                  </div>
+                  <div class="col-md-2 d-flex flex-column gap-1 align-items-center justify-content-end" style="padding-bottom:2px;">
+                    <label class="form-label mb-0 text-center" style="font-size:10px;">Tính phí</label>
+                    <div class="d-flex align-items-center gap-2">
+                      <input type="checkbox" name="sub_unit_billing_{{ u.id }}" value="1"
+                             {% if u.include_in_billing %}checked{% endif %}
+                             class="form-check-input" style="width:16px;height:16px;"
+                             title="Tính điểm trạm này vào số cơ sở hợp đồng">
+                    </div>
+                  </div>
+                  <div class="col-md-1 d-flex align-items-end">
+                    <button type="button" class="btn btn-sm btn-outline-danger w-100 btn-remove-unit"
+                            title="Xóa điểm trạm này">
+                      <i class="bi bi-trash3"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+
+          <div id="no-units-msg" class="text-muted text-center py-3 small {% if sub_units %}d-none{% endif %}">
+            Chưa có điểm trạm. Nhấn <strong>Thêm điểm trạm</strong> để bắt đầu.
+          </div>
+        </div>
+      </div>
+    </div><!-- /sub-units outer -->
+
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+// ── Sub-units dynamic management ─────────────────────────────────────────────
+var UNIT_TYPES = {{ unit_types | tojson }};
+
+function getUnitRowTemplate() {
+  var idx = document.querySelectorAll('.sub-unit-row').length;
+  return `<div class="sub-unit-row card mb-2 border-0 shadow-sm" data-idx="${idx}">
+    <div class="card-body py-2 px-3">
+      <input type="hidden" name="sub_unit_id" value="">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+          <label class="form-label">Tên điểm trạm <span class="text-danger">*</span></label>
+          <input type="text" name="sub_unit_name" class="form-control form-control-sm sub-unit-name"
+                 value="" placeholder="VD: Điểm trạm Bàu Hàm 2">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Loại</label>
+          <select name="sub_unit_type" class="form-select form-select-sm" data-native-select="true">
+            ${UNIT_TYPES.map(t => `<option value="${t}">${t}</option>`).join('')}
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Địa chỉ</label>
+          <input type="text" name="sub_unit_address" class="form-control form-control-sm"
+                 value="" placeholder="Địa chỉ điểm trạm">
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+          <button type="button" class="btn btn-sm btn-outline-danger w-100 btn-remove-unit">
+            <i class="bi bi-trash3"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function updateUnitCount() {
+  var rows = document.querySelectorAll('.sub-unit-row');
+  var filled = Array.from(rows).filter(r => {
+    var inp = r.querySelector('.sub-unit-name');
+    return inp && inp.value.trim();
+  }).length;
+  var badge = document.getElementById('unit-count-badge');
+  if (badge) badge.textContent = (1 + filled) + ' cơ sở';
+  var noMsg = document.getElementById('no-units-msg');
+  if (noMsg) noMsg.classList.toggle('d-none', rows.length > 0);
+}
+
+function bindRemoveButtons() {
+  document.querySelectorAll('.btn-remove-unit').forEach(function(btn) {
+    btn.onclick = function() {
+      btn.closest('.sub-unit-row').remove();
+      updateUnitCount();
+    };
+  });
+}
+
+document.getElementById('btn-add-unit')?.addEventListener('click', function() {
+  var list = document.getElementById('sub-units-list');
+  list.insertAdjacentHTML('beforeend', getUnitRowTemplate());
+  bindRemoveButtons();
+  updateUnitCount();
+  list.lastElementChild.querySelector('input[name="sub_unit_name"]').focus();
+});
+
+// Update main-unit-name when legal_name changes
+document.querySelector('input[name="legal_name"]')?.addEventListener('input', function() {
+  var el = document.getElementById('main-unit-name');
+  var shortEl = document.querySelector('input[name="short_name"]');
+  if (el) el.textContent = (shortEl && shortEl.value.trim()) || this.value || '(chưa nhập)';
+});
+document.querySelector('input[name="short_name"]')?.addEventListener('input', function() {
+  var el = document.getElementById('main-unit-name');
+  var legalEl = document.querySelector('input[name="legal_name"]');
+  if (el) el.textContent = this.value.trim() || (legalEl && legalEl.value) || '(chưa nhập)';
+});
+
+document.querySelectorAll('.sub-unit-name').forEach(function(inp) {
+  inp.addEventListener('input', updateUnitCount);
+});
+bindRemoveButtons();
+updateUnitCount();
+
+(function() {
+  const INIT_PROVINCE = {{ ('"' + ((prefill.province if prefill else (customer.province if customer else '')) or '') + '"') | safe }};
+  const INIT_WARD     = {{ ('"' + ((prefill.ward     if prefill else (customer.ward     if customer else '')) or '') + '"') | safe }};
+
+  const selProv = document.getElementById('sel-province');
+  const selWard = document.getElementById('sel-ward');
+  if (!selProv || !selWard) return;
+
+  function populateWards(provinceName, selectedWard, data) {
+    selWard.innerHTML = '<option value="">— Chọn xã / phường —</option>';
+    if (!provinceName) return;
+    const provData = Object.values(data).find(p => p.ten === provinceName);
+    if (!provData) return;
+    const wards = [...provData.xa].sort((a,b) => a.ten.localeCompare(b.ten, 'vi'));
+    wards.forEach(w => {
+      const opt = document.createElement('option');
+      opt.value = w.ten;
+      opt.textContent = w.ten;
+      if (w.ten === selectedWard) opt.selected = true;
+      selWard.appendChild(opt);
+    });
+  }
+
+  fetch('/static/dia_chinh.json')
+    .then(r => r.json())
+    .then(data => {
+      const provList = Object.values(data).sort((a,b) => a.ten.localeCompare(b.ten, 'vi'));
+      provList.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.ten;
+        opt.textContent = p.ten;
+        if (p.ten === INIT_PROVINCE) opt.selected = true;
+        selProv.appendChild(opt);
+      });
+      if (INIT_PROVINCE) populateWards(INIT_PROVINCE, INIT_WARD, data);
+      selProv.addEventListener('change', function() {
+        populateWards(this.value, '', data);
+      });
+    });
+})();
+</script>
+{% endblock %}

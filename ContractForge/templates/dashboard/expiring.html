@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block content %}
+
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb" style="font-size:.82rem;">
+    <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">Dashboard</a></li>
+    <li class="breadcrumb-item active">Hợp đồng sắp hết hạn</li>
+  </ol>
+</nav>
+
+<!-- Filter days -->
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body py-2 px-3 d-flex align-items-center gap-3 flex-wrap">
+    <span class="text-muted flex-shrink-0" style="font-size:.82rem;">Hiển thị hợp đồng hết hạn trong:</span>
+    {% for d in [7, 14, 30, 60, 90] %}
+    <a href="/dashboard/expiring?days={{ d }}"
+       class="btn btn-sm {% if days==d %}btn-danger{% else %}btn-outline-secondary{% endif %}">
+      {{ d }} ngày
+    </a>
+    {% endfor %}
+    <a href="/dashboard/expiring/export?days={{ days }}"
+       class="btn btn-sm btn-outline-success ms-auto flex-shrink-0"
+       title="Tải danh sách sắp hết hạn ra Excel">
+      <i class="bi bi-download me-1"></i>Tải Excel
+    </a>
+  </div>
+</div>
+
+<!-- Summary badges -->
+<div class="d-flex gap-2 mb-3 flex-wrap">
+  {% set critical = contracts | selectattr('urgency','eq','critical') | list %}
+  {% set warning  = contracts | selectattr('urgency','eq','warning')  | list %}
+  {% set info     = contracts | selectattr('urgency','eq','info')     | list %}
+  <span class="urgency-pill urgency-pill-danger">
+    <i class="bi bi-exclamation-circle"></i>Khẩn cấp ≤7 ngày: {{ critical|length }}
+  </span>
+  <span class="urgency-pill urgency-pill-warning">
+    <i class="bi bi-exclamation-triangle"></i>Cảnh báo 8–14 ngày: {{ warning|length }}
+  </span>
+  <span class="urgency-pill urgency-pill-info">
+    <i class="bi bi-info-circle"></i>Chú ý 15–{{ days }} ngày: {{ info|length }}
+  </span>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-white border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
+    <h6 class="mb-0 fw-semibold" style="font-size:.88rem;">
+      <i class="bi bi-alarm me-2 text-danger"></i>
+      {{ contracts|length }} hợp đồng hết hạn trong {{ days }} ngày tới
+      <small class="text-muted fw-normal">(tính từ {{ today.strftime('%d/%m/%Y') }})</small>
+    </h6>
+    {% if contracts %}
+    <span class="text-muted" style="font-size:.75rem;">Sắp xếp theo ngày hết hạn ↑</span>
+    {% endif %}
+  </div>
+
+  {% if contracts %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0" style="font-size:.84rem;">
+      <thead style="background:#f9fafb;">
+        <tr>
+          <th class="px-3 py-2" style="width:170px;">Số hợp đồng</th>
+          <th class="py-2">Khách hàng</th>
+          <th class="py-2" style="width:105px;">Hết hạn</th>
+          <th class="py-2 text-center" style="width:90px;">Còn lại</th>
+          <th class="py-2" style="width:110px;">Trạng thái</th>
+          <th class="py-2" style="width:110px;">Giá trị</th>
+          <th class="py-2" style="width:80px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in contracts %}
+        <tr class="{% if item.urgency=='critical' %}table-danger{% elif item.urgency=='warning' %}table-warning{% endif %}">
+          <td class="px-3 fw-semibold">
+            <a href="/contracts/{{ item.contract_id }}" class="text-decoration-none" style="color:var(--heading);">
+              {{ item.contract_number }}
+            </a>
+          </td>
+          <td>
+            <a href="/customers/{{ item.customer_id }}" class="text-decoration-none" style="color:var(--heading);">
+              {{ item.customer_name }}
+            </a>
+          </td>
+          <td class="fw-semibold {% if item.urgency=='critical' %}text-danger{% endif %}">
+            {{ item.end_date.strftime('%d/%m/%Y') }}
+          </td>
+          <td class="text-center">
+            <span class="badge rounded-pill
+              {% if item.urgency=='critical' %}bg-danger
+              {% elif item.urgency=='warning' %}bg-warning text-dark
+              {% else %}bg-info text-dark{% endif %}"
+              style="font-size:.72rem;min-width:48px;">
+              {{ item.days_left }} ngày
+            </span>
+          </td>
+          <td>
+            {% set sl = {
+              'Active':('success','Hiệu lực'),
+              'Signed':('teal','Đã ký'),
+              'ExpiringSoon':('warning','Sắp hết hạn'),
+            }.get(item.status, ('secondary','?')) %}
+            <span class="badge bg-{{ sl[0] }}-subtle text-{{ sl[0] }}" style="font-size:.72rem;">{{ sl[1] }}</span>
+          </td>
+          <td class="text-muted" style="font-size:.78rem;">
+            {% if item.total_amount %}
+            {{ '{:,.0f}'.format(item.total_amount).replace(',','.') }}
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            <div class="d-flex gap-1 justify-content-end pe-2">
+              <a href="/contracts/{{ item.contract_id }}" class="btn btn-xs btn-outline-primary" title="Chi tiết">
+                <i class="bi bi-eye"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body text-center py-5 text-muted">
+    <i class="bi bi-calendar-check fs-2 d-block mb-2 opacity-25"></i>
+    <div>Không có hợp đồng nào hết hạn trong {{ days }} ngày tới</div>
+    <a href="/contracts" class="btn btn-sm btn-outline-secondary mt-2">Xem tất cả hợp đồng</a>
+  </div>
+  {% endif %}
+</div>
+
+<style>
+.btn-xs { padding:2px 8px; font-size:.75rem; }
+.bg-teal-subtle { background:#d1fae5; }
+.text-teal { color:#0d9488; }
+</style>
+{% endblock %}

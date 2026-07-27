@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% if flash_msg %}
+<div class="alert alert-{{ flash_type }} alert-dismissible fade show ">
+  <i class="bi bi-check-circle-fill "></i>{{ flash_msg }}
+  <button class="al-x">×</button>
+</div>
+{% endif %}
+{% if errors %}
+<div class="al al-d ">
+  <i class="bi bi-x-circle-fill "></i>{% for e in errors %}{{ e }} {% endfor %}
+  <button class="al-x">×</button>
+</div>
+{% endif %}
+
+<div class="pi">
+  <div>
+    <h5 class="">Sinh hợp đồng hàng loạt</h5>
+    <p>Chọn sản phẩm và mẫu → chọn khách hàng → xem trước và xác nhận.</p>
+  </div>
+  <a href="/batch/import" class="btn btn-sm btn-op">
+    <i class="bi bi-file-earmark-excel "></i>Import từ Excel
+  </a>
+</div>
+
+<div class="flex aic gap-2 " style="font-size:.83rem;">
+  <span class="bg bg-p">1 Tham số chung</span>
+  <span class="muted">→</span>
+  <span class="bg bg-gr">2 Xem trước</span>
+  <span class="muted">→</span>
+  <span class="bg bg-gr">3 Sinh hàng loạt</span>
+</div>
+
+<!-- Inject customer data as JSON — Python-normalized, no Jinja filter needed -->
+<script id="customers-json" type="application/json">
+{{ customers_json | safe }}
+</script>
+
+<form method="post" action="/batch/preview" id="batch-form">
+<div class="bento-grid">
+
+  <!-- LEFT: params -->
+  <div class="span-7">
+    <div class="card mb12">
+      <div class="card-h">
+        <h6 class=" fw-semibold"><i class="bi bi-sliders text-primary"></i>Tham số chung</h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="lbl">Sản phẩm <span class="text-danger">*</span></label>
+            <select name="product_id" id="sel-prod" class="fs fs-sm" required data-native-select="true">
+              <option value="">— Chọn sản phẩm —</option>
+              {% for p in products %}
+              <option value="{{ p.id }}" data-code="{{ p.code }}"
+                {% if prefill and prefill.get('product_id')==p.id|string %}selected{% endif %}>
+                {% if 'YTCS' in p.code %}Y tế cơ sở (YTCS)
+                {% elif 'HSSK' in p.code %}Hồ sơ sức khỏe (HSSK)
+                {% else %}{{ p.code }} — {{ p.name }}{% endif %}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="lbl">Mẫu hợp đồng <span class="text-danger">*</span></label>
+            <select name="template_id" id="sel-tpl" class="fs fs-sm" required data-native-select="true">
+              <option value="">— Chọn mẫu —</option>
+              {% for t in templates %}
+              <option value="{{ t.id }}" data-code="{{ t.code }}"
+                {% if prefill and prefill.get('template_id')==t.id|string %}selected{% endif %}>
+                {{ t.name }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="lbl">Ngày ký</label>
+            <input type="date" name="sign_date" id="inp-sign" class="fc fc-sm"
+                   value="{{ prefill.sign_date if prefill else '' }}">
+          </div>
+          <div class="col-md-4">
+            <label class="lbl">Ngày hiệu lực</label>
+            <input type="date" name="start_date" id="inp-start" class="fc fc-sm"
+                   value="{{ prefill.start_date if prefill else '' }}">
+          </div>
+          <div class="col-md-4">
+            <label class="lbl">Số tháng</label>
+            <input type="number" name="month_count" id="inp-months" class="fc fc-sm"
+                   value="{{ prefill.month_count if prefill else '' }}" min="1" placeholder="VD: 12">
+          </div>
+          <div class="col-md-4">
+            <label class="lbl">Đơn giá có VAT (VNĐ)</label>
+            <input type="text" name="unit_price_vat" class="fc fc-sm"
+                   value="{{ prefill.unit_price_vat if prefill else '' }}" placeholder="Ví dụ: 500000">
+          </div>
+          <div class="col-md-4">
+            <label class="lbl">Đại diện Bên B</label>
+            {% set _pbd = party_b_defaults() %}
+            <input type="text" name="party_b_representative" class="fc fc-sm"
+                   value="{{ prefill.party_b_representative if prefill else _pbd.representative }}">
+          </div>
+          <div class="col-md-4">
+            <label class="lbl">Số uỷ quyền</label>
+            <input type="text" name="party_b_authorization_number" class="fc fc-sm"
+                   value="{{ prefill.party_b_authorization_number if prefill else _pbd.authorization_number }}">
+          </div>
+          <div class="col-md-4">
+            <label class="lbl">Ngày uỷ quyền</label>
+            <input type="text" name="party_b_authorization_date" class="fc fc-sm"
+                   value="{{ prefill.party_b_authorization_date if prefill else _pbd.authorization_date }}">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: customer selection — rendered by JS from JSON -->
+  <div class="span-5">
+    <div class="card mb12" style="height:calc(100% - 1rem);">
+      <div class="card-h">
+        <h6 class=" fw-semibold"><i class="bi bi-people text-success"></i>Chọn khách hàng</h6>
+        <div class="flex aic g8">
+          <span id="sel-count" class="bg bg-g" style="font-size:.75rem;">0 đã chọn</span>
+          <button type="button" class="btn btn-xs btn-o" id="btn-select-all">Chọn tất cả</button>
+          <button type="button" class="btn btn-xs btn-o" id="btn-clear">Bỏ hết</button>
+        </div>
+      </div>
+      <div class="card-b" style="padding:0" style="overflow-y:auto;max-height:380px;">
+        <div class="p-2 ">
+          <input type="text" id="cust-search"
+                 class="form-control form-control-sm "
+                 placeholder="Tìm tên, mã KH..."
+                 autocomplete="off" spellcheck="false">
+        </div>
+        <div id="cust-list" style="padding-top:6px;">
+          <!-- Rendered by JS -->
+          <div class="text-center text-muted small">Đang tải...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /bento-grid -->
+
+<div class="flex jsb aic p-3 rounded"
+     style="background:var(--sur-2);border:1px solid var(--bd);">
+  <span class="muted" style="font-size:.83rem;">
+    Tiếp theo: xem trước số hợp đồng và ngày tháng của từng khách hàng
+  </span>
+  <button type="submit" class="btn btn-p" id="btn-preview">
+    <i class="bi bi-eye "></i>Xem trước <span id="btn-count"></span>
+  </button>
+</div>
+</form>
+
+<style>
+.btn-xs{padding:2px 8px;font-size:.75rem;}
+.form-label-sm{font-size:.78rem;font-weight:500;color:#4a5568;margin-bottom:3px;}
+.cust-item{display:flex;align-items:flex-start;gap:8px;padding:8px 12px;cursor:pointer;font-size:.83rem;border-bottom:1px solid rgba(0,0,0,.06);}
+.cust-item:hover{background:rgba(var(--bs-primary-rgb),.04);}
+.cust-item.checked-item{background:rgba(var(--bs-success-rgb),.06);}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  // 1. Load customer data from embedded JSON — no Jinja filter, no timing issues
+  var raw = document.getElementById('customers-json');
+  var ALL = [];
+  if (raw) {
+    try { ALL = JSON.parse(raw.textContent); } catch(e) { console.error('JSON parse error', e); }
+  }
+
+  // 2. Render list
+  var listEl = document.getElementById('cust-list');
+  function renderList(items) {
+    if (!listEl) return;
+    if (items.length === 0) {
+      listEl.innerHTML = '<div class="text-center text-muted small">Không tìm thấy khách hàng.</div>';
+      return;
+    }
+    var html = '';
+    items.forEach(function(c) {
+      var units = c.units > 1
+        ? '<span class="badge bg-primary-subtle text-primary " style="font-size:.68rem;">' + c.units + ' cơ sở</span>'
+        : '';
+      html += '<label class="cust-item" data-id="' + c.id + '">'
+        + '<input type="checkbox" name="customer_ids" value="' + c.id + '" class="form-check-input flex-shrink-0 chk-cust" style="cursor:pointer;">'
+        + '<span><span class="fw6">' + c.label + '</span>' + units
+        + '<br><small class="muted">' + c.code + '</small></span>'
+        + '</label>';
+    });
+    listEl.innerHTML = html;
+    // Re-bind checkbox change
+    listEl.querySelectorAll('.chk-cust').forEach(function(chk) {
+      chk.addEventListener('change', function() {
+        this.closest('.cust-item').classList.toggle('checked-item', this.checked);
+        updateCount();
+      });
+    });
+  }
+
+  // 3. Search — runs entirely in JS on the JSON array
+  var searchEl = document.getElementById('cust-search');
+  if (searchEl) {
+    searchEl.addEventListener('input', function() {
+      var q = this.value.toLowerCase().trim();
+      if (!q) { renderList(ALL); return; }
+      var filtered = ALL.filter(function(c) {
+        return c.search.indexOf(q) !== -1;
+      });
+      renderList(filtered);
+      updateCount();
+    });
+    searchEl.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') { this.value = ''; renderList(ALL); updateCount(); }
+    });
+  }
+
+  // 4. Select all / clear
+  document.getElementById('btn-select-all').addEventListener('click', function() {
+    listEl.querySelectorAll('.chk-cust:not([style*="display:none"])').forEach(function(c) {
+      c.checked = true;
+      c.closest('.cust-item').classList.add('checked-item');
+    });
+    updateCount();
+  });
+  document.getElementById('btn-clear').addEventListener('click', function() {
+    listEl.querySelectorAll('.chk-cust').forEach(function(c) {
+      c.checked = false;
+      c.closest('.cust-item').classList.remove('checked-item');
+    });
+    updateCount();
+  });
+
+  // 5. Count
+  function updateCount() {
+    var n = listEl ? listEl.querySelectorAll('.chk-cust:checked').length : 0;
+    var s = document.getElementById('sel-count');
+    var b = document.getElementById('btn-count');
+    if (s) s.textContent = n + ' đã chọn';
+    if (b) b.textContent = n > 0 ? '(' + n + ' KH)' : '';
+  }
+
+  // 6. Initial render
+  renderList(ALL);
+  updateCount();
+
+  // 7. Auto-fill start_date from sign_date
+  var signEl = document.getElementById('inp-sign');
+  if (signEl) signEl.addEventListener('change', function() {
+    var startEl = document.getElementById('inp-start');
+    if (startEl && !startEl.value) startEl.value = this.value;
+  });
+
+  // 8. Auto-fill price from product
+  var PRICES = {'SW-YTCS': 500000, 'SW-HSSK': 476182};
+  var prodEl = document.getElementById('sel-prod');
+  if (prodEl) prodEl.addEventListener('change', function() {
+    var opt = this.options[this.selectedIndex];
+    var code = opt ? (opt.dataset.code || '') : '';
+    var price = PRICES[code];
+    if (price) {
+      var priceEl = document.querySelector('input[name="unit_price_vat"]');
+      if (priceEl && !priceEl.value) priceEl.value = price;
+    }
+  });
+})();
+</script>
+{% endblock %}

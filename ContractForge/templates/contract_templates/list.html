@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% if flash_msg %}
+<div class="alert alert-{{ flash_type }} alert-dismissible fade show mb-3">
+  <i class="bi bi-{% if flash_type == 'success' %}check-circle{% else %}exclamation-triangle{% endif %}-fill me-2"></i>
+  {{ flash_msg }}
+  <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<!-- Toolbar -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div class="d-flex align-items-center gap-3">
+    <span class="text-muted" style="font-size:0.83rem;">
+      <strong>{{ total }}</strong> mẫu hợp đồng
+    </span>
+    <div class="form-check form-switch mb-0" style="font-size:0.82rem;">
+      <input class="form-check-input" type="checkbox" id="activeSwitch"
+             {% if not active_only %}checked{% endif %}
+             onchange="window.location='/templates?active_only=' + (this.checked ? 0 : 1)">
+      <label class="form-check-label text-muted" for="activeSwitch">Hiện tất cả</label>
+    </div>
+  </div>
+  <a href="/templates/new" class="btn btn-sm btn-danger">
+    <i class="bi bi-upload me-1"></i>Upload mẫu mới
+  </a>
+</div>
+
+{% if grouped %}
+  {% for contract_type, items in grouped.items() %}
+  <div class="mb-4">
+    <!-- Group header -->
+    <div class="d-flex align-items-center gap-2 mb-2">
+      <span class="badge px-3 py-2 rounded-pill"
+        style="font-size:0.78rem;background:
+          {% if contract_type == 'YTCS' %}#1a2238;color:#fff
+          {% elif contract_type == 'HSSK' %}#2a9d8f;color:#fff
+          {% elif contract_type == 'Phụ lục' %}#457b9d;color:#fff
+          {% elif contract_type == 'Nghiệm thu' %}#e9c46a;color:#333
+          {% elif contract_type == 'Thanh lý' %}#e76f51;color:#fff
+          {% else %}#6c757d;color:#fff{% endif %};">
+        {{ contract_type }}
+      </span>
+      <span class="text-muted" style="font-size:0.78rem;">{{ items | length }} mẫu</span>
+    </div>
+
+    <div class="row g-2">
+      {% for tpl in items %}
+      <div class="col-md-6 col-lg-4">
+        <div class="card border-0 shadow-sm h-100 {% if not tpl.is_active %}opacity-50{% endif %}">
+          <div class="card-body p-3">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <div>
+                <code class="text-muted" style="font-size:0.72rem;">{{ tpl.code }}</code>
+                {% if not tpl.is_active %}
+                <span class="badge bg-secondary ms-1" style="font-size:0.65rem;">Ngưng</span>
+                {% endif %}
+              </div>
+              <span class="badge {% if tpl.mode == 'placeholder' %}bg-success-subtle text-success{% else %}bg-warning-subtle text-warning{% endif %}"
+                style="font-size:0.68rem;">
+                {{ tpl.mode }}
+              </span>
+            </div>
+            <div class="fw-semibold mb-1" style="font-size:0.88rem;">{{ tpl.name }}</div>
+            {% if tpl.description %}
+            <div class="text-muted mb-2" style="font-size:0.78rem;">{{ tpl.description[:80] }}{% if tpl.description|length > 80 %}…{% endif %}</div>
+            {% endif %}
+
+            <!-- Placeholder stats -->
+            {% set total_ph = tpl.detected_placeholders | length %}
+            {% if total_ph > 0 %}
+            {% set fm = tpl.field_mapping %}
+            {% set mapped_ph = tpl.detected_placeholders | selectattr('__class__') | list | length %}
+            {# Count mapped #}
+            {% set ns = namespace(mapped=0) %}
+            {% for ph in tpl.detected_placeholders %}
+              {% if fm.get(ph, '') %}{% set ns.mapped = ns.mapped + 1 %}{% endif %}
+            {% endfor %}
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <div class="progress flex-grow-1" style="height:4px;">
+                <div class="progress-bar bg-success" style="width:{{ (ns.mapped / total_ph * 100)|int }}%"></div>
+              </div>
+              <small class="text-muted" style="font-size:0.72rem;white-space:nowrap;">
+                {{ ns.mapped }}/{{ total_ph }} mapped
+              </small>
+            </div>
+            {% else %}
+            <div class="text-muted" style="font-size:0.75rem;"><em>Chưa phân tích</em></div>
+            {% endif %}
+
+            <div class="d-flex gap-1 mt-2">
+              <a href="/templates/{{ tpl.id }}" class="btn btn-xs btn-outline-primary flex-fill">
+                <i class="bi bi-eye me-1"></i>Chi tiết
+              </a>
+              <a href="/templates/{{ tpl.id }}/edit" class="btn btn-xs btn-outline-secondary">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <a href="/templates/{{ tpl.id }}/download" class="btn btn-xs btn-outline-secondary" title="Tải file">
+                <i class="bi bi-download"></i>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+
+{% else %}
+<div class="card border-0 shadow-sm">
+  <div class="card-body text-center py-5 text-muted">
+    <i class="bi bi-file-earmark-word fs-2 d-block mb-2 opacity-25"></i>
+    Chưa có mẫu hợp đồng nào.
+    <br><a href="/templates/new" class="small">Upload mẫu đầu tiên</a>
+  </div>
+</div>
+{% endif %}
+
+<style>
+.btn-xs { padding: 2px 8px; font-size: 0.75rem; }
+</style>
+{% endblock %}
