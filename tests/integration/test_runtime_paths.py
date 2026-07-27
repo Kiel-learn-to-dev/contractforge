@@ -75,6 +75,64 @@ def test_legacy_data_used_when_present(monkeypatch, tmp_path):
         )
 
 
+def test_frozen_build_looks_beside_the_executable(monkeypatch, tmp_path):
+    """Bản .exe phải thấy thư mục data/ nằm cạnh nó.
+
+    PyInstaller giải nén mã nguồn vào %TEMP%, nên ``__file__`` không nói gì về
+    chỗ người dùng đặt file .exe. Bản trước tính thư mục data kiểu cũ từ
+    ``__file__``, nên bản đóng gói không bao giờ thấy dữ liệu đang có ngay bên
+    cạnh — nó âm thầm tạo CSDL trống trong LocalAppData và người dùng mở lên
+    thấy trắng trơn.
+    """
+    import sys
+
+    import app.paths as paths
+
+    install = tmp_path / "ProgramFiles" / "ContractForge"
+    install.mkdir(parents=True)
+    fake_exe = install / "ContractForge.exe"
+    fake_exe.write_bytes(b"MZ")
+
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "executable", str(fake_exe), raising=False)
+
+    assert paths._legacy_sibling_data() == install / "data"
+
+
+def test_frozen_build_finds_an_existing_database_beside_it(monkeypatch, tmp_path):
+    """Nâng cấp lên bản .exe không được làm mất dữ liệu đang dùng."""
+    import sys
+
+    import app.paths as paths
+
+    install = tmp_path / "app"
+    (install / "data").mkdir(parents=True)
+    (install / "data" / "contract_manager.db").write_bytes(b"sqlite")
+    fake_exe = install / "ContractForge.exe"
+    fake_exe.write_bytes(b"MZ")
+
+    fake_local = tmp_path / "Local"          # LocalAppData sạch, chưa có gì
+    fake_local.mkdir()
+    monkeypatch.setenv("LOCALAPPDATA", str(fake_local))
+    monkeypatch.delenv("CONTRACTFORGE_DATA_ROOT", raising=False)
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "executable", str(fake_exe), raising=False)
+    paths.cf_clear_data_root_override()
+
+    assert paths._resolve_data_root() == (install / "data").resolve()
+
+
+def test_source_checkout_still_uses_the_repo_data_dir(monkeypatch, tmp_path):
+    """Chạy từ mã nguồn thì hành vi cũ giữ nguyên."""
+    import sys
+
+    import app.paths as paths
+
+    monkeypatch.setattr(sys, "frozen", False, raising=False)
+
+    assert paths._legacy_sibling_data() == paths.BASE_DIR.parent / "data"
+
+
 def test_fresh_install_targets_user_data_default(monkeypatch, tmp_path):
     """A brand-new install resolves to the platform user-data dir."""
     import app.paths as paths

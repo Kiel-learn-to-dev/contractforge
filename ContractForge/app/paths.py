@@ -71,9 +71,29 @@ def _user_data_default() -> Path:
     return Path.home() / ".local" / "share" / "ContractForge"
 
 
+def _install_dir() -> Path:
+    """Thư mục cài đặt — nơi người dùng thấy ứng dụng nằm ở đó.
+
+    Chạy từ mã nguồn thì đó là thư mục chứa mã. Nhưng bản đóng gói bằng
+    PyInstaller giải nén mã nguồn vào một thư mục tạm (``sys._MEIPASS``), nên
+    ``__file__`` trỏ vào đâu đó trong ``%TEMP%`` — không liên quan gì tới chỗ
+    người dùng đặt file .exe. Khi đã đóng gói, thư mục cài đặt là nơi chứa
+    chính file thực thi.
+    """
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return BASE_DIR.parent
+
+
 def _legacy_sibling_data() -> Path:
-    """The old source-relative data location: <repo>/data."""
-    return BASE_DIR.parent / "data"
+    """Thư mục dữ liệu kiểu cũ, nằm cạnh ứng dụng: <thư mục cài đặt>/data.
+
+    Với bản đóng gói, phải tính từ file .exe chứ không phải từ mã nguồn đã giải
+    nén. Nếu không, bản .exe sẽ không bao giờ thấy thư mục ``data/`` đang có
+    ngay bên cạnh nó, âm thầm tạo một cơ sở dữ liệu trống trong LocalAppData —
+    người dùng mở lên thấy app trắng trơn và tưởng mất sạch dữ liệu.
+    """
+    return _install_dir() / "data"
 
 
 def _has_active_db(root: Path) -> bool:

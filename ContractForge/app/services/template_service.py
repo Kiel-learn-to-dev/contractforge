@@ -252,10 +252,19 @@ def toggle_active(db: Session, template_id: int) -> ContractTemplate:
 
 
 def _bundled_template_files():
-    """Discover optional local-only DOCX assets without assuming their names."""
+    """Tìm các mẫu DOCX cục bộ mà người dùng tự đặt vào assets/default_templates.
+
+    Bỏ qua file `sample_*.docx`: đó là mẫu hư cấu đi kèm mã nguồn, dùng làm bản
+    dự phòng cho biểu 08a khi cơ quan chưa có mẫu riêng — không phải mẫu hợp
+    đồng của người dùng. Nhập chúng vào danh mục sẽ nhét một mẫu giả vào giữa
+    danh sách mẫu thật của họ.
+    """
     from app.paths import ASSETS_DIR
 
-    return sorted((ASSETS_DIR / "default_templates").glob("*.docx"))
+    return sorted(
+        path for path in (ASSETS_DIR / "default_templates").glob("*.docx")
+        if not path.name.startswith("sample_")
+    )
 
 
 def _bundled_template_code(file_bytes: bytes) -> str:

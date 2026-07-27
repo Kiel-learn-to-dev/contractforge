@@ -88,6 +88,29 @@ def test_sample_is_used_when_no_private_template(db_engine, tmp_path):
     assert resolve_form_08a_template(assets) == sample
 
 
+def test_sample_is_not_imported_into_the_user_template_catalog(db_engine, db_session):
+    """Mẫu hư cấu không được chen vào danh sách mẫu thật của người dùng.
+
+    seed_from_project_files() quét assets/default_templates và nhập mọi .docx
+    tìm thấy. Khi thêm mẫu mẫu vào đó, nó lập tức xuất hiện trong danh mục mẫu
+    của người dùng như một mẫu hợp đồng thật.
+    """
+    from app.models.contract_template import ContractTemplate
+    from app.services.template_service import (
+        _bundled_template_files, seed_from_project_files,
+    )
+
+    discovered = [p.name for p in _bundled_template_files()]
+    assert not any(name.startswith("sample_") for name in discovered), (
+        f"mẫu mẫu bị nhặt vào danh mục: {discovered}"
+    )
+
+    seed_from_project_files(db_session)
+
+    names = [t.name for t in db_session.query(ContractTemplate).all()]
+    assert not any("sample" in n.lower() for n in names), names
+
+
 def test_form_08a_template_actually_exists(db_engine):
     """Đường dẫn app đang dùng phải trỏ tới một file có thật."""
     from app.paths import FORM_08A_TEMPLATE
