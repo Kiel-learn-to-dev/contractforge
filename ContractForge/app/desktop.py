@@ -189,6 +189,13 @@ def open_window(base_url: str, on_closed: Optional[Callable[[], None]] = None) -
 
     import webview
 
+    # pywebview mặc định ALLOW_DOWNLOADS=False: WebView2 nhận sự kiện tải file
+    # rồi HUỶ ngay, không báo lỗi, không hiện hộp thoại. Người dùng bấm "Tải về"
+    # và không có gì xảy ra cả — file .docx đã sinh xong nằm im trong data/, chỉ
+    # là không bao giờ ra tới máy họ. Toàn bộ giá trị của ứng dụng nằm ở chỗ lấy
+    # được file hợp đồng, nên bật cờ này là bắt buộc, không phải tuỳ chọn.
+    webview.settings["ALLOW_DOWNLOADS"] = True
+
     window = webview.create_window(
         WINDOW_TITLE,
         base_url,

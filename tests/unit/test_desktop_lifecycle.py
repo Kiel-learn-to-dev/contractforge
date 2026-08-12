@@ -175,3 +175,30 @@ def test_webview_availability_is_reported_not_assumed(db_engine):
     from app.desktop import webview_available
 
     assert isinstance(webview_available(), bool)
+
+
+def test_window_allows_downloads(db_engine, monkeypatch):
+    """Cửa sổ phải cho tải file về.
+
+    pywebview mặc định ALLOW_DOWNLOADS=False, và WebView2 huỷ lượt tải trong im
+    lặng — không lỗi, không hộp thoại, không log. Người dùng sinh xong hợp đồng,
+    bấm "Tải về", và không có gì xảy ra. Đây là toàn bộ mục đích của ứng dụng,
+    nên phải có test canh: mọi thứ khác xanh mà cờ này tắt thì bản đóng gói vô dụng.
+    """
+    if not pytest.importorskip("webview"):  # pragma: no cover
+        return
+    import webview
+
+    from app.desktop import open_window
+
+    monkeypatch.setitem(webview.settings, "ALLOW_DOWNLOADS", False)
+    monkeypatch.setattr(webview, "create_window",
+                        lambda *a, **k: type("W", (), {"events": None})())
+    started: list[bool] = []
+    monkeypatch.setattr(webview, "start", lambda **k: started.append(True))
+
+    assert open_window(BASE) == "webview"
+    assert started, "webview.start() phải được gọi"
+    assert webview.settings["ALLOW_DOWNLOADS"] is True, (
+        "tắt cờ này thì nút 'Tải về' im lặng không làm gì cả"
+    )
