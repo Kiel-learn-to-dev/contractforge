@@ -25,6 +25,7 @@ from app.database import SessionLocal
 from app.paths import TEMPLATES_DIR, CUSTOMER_DOCS_DIR
 from app.models.customer_unit import UNIT_TYPES
 from app.models.customer_document import CustomerDocument
+from app.services import lifecycle
 from app.services.customer_service import (
     CustomerFilters, list_customers, get_customer,
     create_customer, update_customer, toggle_active,
@@ -1462,6 +1463,107 @@ def restore(customer_id: int):
         db.close()
     name = c.short_name or c.legal_name
     return _flash_redirect("/settings", f"Đã khôi phục '{name}'", "success")
+
+
+# ---------------------------------------------------------------------------
+# BỘ HỒ SƠ ĐẤU NỐI
+# ---------------------------------------------------------------------------
+
+@router.get("/{customer_id}/dossier", response_class=HTMLResponse)
+def dossier_view(request: Request, customer_id: int):
+    """Màn hình xác nhận: ô nào đã có file, ô nào còn thiếu, trước khi tạo."""
+    from app.services import dossier_service as ds
+
+    db = SessionLocal()
+    try:
+        customer = get_customer(db, customer_id)
+        if not customer or customer.is_deleted:
+            raise HTTPException(404, "Không tìm thấy khách hàng")
+        plan = ds.build_plan(db, customer)
+        # Materialize nhãn trạng thái trước khi đóng session — template đọc sau.
+        contract_rows = [
+            {"number": c.contract_number,
+             "product": c.product.name if c.product else "",
+             "status": lifecycle.status_label(c.status),
+             "has_scan": bool(c.signed_pdf_path)}
+            for c in plan.contracts
+        ]
+    finally:
+        db.close()
+
+    return templates.TemplateResponse(request, "customers/dossier.html", {
+        "page_title": "Khách hàng",
+        "customer": customer,
+        "plan": plan,
+        "contract_rows": contract_rows,
+        "dest_dir": str(plan.dest_dir),
+        "dir_exists": plan.dest_dir.exists(),
+        "is_stale": ds.is_stale(plan),
+        **_extract_flash(request),
+    })
+
+
+@router.post("/{customer_id}/dossier/build")
+def dossier_build(customer_id: int, open_after: str = Form("")):
+    """Tạo (hoặc tạo lại) thư mục hồ sơ, rồi mở Explorer nếu được yêu cầu."""
+    from app.services import dossier_service as ds
+
+    back = f"/customers/{customer_id}/dossier"
+
+    db = SessionLocal()
+    try:
+        customer = get_customer(db, customer_id)
+        if not customer or customer.is_deleted:
+            raise HTTPException(404, "Không tìm thấy khách hàng")
+        plan = ds.build_plan(db, customer)
+    finally:
+        db.close()
+
+    try:
+        result = ds.materialize(plan)
+    except OSError as e:
+        return _flash_redirect(back, f"Không tạo được thư mục hồ sơ: {e}", "danger")
+
+    how = "liên kết" if result.duplicated_bytes_saved else "sao chép"
+    msg = f"Đã gom {result.copied} file ({how}) vào {result.dest_dir}"
+    tone = "success"
+    if result.missing_required:
+        msg += f" — còn thiếu {result.missing_required} mục bắt buộc"
+        tone = "warning"
+    if result.errors:
+        msg += " | " + " | ".join(result.errors)
+        tone = "warning"
+
+    if open_after:
+        try:
+            ds.open_in_file_manager(result.dest_dir)
+        except (OSError, ValueError) as e:
+            msg += f" — không mở được thư mục ({e}), hãy mở tay đường dẫn trên"
+            tone = "warning"
+
+    return _flash_redirect(back, msg, tone)
+
+
+@router.post("/{customer_id}/dossier/open")
+def dossier_open(customer_id: int):
+    """Mở lại thư mục hồ sơ đã tạo, không gom lại file."""
+    from app.services import dossier_service as ds
+
+    back = f"/customers/{customer_id}/dossier"
+    db = SessionLocal()
+    try:
+        customer = get_customer(db, customer_id)
+        if not customer or customer.is_deleted:
+            raise HTTPException(404, "Không tìm thấy khách hàng")
+        target = ds.dossier_dir_for(customer)
+    finally:
+        db.close()
+
+    try:
+        ds.open_in_file_manager(target)
+    except (OSError, ValueError) as e:
+        return _flash_redirect(back, f"Không mở được thư mục: {e}", "danger")
+    return _flash_redirect(back, f"Đã mở {target}", "success")
 
 
 # ---------------------------------------------------------------------------

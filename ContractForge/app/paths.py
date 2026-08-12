@@ -181,6 +181,7 @@ PAYMENT_SLIPS_DIR = DATA_DIR / "uploads" / "payment_slips"  # Ủy nhiệm chi (
 OUTPUTS_DIR = DATA_DIR / "outputs"
 OUTPUT_CONTRACTS_DIR = DATA_DIR / "outputs" / "contracts"
 OUTPUT_BATCH_DIR = DATA_DIR / "outputs" / "batch"
+DOSSIER_DIR = DATA_DIR / "dau-noi"          # Bộ hồ sơ đấu nối gom sẵn theo KH
 LOGS_DIR = DATA_DIR / "logs"
 BACKUPS_DIR = DATA_DIR / "backups"
 DB_PATH = DATA_DIR / DB_FILENAME
@@ -197,6 +198,7 @@ _RUNTIME_DIRS: tuple[Path, ...] = (
     OUTPUTS_DIR,
     OUTPUT_CONTRACTS_DIR,
     OUTPUT_BATCH_DIR,
+    DOSSIER_DIR,
     LOGS_DIR,
     BACKUPS_DIR,
 )
@@ -226,6 +228,7 @@ def _refresh_derived_paths() -> None:
         "OUTPUTS_DIR": DATA_DIR / "outputs",
         "OUTPUT_CONTRACTS_DIR": DATA_DIR / "outputs" / "contracts",
         "OUTPUT_BATCH_DIR": DATA_DIR / "outputs" / "batch",
+        "DOSSIER_DIR": DATA_DIR / "dau-noi",
         "LOGS_DIR": DATA_DIR / "logs",
         "BACKUPS_DIR": DATA_DIR / "backups",
         "DB_PATH": DATA_DIR / DB_FILENAME,
@@ -246,6 +249,7 @@ def _refresh_derived_paths() -> None:
         new_paths["OUTPUTS_DIR"],
         new_paths["OUTPUT_CONTRACTS_DIR"],
         new_paths["OUTPUT_BATCH_DIR"],
+        new_paths["DOSSIER_DIR"],
         new_paths["LOGS_DIR"],
         new_paths["BACKUPS_DIR"],
     )

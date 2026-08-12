@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block content %}
+
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb" style="font-size:0.82rem;">
+    <li class="breadcrumb-item"><a href="/customers" class="text-decoration-none">Khách hàng</a></li>
+    <li class="breadcrumb-item">
+      <a href="/customers/{{ customer.id }}" class="text-decoration-none">{{ customer.short_name or customer.legal_name }}</a>
+    </li>
+    <li class="breadcrumb-item active">Bộ hồ sơ đấu nối</li>
+  </ol>
+</nav>
+
+{% if flash_msg %}
+<div class="alert alert-{{ flash_type }} alert-dismissible fade show mb-3">
+  <i class="bi bi-{% if flash_type == 'success' %}check-circle{% elif flash_type == 'warning' %}exclamation-triangle{% else %}x-circle{% endif %}-fill me-2"></i>
+  <span style="word-break:break-word;">{{ flash_msg }}</span>
+  <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<div class="card mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <h6 class="mb-0 fw-semibold">
+      <i class="bi bi-folder-symlink me-2 text-primary"></i>Bộ hồ sơ đấu nối
+    </h6>
+    <span class="badge {% if plan.is_complete %}badge-green{% else %}bg-warning-subtle text-warning-emphasis{% endif %}">
+      {{ plan.ready_count }} file sẵn sàng{% if plan.missing_required %} · thiếu {{ plan.missing_required|length }} mục bắt buộc{% endif %}
+    </span>
+  </div>
+
+  <div class="card-body">
+    <p class="text-muted mb-3" style="font-size:.85rem;">
+      Gom toàn bộ file của <strong>{{ customer.short_name or customer.legal_name }}</strong>
+      ({{ customer.code }}) về một thư mục, đặt tên đánh số theo đúng thứ tự các ô upload
+      trên trang quản lý bán hàng. File liên kết thẳng tới bản gốc nên không tốn thêm
+      dung lượng đĩa — xoá thư mục cũng không làm mất dữ liệu gốc.
+    </p>
+
+    {% if is_stale %}
+    <div class="alert alert-warning py-2 px-3 mb-3" style="font-size:.82rem;">
+      <i class="bi bi-clock-history me-1"></i>
+      Thư mục đã tạo trước đây đang cũ hơn dữ liệu hiện tại — có giấy tờ được cập nhật sau đó.
+      Nên bấm tạo lại trước khi nộp.
+    </div>
+    {% endif %}
+
+    <form method="post" action="/customers/{{ customer.id }}/dossier/build">
+
+      {# ── Hợp đồng đưa vào hồ sơ — TẤT CẢ, không chọn một ── #}
+      {% if contract_rows %}
+      <div class="mb-3">
+        <div class="text-muted mb-1 fw-semibold" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;">
+          Hợp đồng đưa vào hồ sơ ({{ contract_rows|length }})
+        </div>
+        <ul class="list-unstyled mb-0" style="font-size:.83rem;">
+          {% for ct in contract_rows %}
+          <li class="mb-1">
+            {% if ct.has_scan %}
+            <i class="bi bi-check-circle-fill text-success me-1"></i>
+            {% else %}
+            <i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>
+            {% endif %}
+            <code style="font-size:.78rem;">{{ ct.number }}</code>
+            <span class="text-muted">· {{ ct.product }} · {{ ct.status }}</span>
+            {% if not ct.has_scan %}<span class="text-warning-emphasis">· chưa có scan</span>{% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% else %}
+      <div class="alert alert-secondary py-2 px-3 mb-3" style="font-size:.82rem;max-width:520px;">
+        Khách hàng chưa có hợp đồng đã ký nào — các ô hợp đồng sẽ bỏ trống.
+      </div>
+      {% endif %}
+
+      {# ── Checklist ── #}
+      <div class="table-responsive mb-3">
+        <table class="table table-sm align-middle mb-0" style="font-size:.85rem;">
+          <thead>
+            <tr class="text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;">
+              <th style="width:36px;"></th>
+              <th style="width:52px;">Ô</th>
+              <th>Giấy tờ</th>
+              <th>Tên file sẽ tạo</th>
+              <th class="text-end" style="width:90px;">Dung lượng</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in plan.slots %}
+            <tr {% if s.missing_required %}class="table-warning"{% endif %}>
+              <td class="text-center">
+                {% if s.ok %}
+                  <i class="bi bi-check-circle-fill text-success"></i>
+                {% elif s.slot.required %}
+                  <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+                {% else %}
+                  <i class="bi bi-dash-circle text-muted opacity-50"></i>
+                {% endif %}
+              </td>
+              <td><code style="font-size:.78rem;">{{ '%02d' % s.order }}</code></td>
+              <td>
+                {{ s.slot.label }}
+                {% if not s.slot.required %}
+                <span class="text-muted" style="font-size:.72rem;">· không bắt buộc</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if s.ok %}
+                  <code style="font-size:.78rem;">{{ s.dest_name }}</code>
+                {% else %}
+                  <span class="text-muted">{{ s.note }}</span>
+                {% endif %}
+              </td>
+              <td class="text-end text-muted" style="font-size:.78rem;">
+                {% if s.ok %}{{ (s.size / 1024) | round | int }} KB{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {# ── Đường dẫn đích ── #}
+      <div class="mb-3">
+        <div class="text-muted mb-1 fw-semibold" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;">
+          Thư mục đích
+        </div>
+        <code style="font-size:.8rem;word-break:break-all;">{{ dest_dir }}</code>
+        {% if dir_exists %}
+        <span class="badge bg-secondary-subtle text-secondary ms-2" style="font-size:.7rem;">đã tồn tại — sẽ tạo đè</span>
+        {% endif %}
+      </div>
+
+      {% if plan.missing_required %}
+      <div class="alert alert-warning py-2 px-3 mb-3" style="font-size:.82rem;">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+        Còn thiếu:
+        {% for m in plan.missing_required %}<strong>{{ m.slot.label }}</strong>{% if not loop.last %}, {% endif %}{% endfor %}.
+        Vẫn tạo được thư mục với những gì đang có.
+      </div>
+      {% endif %}
+
+      <div class="d-flex gap-2 flex-wrap">
+        <button type="submit" name="open_after" value="1" class="btn btn-primary btn-sm">
+          <i class="bi bi-folder2-open me-1"></i>Tạo thư mục và mở
+        </button>
+        <button type="submit" class="btn btn-outline-primary btn-sm">
+          <i class="bi bi-download me-1"></i>Chỉ tạo, không mở
+        </button>
+        <a href="/customers/{{ customer.id }}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-arrow-left me-1"></i>Về trang khách hàng
+        </a>
+      </div>
+    </form>
+
+    {% if dir_exists %}
+    <form method="post" action="/customers/{{ customer.id }}/dossier/open" class="mt-2">
+      <button type="submit" class="btn btn-outline-dark btn-sm">
+        <i class="bi bi-box-arrow-up-right me-1"></i>Mở thư mục hiện có (không gom lại)
+      </button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
