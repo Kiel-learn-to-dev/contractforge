@@ -18,10 +18,10 @@ def test_quotation_choices_include_only_active_products_and_templates(
         list_quotation_templates,
     )
 
-    available_template = make_template(name="Mẫu báo giá chung")
+    available_template = make_template(name="Mẫu báo giá chung", contract_type="Báo giá")
     available_product = make_product(code="QUOTE-AVAILABLE", name="Gói có thể báo giá")
     make_product(code="QUOTE-HIDDEN", name="Gói đã tắt", is_active=False)
-    make_template(name="Mẫu đã tắt", is_active=False)
+    make_template(name="Mẫu đã tắt", is_active=False, contract_type="Báo giá")
 
     products = list_quotation_products(db_session)
     templates = list_quotation_templates(db_session)
@@ -51,7 +51,7 @@ def test_resolve_selection_rejects_inactive_records(
     from app.routers.quotation import resolve_quotation_selection
 
     product = make_product(is_active=False)
-    template = make_template()
+    template = make_template(contract_type="Báo giá")
 
     with pytest.raises(ValueError, match="Sản phẩm"):
         resolve_quotation_selection(db_session, product.id, template.id)
@@ -95,7 +95,8 @@ def test_generate_uses_user_selected_product_and_template(
     )
     template_path = tmp_path / "quotation.docx"
     template_path.write_bytes(b"placeholder")
-    template = make_template(file_path=str(template_path), file_name="quotation.docx")
+    template = make_template(file_path=str(template_path), file_name="quotation.docx",
+                             contract_type="Báo giá")
     captured = {}
 
     def fake_render(path, context):
@@ -133,7 +134,7 @@ def test_form_renders_product_and_template_choices(
     import app.routers.quotation as quotation
 
     make_product(code="SERVICE-CUSTOM", name="Dịch vụ Tùy chỉnh")
-    make_template(code="TPL-QUOTE", name="Mẫu báo giá tùy chỉnh")
+    make_template(code="TPL-QUOTE", name="Mẫu báo giá tùy chỉnh", contract_type="Báo giá")
     monkeypatch.setattr(quotation, "SessionLocal", lambda: db_session)
     request = Request({
         "type": "http",
@@ -190,3 +191,61 @@ def test_custom_placeholder_mapping_renders_into_real_docx(db_session, make_temp
     rendered = Document(BytesIO(render_docx(str(source), context)))
 
     assert rendered.paragraphs[0].text == "Sản phẩm: Dịch vụ Tùy chỉnh"
+
+
+# ─── Hồi quy: báo giá không được sinh ra file hợp đồng ────────────────────────
+
+def test_contract_templates_never_appear_in_the_quotation_picker(
+    db_session, make_template,
+):
+    """Ô chọn mẫu ở trang báo giá chỉ được liệt kê mẫu phân loại 'Báo giá'.
+
+    Lỗi cũ: hàm này trả về mọi mẫu đang bật. Mẫu hợp đồng lọt vào danh sách, và
+    đoạn JS tự chọn `product.default_template_id` — vốn trỏ vào mẫu HỢP ĐỒNG của
+    sản phẩm — khiến chọn sản phẩm xong là ô mẫu tự nhảy sang mẫu hợp đồng.
+    """
+    from app.routers.quotation import list_quotation_templates
+
+    quote_tpl = make_template(code="TPL-BG", name="Mẫu báo giá",
+                              contract_type="Báo giá")
+    make_template(code="TPL-HD", name="Mẫu chuẩn hợp đồng", contract_type="Hợp đồng")
+    make_template(code="TPL-NT", name="Biểu nghiệm thu", contract_type="Nghiệm thu")
+
+    assert [t.id for t in list_quotation_templates(db_session)] == [quote_tpl.id]
+
+
+def test_generating_with_a_contract_template_is_refused(
+    db_session, make_product, make_template,
+):
+    """Chặn ở tầng server, không chỉ ở dropdown.
+
+    Form còn mở ở tab khác, nút Back, hoặc mẫu bị đổi nhãn sau khi trang đã tải
+    đều gửi lên được template_id của mẫu hợp đồng. Nếu không chặn, người dùng
+    nhận về một bản hợp đồng mang tên "BaoGia_....docx" và chỉ phát hiện sau khi
+    đã gửi cho khách.
+    """
+    from app.routers.quotation import resolve_quotation_selection
+
+    product = make_product(code="SP-BG", default_price=100_000)
+    contract_tpl = make_template(code="TPL-HD2", name="Mẫu chuẩn hợp đồng",
+                                 contract_type="Hợp đồng")
+
+    with pytest.raises(ValueError, match="không phải mẫu Báo giá"):
+        resolve_quotation_selection(db_session, product.id, contract_tpl.id)
+
+
+def test_product_default_template_is_a_contract_template_not_a_quotation_one(
+    db_session, make_product, make_template,
+):
+    """Ghim lại gốc rễ của lỗi: default_template_id của sản phẩm là mẫu HỢP ĐỒNG.
+
+    Nếu sau này có ai định dùng lại trường đó để gợi ý mẫu cho trang báo giá thì
+    test này nhắc rằng nó mang ý nghĩa khác.
+    """
+    from app.routers.quotation import list_quotation_templates
+
+    contract_tpl = make_template(code="TPL-HD3", contract_type="Hợp đồng")
+    product = make_product(code="SP-BG2", default_template_id=contract_tpl.id)
+
+    assert product.default_template_id == contract_tpl.id
+    assert contract_tpl.id not in {t.id for t in list_quotation_templates(db_session)}

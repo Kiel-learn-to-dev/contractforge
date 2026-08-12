@@ -30,9 +30,15 @@ UPLOAD_DIR = str(UPLOAD_TEMPLATES_DIR)
 MAX_FILE_SIZE = 10 * 1024 * 1024   # 10 MB
 ALLOWED_EXTENSIONS = {".docx"}
 
+# Nhãn phân loại của mẫu báo giá. Trang báo giá chỉ được nhận mẫu mang nhãn này;
+# để lẫn mẫu hợp đồng vào là người dùng tải về một bản hợp đồng đội lốt báo giá.
+# `_template_kind()` gán đúng nhãn này khi phân tích mẫu, nên hai nơi phải dùng
+# chung một hằng số thay vì mỗi chỗ viết lại chuỗi.
+QUOTATION_TYPE = "Báo giá"
+
 # Nhóm mẫu hợp đồng gợi ý trong form. Đây là nhãn phân loại tự do — người dùng
 # gõ giá trị khác cũng được; danh sách này chỉ để bấm cho nhanh.
-CONTRACT_TYPES = ["Hợp đồng", "Phụ lục", "Nghiệm thu", "Thanh lý", "Báo giá", "Khác"]
+CONTRACT_TYPES = ["Hợp đồng", "Phụ lục", "Nghiệm thu", "Thanh lý", QUOTATION_TYPE, "Khác"]
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -277,7 +283,7 @@ def _bundled_template_code(file_bytes: bytes) -> str:
 def _template_kind(placeholders: list[str]) -> str:
     fields = set(placeholders)
     if any(field.startswith("QUOTE_DATE") for field in fields):
-        return "Báo giá"
+        return QUOTATION_TYPE
     if any(field.startswith("ACCEPTANCE_DATE") for field in fields):
         return "Nghiệm thu"
     if any(field.startswith("LIQUIDATION_DATE") for field in fields):

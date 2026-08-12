@@ -22,6 +22,7 @@ from app.models.product import Product
 from app.models.contract_template import ContractTemplate
 from app.paths import TEMPLATES_DIR
 from app.services.docx_renderer import apply_template_mapping, render_docx
+from app.services.template_service import QUOTATION_TYPE
 from app.utils.amount_to_words_vi import amount_to_words
 from app.utils.date_helpers import split_date_parts, parse_date_input
 
@@ -39,10 +40,19 @@ def list_quotation_products(db) -> list[Product]:
 
 
 def list_quotation_templates(db) -> list[ContractTemplate]:
-    """List active user-managed DOCX templates available for quotations."""
+    """Mẫu DOCX dùng được cho báo giá — CHỈ mẫu mang nhãn báo giá.
+
+    Trước đây hàm này trả về mọi mẫu đang bật, kể cả mẫu hợp đồng và biểu nghiệm
+    thu. Kết hợp với đoạn JS tự chọn `product.default_template_id` (vốn trỏ vào
+    mẫu HỢP ĐỒNG của sản phẩm), chọn sản phẩm xong là ô mẫu tự nhảy sang mẫu hợp
+    đồng — bấm sinh file ra một bản hợp đồng mang tên "BaoGia_...docx".
+    """
     return (
         db.query(ContractTemplate)
-        .filter(ContractTemplate.is_active == True)
+        .filter(
+            ContractTemplate.is_active == True,
+            ContractTemplate.contract_type == QUOTATION_TYPE,
+        )
         .order_by(ContractTemplate.name, ContractTemplate.code)
         .all()
     )
@@ -78,7 +88,16 @@ def resolve_quotation_selection(db, product_id: int, template_id: int):
         .first()
     )
     if template is None:
-        raise ValueError("Mẫu hợp đồng không tồn tại hoặc đã ngừng sử dụng.")
+        raise ValueError("Mẫu không tồn tại hoặc đã ngừng sử dụng.")
+    # Chặn ở tầng server, không chỉ ở dropdown: form cũ còn mở trong tab khác,
+    # nút Back, hay mẫu bị đổi nhãn sau khi trang đã tải đều gửi lên được một
+    # template_id trỏ vào mẫu hợp đồng. Sinh ra file sai loại mà vẫn đặt tên
+    # "BaoGia_..." là kiểu lỗi người dùng chỉ phát hiện sau khi đã gửi cho khách.
+    if template.contract_type != QUOTATION_TYPE:
+        raise ValueError(
+            f"'{template.name}' là mẫu {template.contract_type}, không phải mẫu "
+            f"{QUOTATION_TYPE}. Hãy chọn một mẫu {QUOTATION_TYPE}."
+        )
     return product, template
 
 
