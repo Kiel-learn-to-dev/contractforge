@@ -1,137 +1,142 @@
 # ContractForge
 
-> Ứng dụng quản lý hợp đồng chạy offline, một người dùng, dành cho máy tính cá nhân.
 > A neutral, single-user, offline-first desktop contract manager.
 
-ContractForge quản lý toàn bộ vòng đời hợp đồng — từ bản nháp, sinh file Word từ mẫu
-có sẵn, theo dõi ký kết, hoá đơn, thanh toán, cho đến khi hết hạn — mà **không cần
-kết nối Internet và không gửi dữ liệu đi đâu cả**. Toàn bộ dữ liệu nằm trong một file
-SQLite trên máy bạn.
+ContractForge manages the full contract lifecycle — from draft, through generating Word
+documents from your own templates, tracking signatures, invoices and payments, all the
+way to expiry — **without an internet connection and without sending your data
+anywhere**. Everything lives in a single SQLite file on your machine.
 
 ---
 
-## Tính năng chính
+## Features
 
-- **Danh mục khách hàng** kèm đơn vị trực thuộc, hồ sơ giấy tờ đính kèm, nhập/xuất Excel.
-- **Mẫu hợp đồng Word**: tải lên file `.docx` của riêng bạn, đánh dấu chỗ điền bằng
-  placeholder dạng `{{TEN_TRUONG}}`, app tự điền và sinh file hoàn chỉnh.
-- **Sinh hàng loạt**: một job tạo hợp đồng cho nhiều khách hàng, đóng gói thành `.zip`.
-- **Vòng đời hợp đồng** có kiểm soát: mỗi lần đổi trạng thái đều được kiểm tra hợp lệ,
-  yêu cầu chứng từ kèm theo, và ghi lại lịch sử.
-- **Dashboard & nhắc hạn**: cảnh báo hợp đồng sắp hết hạn, việc còn tồn đọng,
-  thống kê theo sản phẩm và theo tháng.
-- **Báo giá** và biểu mẫu phụ trợ sinh từ cùng bộ dữ liệu.
+- **Customer directory** with subordinate units, attached paperwork, and Excel import/export.
+- **Word templates**: upload your own `.docx`, mark the fill-in points with `{{FIELD_NAME}}`
+  placeholders, and the app fills them in and produces a finished document.
+- **Batch generation**: one job produces contracts for many customers, packaged as a `.zip`.
+- **A governed contract lifecycle**: every status change is validated, may require
+  supporting documents, and is recorded in a history log.
+- **Dashboard and reminders**: warnings for contracts nearing expiry, outstanding work,
+  and breakdowns by product and by month.
+- **Quotations** and supporting forms generated from the same data.
+- **Document dossiers**: gather every file belonging to one customer into a single folder,
+  numbered to match the upload fields of an external portal. Files are hardlinked, so the
+  folder costs no extra disk space and deleting it cannot touch the originals.
 
-## Vòng đời hợp đồng
+## Contract lifecycle
 
 ```
 Draft ──► Generated ──► Sent ──► Signed ──► Invoiced ──► PaidActive ──► Expired
                                     └──────────┴─────────────┴────────► Terminated
 ```
 
-Mỗi bước chuyển đều đi qua một bảng luật duy nhất
-(`ContractForge/app/services/lifecycle.py`). `Invoiced` yêu cầu đã đính kèm hoá đơn,
-`PaidActive` yêu cầu đã đính kèm chứng từ thanh toán.
+Every transition goes through a single rules table
+(`ContractForge/app/services/lifecycle.py`). `Invoiced` requires an attached invoice;
+`PaidActive` requires attached proof of payment.
 
-**"Sắp hết hạn" không phải là một trạng thái** — nó được tính từ `end_date` mỗi lần
-hiển thị. Nhờ vậy một hợp đồng gần hết hạn vẫn giữ nguyên trạng thái thật của nó và
-vẫn xuất hoá đơn được bình thường.
+**"Expiring soon" is not a status** — it is derived from `end_date` each time it is
+displayed. That way a contract close to expiry keeps its real status and can still be
+invoiced normally.
 
 ---
 
-## Cài đặt & chạy
+## Install and run
 
-Yêu cầu Python 3.11 trở lên.
+Requires Python 3.11 or newer.
 
 ```bash
 pip install -r ContractForge/requirements.txt
 ```
 
-Chạy từ mã nguồn:
+Run from source:
 
 ```bash
 cd ContractForge && python -m uvicorn main:app --host 127.0.0.1 --port 8000
 ```
 
-Rồi mở http://127.0.0.1:8000
+Then open http://127.0.0.1:8000
 
-### Chạy như một ứng dụng desktop
+### Running as a desktop application
 
 ```bash
 pip install pywebview pystray pillow
 ```
 
-Rồi chạy `ContractForge.pyw` (Windows: double-click). Server khởi động ngay trong
-tiến trình đó, trên một cổng trống do hệ điều hành cấp, và hiện trong một cửa sổ
-WebView2 riêng — không phụ thuộc trình duyệt. Đóng cửa sổ là server dừng theo.
-Thiếu `pywebview` thì ứng dụng vẫn chạy, chỉ là mở bằng trình duyệt hệ thống.
+Then run `ContractForge.pyw` (on Windows, double-click it). The server starts inside that
+same process on a free port assigned by the operating system, and appears in its own
+WebView2 window — no browser required. Closing the window stops the server. Without
+`pywebview` the application still runs; it just opens in your system browser.
 
-Trên Windows, cửa sổ dùng **WebView2 Runtime**. Windows 11 và Windows 10 bản mới
-đã có sẵn; nếu chưa, tải tại
+On Windows the window uses the **WebView2 Runtime**. Windows 11 and recent Windows 10
+builds ship with it; otherwise install it from
 <https://developer.microsoft.com/microsoft-edge/webview2/>.
 
-### Đóng gói thành .exe
+### Building a standalone .exe
 
 ```bash
 python -m PyInstaller --clean --noconfirm packaging/pyinstaller/contractforge.spec
 ```
 
-Hoặc chạy `build_exe.bat` trên Windows. Bản đóng gói không cần cài Python và
-**không chứa dữ liệu người dùng** — lần chạy đầu tiên nó tự dựng thư mục dữ liệu
-sạch. Danh sách kiểm tra trước khi phát hành:
+Or run `build_exe.bat` on Windows. The packaged build needs no Python installation and
+**contains no user data** — on first run it creates a clean data directory of its own.
+Pre-release checklist:
 [tests/smoke/windows_release_checklist.md](tests/smoke/windows_release_checklist.md).
 
-> Server **chỉ lắng nghe trên `127.0.0.1`**. Đây là ứng dụng một người dùng chạy cục bộ;
-> nó không có cơ chế đăng nhập nên không được mở ra mạng LAN hay Internet.
+> The server **listens on `127.0.0.1` only**. This is a single-user local application with
+> no login mechanism, so it must never be exposed to a LAN or to the internet.
 
 ---
 
-## Dữ liệu của bạn nằm ở đâu
+## Where your data lives
 
-Mã nguồn và dữ liệu tách bạch hoàn toàn. Thư mục dữ liệu được xác định theo thứ tự
-ưu tiên sau (xem `ContractForge/app/paths.py`):
+Source code and data are kept strictly separate. The data directory is resolved in this
+order of precedence (see `ContractForge/app/paths.py`):
 
-1. Biến môi trường `CONTRACTFORGE_DATA_ROOT`, nếu được đặt.
-2. `%LOCALAPPDATA%\ContractForge` — nếu ở đó đã có sẵn cơ sở dữ liệu.
-3. `<thư mục dự án>/data` — bản cài đặt cũ vẫn chạy bình thường, không bị ép di chuyển.
-4. Mặc định cho máy mới: `%LOCALAPPDATA%\ContractForge`
+1. The `CONTRACTFORGE_DATA_ROOT` environment variable, if set.
+2. `%LOCALAPPDATA%\ContractForge` — if a database already exists there.
+3. `<project directory>/data` — so existing installations keep working and are never
+   forced to move.
+4. Default for a fresh machine: `%LOCALAPPDATA%\ContractForge`
    (macOS: `~/Library/Application Support/ContractForge`,
    Linux: `~/.local/share/ContractForge`).
 
-Bên trong thư mục dữ liệu:
+Inside the data directory:
 
-| Thư mục | Nội dung |
+| Directory | Contents |
 |---|---|
-| `contract_manager.db` | Toàn bộ dữ liệu nghiệp vụ (SQLite) |
-| `uploads/templates/` | Mẫu Word bạn tải lên |
-| `uploads/signed_scans/`, `invoice_docs/`, `payment_slips/` | Chứng từ đính kèm |
-| `uploads/customer_docs/` | Hồ sơ giấy tờ khách hàng |
-| `outputs/` | File `.docx` và `.zip` đã sinh |
-| `backups/` | Bản sao lưu do công cụ di trú tạo ra |
+| `contract_manager.db` | All business data (SQLite) |
+| `uploads/templates/` | Word templates you uploaded |
+| `uploads/signed_scans/`, `invoice_docs/`, `payment_slips/` | Attached supporting documents |
+| `uploads/customer_docs/` | Customer paperwork |
+| `outputs/` | Generated `.docx` and `.zip` files |
+| `dau-noi/` | Assembled document dossiers (hardlinks, regenerable) |
+| `backups/` | Backups created by the migration tooling |
 
-**Sao lưu** = copy cả thư mục này. Không có gì khác cần giữ.
+**To back up**, copy this whole directory. There is nothing else to keep.
 
-**Khi xoá hợp đồng**, các file gắn với nó (bản `.docx` đã sinh, bản scan đã ký, hoá đơn,
-chứng từ thanh toán) cũng bị xoá khỏi đĩa cùng lúc. Hồ sơ giấy tờ của khách hàng thì
-gắn với khách hàng chứ không gắn với hợp đồng, nên không bị ảnh hưởng.
+**When a contract is deleted**, the files attached to it (the generated `.docx`, the signed
+scan, the invoice, the payment record) are deleted from disk at the same time. Customer
+paperwork belongs to the customer rather than to any contract, so it is left untouched.
 
 ---
 
-## Phát triển
+## Development
 
 ```bash
-python -m pytest -q                        # bộ test
-python scripts/check_public_repo.py        # kiểm tra không lộ dữ liệu riêng
+python -m pytest -q                        # test suite
+python scripts/check_public_repo.py        # check that no private data leaked
 ```
 
-Bộ test luôn chạy trên thư mục dữ liệu tạm — chạy test **không bao giờ** đụng vào
-cơ sở dữ liệu thật của bạn (xem `tests/conftest.py`).
+The test suite always runs against a temporary data directory — running the tests will
+**never** touch your real database (see `tests/conftest.py`).
 
-Trước khi commit, `scripts/check_public_repo.py` sẽ chặn nếu có file dữ liệu, file
-sinh ra, log, file thực thi, hay từ khoá riêng của tổ chức lọt vào mã nguồn công khai.
+Before committing, `scripts/check_public_repo.py` fails the run if data files, generated
+output, logs, executables, or organisation-specific keywords have found their way into the
+public source tree.
 
-Kiến trúc, các quyết định thiết kế và lộ trình: xem `OPEN_SOURCE_DESKTOP_PLAN.md`.
+For architecture, design decisions and roadmap, see `OPEN_SOURCE_DESKTOP_PLAN.md`.
 
-## Giấy phép
+## License
 
 [MIT](LICENSE)
