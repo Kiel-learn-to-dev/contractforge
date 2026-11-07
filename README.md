@@ -43,34 +43,59 @@ invoiced normally.
 
 ## Install and run
 
-Requires Python 3.11 or newer.
+Requires **Python 3.11 or newer** (tested on 3.11 – 3.14). The first install needs an
+internet connection; after that the app runs fully offline.
+
+### Quickest start
+
+From a clone of this repository, run the launcher for your system. It creates a private
+virtual environment, installs the dependencies, and starts the server:
+
+| System | Command |
+|---|---|
+| Windows | double-click `ContractForge\chay_windows.bat` |
+| macOS / Linux | `bash ContractForge/chay_mac_linux.sh` |
+
+Then open http://localhost:8888. Stop the server with `Ctrl+C`. If something goes wrong
+on Windows, `ContractForge\kiem_tra_moi_truong.bat` checks the environment step by step.
+Each launcher re-checks the dependencies on every start, so it also picks up a changed
+`requirements.txt` after a `git pull`.
+
+### Manual install
 
 ```bash
+python -m venv .venv
+source .venv/bin/activate            # Windows: .venv\Scripts\activate
 pip install -r ContractForge/requirements.txt
+cd ContractForge && python -m uvicorn main:app --host 127.0.0.1 --port 8888
 ```
 
-Run from source:
-
-```bash
-cd ContractForge && python -m uvicorn main:app --host 127.0.0.1 --port 8000
-```
-
-Then open http://127.0.0.1:8000
+Then open http://127.0.0.1:8888. Using a virtual environment keeps the install away from
+other Python projects (and from "externally managed environment" errors on recent
+Debian, Ubuntu and macOS/Homebrew Pythons).
 
 ### Running as a desktop application
 
 ```bash
-pip install pywebview pystray pillow
+pip install -r requirements-desktop.txt
 ```
 
 Then run `ContractForge.pyw` (on Windows, double-click it). The server starts inside that
-same process on a free port assigned by the operating system, and appears in its own
-WebView2 window — no browser required. Closing the window stops the server. Without
-`pywebview` the application still runs; it just opens in your system browser.
+same process on a free port assigned by the operating system (so it does not use 8888),
+and appears in its own WebView2 window — no browser required. Closing the window stops
+the server. Without `pywebview` the application still runs; it just opens in your system
+browser, and you quit from the tray icon or with `Ctrl+C`.
+
+`ContractForge.pyw` does **not** install anything itself: install the dependencies first
+(`requirements-desktop.txt` includes the base ones), otherwise it exits and the reason is
+written to `contractforge.log` in the data directory's `logs/` folder.
 
 On Windows the window uses the **WebView2 Runtime**. Windows 11 and recent Windows 10
 builds ship with it; otherwise install it from
-<https://developer.microsoft.com/microsoft-edge/webview2/>.
+<https://developer.microsoft.com/microsoft-edge/webview2/>. On Linux, `pywebview` needs
+GTK or Qt from your system (see the
+[pywebview installation guide](https://pywebview.flowrl.com/guide/installation.html));
+without them the app falls back to the browser.
 
 ### Building a standalone .exe
 
@@ -124,6 +149,7 @@ paperwork belongs to the customer rather than to any contract, so it is left unt
 ## Development
 
 ```bash
+pip install -r requirements-dev.txt        # app dependencies + pytest
 python -m pytest -q                        # test suite
 python scripts/check_public_repo.py        # check that no private data leaked
 ```

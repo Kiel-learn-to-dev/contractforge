@@ -26,9 +26,14 @@ viết lại lịch sử Git — xoá file ở commit sau không xoá nó khỏi
 ## Chạy dự án
 
 ```bash
-pip install -r ContractForge/requirements.txt
-cd ContractForge && python -m uvicorn main:app --host 127.0.0.1 --port 8000
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\\Scripts\\activate
+pip install -r requirements-dev.txt                  # thư viện chạy app + pytest
+cd ContractForge && python -m uvicorn main:app --host 127.0.0.1 --port 8888
 ```
+
+Cần Python 3.11 trở lên. Các thư viện chạy app khai báo ở hai nơi —
+`ContractForge/requirements.txt` và `pyproject.toml`; `tests/unit/test_dependency_sync.py`
+sẽ fail nếu hai danh sách lệch nhau, nên sửa cả hai cùng lúc.
 
 Server **chỉ được** bind `127.0.0.1`. App không có đăng nhập; ranh giới bảo mật
 của nó là ranh giới máy. Có test chặn việc này (`test_publication_readiness.py`).
@@ -39,7 +44,9 @@ của nó là ranh giới máy. Có test chặn việc này (`test_publication_r
 python -m pytest -q
 ```
 
-Test luôn chạy trên thư mục dữ liệu tạm — `tests/conftest.py` đặt
+Test chạy được trên Windows, macOS và Linux; test nào phụ thuộc hệ điều hành phải tự
+ghim `sys.platform` (xem `tests/integration/test_runtime_paths.py`) để không đỏ trên
+máy khác. Test luôn chạy trên thư mục dữ liệu tạm — `tests/conftest.py` đặt
 `CONTRACTFORGE_DATA_ROOT` trước khi ứng dụng được import. Chạy test **không bao
 giờ** đụng vào cơ sở dữ liệu thật; nếu thấy nó đụng, đó là bug nghiêm trọng.
 

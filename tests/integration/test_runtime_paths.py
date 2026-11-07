@@ -134,8 +134,14 @@ def test_source_checkout_still_uses_the_repo_data_dir(monkeypatch, tmp_path):
 
 
 def test_fresh_install_targets_user_data_default(monkeypatch, tmp_path):
-    """A brand-new install resolves to the platform user-data dir."""
+    """A brand-new Windows install resolves to ``%LOCALAPPDATA%\\ContractForge``.
+
+    ``LOCALAPPDATA`` is only consulted on Windows, so the platform is pinned to
+    keep this test meaningful (and green) on the Linux/macOS machines that run
+    the suite in CI and on contributors' laptops.
+    """
     import app.paths as paths
+    monkeypatch.setattr(paths.sys, "platform", "win32")
     fake_home = tmp_path / "fresh_home"
     fake_home.mkdir()
     fake_local = fake_home / "AppData" / "Local"
@@ -147,8 +153,9 @@ def test_fresh_install_targets_user_data_default(monkeypatch, tmp_path):
 
 
 def test_migrated_install_reuses_user_data_default(monkeypatch, tmp_path):
-    """An already-migrated desktop install keeps using the user-data dir."""
+    """An already-migrated Windows install keeps using the user-data dir."""
     import app.paths as paths
+    monkeypatch.setattr(paths.sys, "platform", "win32")
     fake_local = tmp_path / "AppData" / "Local"
     migrated = fake_local / "ContractForge"
     (migrated).mkdir(parents=True)
@@ -156,6 +163,24 @@ def test_migrated_install_reuses_user_data_default(monkeypatch, tmp_path):
     monkeypatch.setenv("LOCALAPPDATA", str(fake_local))
     resolved = paths._resolve_data_root()
     assert resolved == migrated.resolve()
+
+
+def test_user_data_default_per_platform(monkeypatch, tmp_path):
+    """Each platform gets its own conventional per-user data directory."""
+    import app.paths as paths
+
+    home = tmp_path / "home"
+    monkeypatch.setattr(paths.Path, "home", classmethod(lambda cls: home))
+    monkeypatch.delenv("XDG_DATA_HOME", raising=False)
+
+    monkeypatch.setattr(paths.sys, "platform", "darwin")
+    assert paths._user_data_default() == home / "Library" / "Application Support" / "ContractForge"
+
+    monkeypatch.setattr(paths.sys, "platform", "linux")
+    assert paths._user_data_default() == home / ".local" / "share" / "ContractForge"
+
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg"))
+    assert paths._user_data_default() == tmp_path / "xdg" / "ContractForge"
 
 
 # ─── Directory creation ───────────────────────────────────────────────────────

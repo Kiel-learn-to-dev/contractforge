@@ -2,9 +2,14 @@
 # ContractForge — project + test configuration
 # =============================================================================
 # This file configures packaging metadata (PEP 621), the test runner, and lint.
-# It deliberately does NOT pin the application's runtime dependencies here in
-# detail — those live in ContractForge/requirements.txt and are inherited at
-# install time. A locked snapshot (requirements.lock) is produced for releases.
+# The runtime dependencies below MUST match ContractForge/requirements.txt;
+# tests/unit/test_dependency_sync.py fails if they drift. There is no lock file:
+# ranges are intentionally open and the suite is run against current releases.
+#
+# ContractForge is an application, not an importable library. It runs from a
+# source checkout (`pip install -r ContractForge/requirements.txt`), so the
+# [tool.setuptools] section below ships no code. `pip install .[dev]` therefore
+# works only as a way to install the dependencies, never as an app install.
 # =============================================================================
 
 [build-system]
@@ -46,12 +51,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-desktop = [
+desktop = [  # keep in sync with requirements-desktop.txt
     "pywebview>=4.0",
     "pystray>=0.19",
     "pillow>=10.0",
 ]
-dev = [
+dev = [  # keep in sync with requirements-dev.txt
     "pytest>=7.0",
 ]
 
@@ -60,12 +65,11 @@ Homepage = "https://github.com/contractforge/contractforge"
 Documentation = "https://github.com/contractforge/contractforge#readme"
 Issues = "https://github.com/contractforge/contractforge/issues"
 
-# ─── Setuptools packaging (source layout) ────────────────────────────────────
+# ─── Setuptools: dependency-only metadata package ────────────────────────────
+# `main.py`, `templates/` and `static/` live outside `app/`, so packaging `app/`
+# alone produced a broken install (`import main` failed). Ship no code instead.
 [tool.setuptools]
-package-dir = { "" = "ContractForge" }
-
-[tool.setuptools.packages.find]
-where = ["ContractForge"]
+packages = []
 
 # ─── Pytest ──────────────────────────────────────────────────────────────────
 [tool.pytest.ini_options]

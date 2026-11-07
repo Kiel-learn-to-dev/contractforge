@@ -24,10 +24,9 @@ if not exist "%~dp0main.py" (
     echo [LOI] main.py khong co tai %CD% >>"%LOGFILE%"
     echo.
     echo Huong dan:
-    echo   1. Giai nen file ZIP
-    echo   2. Mo thu muc contract_manager
-    echo   3. Thay main.py trong do
-    echo   4. ROI double-click chay_windows.bat
+    echo   1. Mo thu muc ContractForge ben trong thu muc du an
+    echo      - thu muc co main.py va requirements.txt
+    echo   2. ROI double-click chay_windows.bat
     echo.
     pause
     exit /b 1
@@ -51,6 +50,16 @@ if errorlevel 1 (
 for /f "tokens=*" %%V in ('python --version 2^>^&1') do (
     echo      [OK] %%V
     echo [%date% %time%] Python: %%V >>"%LOGFILE%"
+)
+python -c "import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)" >>"%LOGFILE%" 2>&1
+if errorlevel 1 (
+    echo [LOI] Can Python 3.11 tro len!
+    echo [LOI] Python qua cu - can 3.11+ >>"%LOGFILE%"
+    echo.
+    echo Tai ban moi tai: https://www.python.org/downloads/
+    echo.
+    pause
+    exit /b 1
 )
 
 echo [3/5] Chuan bi moi truong Python...
@@ -77,29 +86,22 @@ echo [%date% %time%] Kich hoat venv OK >>"%LOGFILE%"
 
 echo [4/5] Kiem tra thu vien...
 echo [%date% %time%] Buoc 4: thu vien >>"%LOGFILE%"
-echo import fastapi, uvicorn, docx, openpyxl, sqlalchemy >"%~dp0_chk.py"
-"%~dp0venv\Scripts\python.exe" "%~dp0_chk.py" >>"%LOGFILE%" 2>&1
+REM Luon chay pip: du thu vien thi pip xong ngay va KHONG can mang; requirements.txt vua
+REM doi (sau git pull) thi tu cap nhat thay vi bao loi "thieu thu vien" kho hieu.
+echo      Lan dau can internet, ~2-5 phut. Cac lan sau chi vai giay...
+"%~dp0venv\Scripts\python.exe" -m pip install -r "%~dp0requirements.txt" --progress-bar off --disable-pip-version-check >>"%LOGFILE%" 2>&1
 if errorlevel 1 (
-    echo      Cai dat thu vien - lan dau, can internet, ~2-5 phut...
-    echo [%date% %time%] Cai thu vien bat dau >>"%LOGFILE%"
-    "%~dp0venv\Scripts\python.exe" -m pip install -r "%~dp0requirements.txt" --progress-bar off >>"%LOGFILE%" 2>&1
-    if errorlevel 1 (
-        del "%~dp0_chk.py" >nul 2>&1
-        echo [LOI] Cai dat thu vien that bai!
-        echo [LOI] pip install that bai >>"%LOGFILE%"
-        echo.
-        echo Xem startup.log de biet loi cu the.
-        echo.
-        pause
-        exit /b 1
-    )
-    echo      [OK] Cai thu vien thanh cong.
-    echo [%date% %time%] Buoc 4: cai xong >>"%LOGFILE%"
-) else (
-    echo      [OK] Thu vien da san sang.
-    echo [%date% %time%] Buoc 4: thu vien da co >>"%LOGFILE%"
+    echo [LOI] Cai dat thu vien that bai!
+    echo [LOI] pip install that bai >>"%LOGFILE%"
+    echo.
+    echo Kiem tra ket noi internet roi chay lai.
+    echo Xem startup.log de biet loi cu the.
+    echo.
+    pause
+    exit /b 1
 )
-del "%~dp0_chk.py" >nul 2>&1
+echo      [OK] Thu vien san sang.
+echo [%date% %time%] Buoc 4: OK >>"%LOGFILE%"
 
 echo [5/5] Kiem tra ung dung...
 echo [%date% %time%] Buoc 5: import app >>"%LOGFILE%"

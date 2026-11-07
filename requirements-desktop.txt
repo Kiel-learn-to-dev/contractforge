@@ -1,0 +1,8 @@
+# Tuy chon: cua so rieng (WebView2) + icon khay he thong cho ContractForge.pyw.
+# Khong cai cung duoc: app tu mo trinh duyet he thong.
+#   pip install -r requirements-desktop.txt
+# Linux: pywebview can them GTK hoac Qt cua he dieu hanh (xem README).
+-r ContractForge/requirements.txt
+pywebview>=4.0
+pystray>=0.19
+pillow>=10.0

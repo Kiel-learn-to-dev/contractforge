@@ -9,6 +9,26 @@ Bản đầu tiên đủ điều kiện công khai mã nguồn.
 
 ### Sửa lỗi
 
+- **Người khác clone repo về cài và chạy không còn vấp.**
+  - Hai test (`test_runtime_paths`) fail trên Linux/macOS vì đặt `LOCALAPPDATA`, biến chỉ
+    được đọc trên Windows — CI đỏ ở bước test. Nay test ghim `sys.platform`, và có thêm
+    test cho thư mục dữ liệu mặc định của từng nền tảng.
+  - Thêm `requirements-dev.txt` (kèm `pytest`) và `requirements-desktop.txt`; README,
+    CONTRIBUTING và CI dùng chung chúng thay vì mỗi nơi một lệnh khác nhau.
+  - `pip install .` không còn tạo ra bản cài hỏng (chỉ có package `app`, thiếu `main.py`,
+    `templates/`, `static/`). Gợi ý `pip install 'contractforge[desktop]'` — gói không có
+    trên PyPI — đổi thành `pip install -r requirements-desktop.txt`.
+  - `chay_windows.bat` / `chay_mac_linux.sh` luôn chạy `pip install -r requirements.txt`
+    (xong ngay và không cần mạng nếu đã đủ), nên `git pull` kéo về thư viện mới không còn
+    gây lỗi thiếu thư viện; kiểm tra Python ≥ 3.11 có thông báo rõ; script `.sh` chạy được
+    từ thư mục bất kỳ.
+  - `pyproject.toml` và `requirements.txt` khai báo thư viện trùng nhau, nay có test chặn
+    việc lệch.
+  - Tài liệu đồng bộ: cổng 8888 (script) thay cho 8000 (README), Python 3.11+, vị trí dữ
+    liệu đúng với `app/paths.py`; `HUONG_DAN.md` viết lại, bỏ phần cũ (v43, "tự cài thư
+    viện" khi mở `.pyw`, sửa `main.py` để đổi cổng); `ContractForge/HUONG_DAN.md` chỉ còn
+    trỏ về bản chính.
+
 - **Hợp đồng đã ký gần hết hạn không còn bị khoá.** Bản quét tự động đổi
   `Signed → ExpiringSoon` khi còn ≤30 ngày, mà `ExpiringSoon` không có lối đi
   tới `Invoiced` — càng gần hạn thì càng không xuất hoá đơn được. "Sắp hết hạn"

@@ -183,7 +183,7 @@ def open_window(base_url: str, on_closed: Optional[Callable[[], None]] = None) -
     """
     if not webview_available():
         log.warning("pywebview chưa được cài — mở bằng trình duyệt hệ thống. "
-                    "Cài thêm: pip install 'contractforge[desktop]'")
+                    "Cài thêm: pip install -r requirements-desktop.txt")
         webbrowser.open(base_url)
         return "browser"
 

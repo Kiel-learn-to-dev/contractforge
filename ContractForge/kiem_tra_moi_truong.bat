@@ -25,7 +25,7 @@ if exist "%~dp0main.py" (
 ) else (
     echo       [FAIL] KHONG TIM THAY main.py!
     echo [%date% %time%] main.py: FAIL >> "%LOGFILE%"
-    echo       HAY CHAY FILE NAY TU BEN TRONG THU MUC contract_manager
+    echo       HAY CHAY FILE NAY TU BEN TRONG THU MUC ContractForge (thu muc co main.py)
 )
 
 REM 2. Python
