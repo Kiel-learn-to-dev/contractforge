@@ -95,6 +95,9 @@ if errorlevel 1 (
     echo [LOI] pip install that bai >>"%LOGFILE%"
     echo.
     echo Kiem tra ket noi internet roi chay lai.
+    echo Neu startup.log bao "Microsoft Visual C++ 14.0 or greater is required":
+    echo   Python cua ban qua moi, mot thu vien chua co ban dung san.
+    echo   Cai Python 3.12 hoac 3.13 tu python.org, xoa thu muc venv, roi chay lai.
     echo Xem startup.log de biet loi cu the.
     echo.
     pause

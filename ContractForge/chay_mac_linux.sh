@@ -42,6 +42,8 @@ source venv/bin/activate
 echo "[...] Kiem tra thu vien (lan dau cai mat 2-5 phut, can internet)..."
 if ! python3 -m pip install -r requirements.txt -q --disable-pip-version-check; then
     echo "[LOI] Cai dat thu vien that bai - xem thong bao pip o tren."
+    echo "Neu pip bao thieu trinh bien dich (gcc / Visual C++), Python cua ban co the qua moi:"
+    echo "thu Python 3.12 hoac 3.13, xoa thu muc venv roi chay lai."
     exit 1
 fi
 echo "[OK] Thu vien san sang."

@@ -40,6 +40,8 @@ hiddenimports = (
         "uvicorn.logging",
         "uvicorn.loops.auto",
         "uvicorn.protocols.http.auto",
+        # Không còn httptools (requirements dùng uvicorn trần) nên auto.py rơi về h11.
+        "uvicorn.protocols.http.h11_impl",
         "uvicorn.lifespan.on",
         # WebSocket cố ý KHÔNG có: app không dùng, và app/desktop.py đặt
         # ws="none" nên uvicorn không nạp lớp đó.

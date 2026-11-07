@@ -22,6 +22,11 @@ Bản đầu tiên đủ điều kiện công khai mã nguồn.
     (xong ngay và không cần mạng nếu đã đủ), nên `git pull` kéo về thư viện mới không còn
     gây lỗi thiếu thư viện; kiểm tra Python ≥ 3.11 có thông báo rõ; script `.sh` chạy được
     từ thư mục bất kỳ.
+  - **Cài đặt thất bại trên Windows + Python 3.15** ("Microsoft Visual C++ 14.0 or greater is
+    required"): `uvicorn[standard]` kéo theo `pyyaml`, chưa có wheel dựng sẵn cho Python mới
+    ra, nên pip phải build từ mã nguồn. App không dùng WebSocket/uvloop/httptools/yaml nên
+    đổi sang `uvicorn` trần; mọi thư viện còn lại đều có wheel. Có test chặn quay lại
+    `[standard]`, và script khởi động chỉ rõ cách xử lý khi pip báo thiếu trình biên dịch.
   - `pyproject.toml` và `requirements.txt` khai báo thư viện trùng nhau, nay có test chặn
     việc lệch.
   - Tài liệu đồng bộ: cổng 8888 (script) thay cho 8000 (README), Python 3.11+, vị trí dữ

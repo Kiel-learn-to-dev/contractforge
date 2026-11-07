@@ -45,3 +45,15 @@ def test_dev_extra_matches_requirements_dev():
 def test_desktop_extra_matches_requirements_desktop():
     expected = _requirements(REPO_ROOT / "requirements-desktop.txt")
     assert _pyproject_list("desktop") == expected
+
+
+def test_no_extras_that_need_a_compiler_on_new_pythons():
+    """``uvicorn[standard]`` pulls in pyyaml, which ships no wheel for brand-new
+    Python releases (3.15 on Windows at the time of writing). pip then builds it
+    from source and demands Microsoft C++ Build Tools, so a fresh install failed
+    on a clean machine. The app uses none of what the extra adds (WebSocket,
+    uvloop, httptools, watchfiles, dotenv, yaml), so plain ``uvicorn`` it is.
+    """
+    declared = _requirements(REPO_ROOT / "ContractForge" / "requirements.txt")
+    offenders = sorted(d for d in declared if d.lower().startswith("uvicorn[standard"))
+    assert not offenders, f"dùng uvicorn trần, không kèm [standard]: {offenders}"
