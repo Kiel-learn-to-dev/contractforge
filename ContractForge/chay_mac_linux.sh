@@ -5,6 +5,9 @@ echo "  CONTRACTFORGE - QUAN LY HOP DONG"
 echo "========================================"
 echo ""
 
+# Chay duoc tu bat ky thu muc nao: moi duong dan ben duoi tinh tu thu muc chua script nay.
+cd "$(dirname "$0")" || exit 1
+
 # === Kiem tra Python ===
 if ! command -v python3 &>/dev/null; then
     echo "[LOI] Khong tim thay Python 3!"
@@ -12,24 +15,36 @@ if ! command -v python3 &>/dev/null; then
     echo "Ubuntu/Debian: sudo apt install python3 python3-pip python3-venv"
     exit 1
 fi
+if ! python3 -c "import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)"; then
+    echo "[LOI] Can Python 3.11 tro len, may dang co $(python3 --version)."
+    echo "Tai ban moi tai https://www.python.org/downloads/"
+    exit 1
+fi
 echo "[OK] Da tim thay $(python3 --version)"
 
 # === Virtual environment ===
-if [ ! -d "venv" ]; then
+if [ ! -x "venv/bin/python" ]; then
     echo "[...] Dang tao moi truong ao (lan dau)..."
-    python3 -m venv venv
+    if ! python3 -m venv venv; then
+        echo "[LOI] Khong tao duoc venv."
+        echo "Ubuntu/Debian: sudo apt install python3-venv"
+        rm -rf venv
+        exit 1
+    fi
     echo "[OK] Da tao."
 fi
 
 source venv/bin/activate
 
 # === Cai thu vien ===
-python3 -c "import fastapi, uvicorn, docx, openpyxl" 2>/dev/null
-if [ $? -ne 0 ]; then
-    echo "[...] Dang cai dat thu vien (lan dau, mat 2-5 phut)..."
-    pip install -r requirements.txt -q
-    echo "[OK] Cai dat xong."
+# Luon chay pip: neu da du thu vien thi pip xong ngay va KHONG can mang; neu requirements.txt
+# vua doi (sau git pull) thi tu cap nhat, khong bi loi "thieu thu vien" kho hieu.
+echo "[...] Kiem tra thu vien (lan dau cai mat 2-5 phut, can internet)..."
+if ! python3 -m pip install -r requirements.txt -q --disable-pip-version-check; then
+    echo "[LOI] Cai dat thu vien that bai - xem thong bao pip o tren."
+    exit 1
 fi
+echo "[OK] Thu vien san sang."
 
 # === Mo trinh duyet ===
 (sleep 2 && python3 -c "

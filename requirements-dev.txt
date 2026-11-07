@@ -1,0 +1,4 @@
+# Moi truong phat trien: thu vien chay app + cong cu test.
+#   pip install -r requirements-dev.txt
+-r ContractForge/requirements.txt
+pytest>=7.0
