@@ -36,6 +36,19 @@ class AddendumError(ValueError):
     """Không lập được phụ lục. Thông báo đọc được trên form."""
 
 
+def _appendix_template_id(db: Session, raw) -> Optional[int]:
+    """Mẫu phụ lục là tùy chọn. Trả về id đã kiểm tra, hoặc None nếu không chọn."""
+    if not raw:
+        return None
+    try:
+        template = db.get(ContractTemplate, int(raw))
+    except (TypeError, ValueError):
+        template = None
+    if template is None or template.contract_type != APPENDIX_TEMPLATE_TYPE:
+        raise AddendumError(f"Chọn mẫu loại '{APPENDIX_TEMPLATE_TYPE}' cho phụ lục.")
+    return template.id
+
+
 def _parent_or_raise(db: Session, parent_id: int) -> Contract:
     parent = db.get(Contract, parent_id)
     if parent is None:
@@ -148,11 +161,7 @@ def create_addendum(db: Session, parent_id: int, kind: str, form_data: dict) -> 
             line["quantity"] = qty
         filled.append(line)
 
-    template_id = form_data.get("template_id") or None
-    if template_id:
-        template = db.get(ContractTemplate, int(template_id))
-        if template is None or template.contract_type != APPENDIX_TEMPLATE_TYPE:
-            raise AddendumError(f"Chọn mẫu loại '{APPENDIX_TEMPLATE_TYPE}' cho phụ lục.")
+    template_id = _appendix_template_id(db, form_data.get("template_id"))
 
     fmt = _format(db)
     number = numbering.build_addendum_number(
@@ -303,6 +312,7 @@ def create_renewal_appendix(db: Session, parent_id: int, form_data: dict) -> Con
     if months < 1:
         raise AddendumError("Số tháng gia hạn phải từ 1 trở lên.")
     items = _fill_quantities(db, parent, _renewal_items(db, _parse_items_json(form_data.get("items_json"))))
+    template_id = _appendix_template_id(db, form_data.get("template_id"))
     fmt = _format(db)
     number = numbering.build_addendum_number(
         parent.contract_number, numbering.next_addendum_seq(_used_seqs(db, parent, fmt)), fmt)
@@ -310,6 +320,7 @@ def create_renewal_appendix(db: Session, parent_id: int, form_data: dict) -> Con
         "contract_number": number,
         "customer_id": str(parent.customer_id),
         "product_id": str(items[0]["product_id"]),
+        "template_id": str(template_id) if template_id else "",
         "sign_date": form_data.get("sign_date") or date.today().isoformat(),
         "start_date": start.isoformat(),
         "month_count": str(months),

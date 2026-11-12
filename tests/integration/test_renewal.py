@@ -155,3 +155,52 @@ def test_renewal_form_refuses_a_line_without_a_package(client, legacy_parent):
     })
     assert resp.status_code == 422
     assert "chưa chọn gói" in resp.text
+
+
+def test_renewal_appendix_keeps_the_chosen_appendix_template(db_session, legacy_parent, make_template):
+    from app.services.addendum_service import create_renewal_appendix
+
+    p = legacy_parent
+    tpl = make_template(name="Phụ lục gia hạn CNTT", contract_type="Phụ lục")
+    child = create_renewal_appendix(db_session, p["parent"].id, {
+        "start_date": "2026-01-01", "month_count": "12", "template_id": str(tpl.id),
+        "items_json": json.dumps([{"product_id": p["new"].id}]),
+    })
+
+    db_session.expire_all()
+    assert child.template_id == tpl.id
+
+
+def test_renewal_appendix_refuses_a_template_of_another_kind(db_session, legacy_parent, make_template):
+    from app.services.addendum_service import AddendumError, create_renewal_appendix
+
+    p = legacy_parent
+    wrong = make_template(name="Hợp đồng sai loại", contract_type="Khác")
+    with pytest.raises(AddendumError, match="cho phụ lục"):
+        create_renewal_appendix(db_session, p["parent"].id, {
+            "start_date": "2026-01-01", "month_count": "12", "template_id": str(wrong.id),
+            "items_json": json.dumps([{"product_id": p["new"].id}]),
+        })
+
+
+def test_renewal_form_offers_appendix_templates_and_passes_the_pick(
+        client, db_session, legacy_parent, make_template):
+    from app.models.contract import Contract
+
+    p = legacy_parent
+    tpl = make_template(name="Phụ lục gia hạn chọn", contract_type="Phụ lục")
+    make_template(name="Mẫu không hiện ở đây", contract_type="Khác")
+
+    page = client.get(f"/contracts/{p['parent'].id}/renewal/new")
+    assert "Phụ lục gia hạn chọn" in page.text
+    assert "Mẫu không hiện ở đây" not in page.text
+
+    resp = client.post(f"/contracts/{p['parent'].id}/renewal/new", data={
+        "mode": "addendum", "start_date": "2026-01-01", "month_count": "12",
+        "template_id": str(tpl.id), "line_product": [str(p["new"].id)],
+    }, follow_redirects=False)
+    assert resp.status_code == 303
+
+    db_session.expire_all()
+    child = db_session.query(Contract).filter(Contract.doc_kind == "addendum_renewal").one()
+    assert child.template_id == tpl.id

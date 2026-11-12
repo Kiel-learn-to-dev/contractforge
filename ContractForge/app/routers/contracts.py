@@ -725,13 +725,17 @@ def _money(v) -> str:
 
 def _renewal_context(db, parent, errors, values):
     """Dữ liệu cho form gia hạn. Mọi giá trị đã đổi sang dict, không giữ ORM ngoài phiên."""
-    from app.services.addendum_service import renewal_defaults, AddendumError
+    from app.services.addendum_service import renewal_defaults, AddendumError, APPENDIX_TEMPLATE_TYPE
     defaults = None
     errs = list(errors)
     try:
         defaults = renewal_defaults(db, parent.id)
     except AddendumError as exc:
         errs.append(str(exc))
+    templates_list = (db.query(ContractTemplate)
+                      .filter(ContractTemplate.contract_type == APPENDIX_TEMPLATE_TYPE,
+                              ContractTemplate.is_active == True)  # noqa: E712
+                      .order_by(ContractTemplate.name).all())
     lines = []
     if defaults is not None:
         for row in defaults["lines"]:
@@ -749,6 +753,7 @@ def _renewal_context(db, parent, errors, values):
         "errors": errs,
         "start": defaults["start_date"].isoformat() if defaults else "",
         "months": defaults["month_count"] if defaults else "",
+        "template_options": [{"id": t.id, "name": t.name} for t in templates_list],
         "lines": lines,
         "candidates": [] if defaults is None else [
             {"id": p.id, "code": p.code, "name": p.name} for p in defaults["candidates"]],
