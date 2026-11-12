@@ -125,12 +125,58 @@
           </div>
           {% endmacro %}
           {% set fmt_amt = '{:,.0f}'.format(c.total_amount).replace(',','.') if c.total_amount else '—' %}
+          {% if c.pricing_model == 'items' %}
+          {% macro money(v) %}{{ '{:,.0f}'.format(v).replace(',','.') if v is not none else '—' }}{% endmacro %}
+          {{ gv("Số tháng", c.month_count) }}
+          <div class="col-12 mt-2">
+            <div class="table-responsive">
+              <table class="table table-sm mb-2" style="font-size:.8rem;">
+                <thead>
+                  <tr>
+                    <th>TT</th><th>Dịch vụ</th><th>ĐVT</th>
+                    <th class="text-end">Số lượng</th><th class="text-end">Số kỳ</th>
+                    <th class="text-end">Đơn giá</th><th class="text-end">Trước thuế</th>
+                    <th class="text-end">Thuế suất</th><th class="text-end">Tiền thuế</th>
+                    <th class="text-end">Sau thuế</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for it in items %}
+                  <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ it.description }}</td>
+                    <td>{{ it.unit_label or '' }}</td>
+                    <td class="text-end">{{ money(it.quantity) }}</td>
+                    <td class="text-end">{{ '%g' % (it.period_count|float) }}</td>
+                    <td class="text-end">{{ money(it.unit_price_pre_vat) }}</td>
+                    <td class="text-end">{{ money(it.amount_pre_vat) }}</td>
+                    <td class="text-end">{{ '%g' % (it.vat_rate|float) }}%</td>
+                    <td class="text-end">{{ money(it.vat_amount) }}</td>
+                    <td class="text-end">{{ money(it.amount_total) }}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+                <tfoot>
+                  <tr><th colspan="9" class="text-end">Cộng trước thuế</th><th class="text-end">{{ money(c.total_pre_vat) }}</th></tr>
+                  <tr><th colspan="9" class="text-end">Tiền thuế</th><th class="text-end">{{ money(c.total_vat) }}</th></tr>
+                  <tr><th colspan="9" class="text-end">Cộng sau thuế</th><th class="text-end">{{ money(c.total_amount) }}</th></tr>
+                </tfoot>
+              </table>
+            </div>
+            {% if c.payment_mode %}
+            <div class="small text-muted">
+              Thanh toán: {{ 'trả trước' if c.payment_mode == 'prepaid' else 'trả sau' }}{% if c.payment_cycle_months %}, chu kỳ {{ c.payment_cycle_months }} tháng{% endif %}
+            </div>
+            {% endif %}
+          </div>
+          {% else %}
           {{ gv("Số đơn vị", c.unit_count) }}
           {{ gv("Số tháng", c.month_count) }}
           {{ gv("Đơn giá chưa VAT", ('{:,.0f}'.format(c.unit_price_pre_vat).replace(',','.') + ' VNĐ') if c.unit_price_pre_vat else '—') }}
           {{ gv("VAT", (c.vat_rate|string + '%') if c.vat_rate is not none else '—') }}
           {{ gv("Đơn giá có VAT", ('{:,.0f}'.format(c.unit_price_vat).replace(',','.') + ' VNĐ') if c.unit_price_vat else '—') }}
           {{ gv("Số lượng (qty)", c.quantity) }}
+          {% endif %}
           {% if c.selected_unit_names %}
           <div class="col-12 mt-2">
             <div class="text-muted mb-1" style="font-size:.78rem;">

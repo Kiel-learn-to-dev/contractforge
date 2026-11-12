@@ -553,6 +553,7 @@ def contract_detail(request: Request, contract_id: int):
         template = db.query(ContractTemplate).filter(ContractTemplate.id == c.template_id).first() if c.template_id else None
         product  = db.query(Product).filter(Product.id == c.product_id).first() if c.product_id else None
         events   = list(c.events)   # load while session open
+        items    = list(c.items)    # dòng bảng giá trị, load while session open
         allowed_next = [s.value for s in VALID_TRANSITIONS.get(c.status, set())]
     finally:
         db.close()
@@ -560,6 +561,7 @@ def contract_detail(request: Request, contract_id: int):
     return templates.TemplateResponse(request, "contracts/detail.html", {
         "request": request, "page_title": "Hợp đồng",
         "c": c, "customer": customer, "template": template, "product": product,
+        "items": items,
         "events": events, "allowed_next": allowed_next,
         "status_labels": STATUS_LABELS,
         **_fv(request),

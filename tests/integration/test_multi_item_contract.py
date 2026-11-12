@@ -347,3 +347,42 @@ def test_preview_matches_the_numbers_create_draft_saves(client, db_session, make
     assert preview["totals"]["total"] == str(int(contract.total_amount))
     assert preview["totals"]["pre_vat"] == str(int(contract.total_pre_vat))
     assert preview["totals"]["vat"] == str(int(contract.total_vat))
+
+
+# ─── Task 2.4: trang chi tiết hiện các dòng ──────────────────────────────────
+
+def test_detail_of_an_items_contract_shows_both_lines_and_formatted_totals(
+        client, db_session, make_customer, make_product):
+    from app.services.contract_service import create_draft
+
+    customer = make_customer()
+    main = make_product(code="DT-MAIN", name="Gói chính chi tiết", kind="main",
+                        group_code="DT-G", unit_label="cơ sở",
+                        default_price=500_000, default_vat_rate=10)
+    addon = make_product(code="DT-ADD", name="Gói kèm chi tiết", kind="addon",
+                         group_code="DT-G", default_price=150_000, default_vat_rate=10)
+    contract = create_draft(db_session, _items_form(
+        customer, main, [_product_row(main.id, 2), _product_row(addon.id, 1)],
+        contract_number="HD-DT-001", payment_mode="prepaid", payment_cycle_months="6"))
+
+    resp = client.get(f"/contracts/{contract.id}")
+
+    assert resp.status_code == 200
+    assert "Gói chính chi tiết" in resp.text
+    assert "Gói kèm chi tiết" in resp.text
+    assert "15.180.000" in resp.text
+    assert "13.800.000" in resp.text
+    assert "Đơn giá chưa VAT" not in resp.text
+    assert "trả trước" in resp.text
+    assert "chu kỳ 6 tháng" in resp.text
+
+
+def test_detail_of_a_legacy_contract_keeps_the_stored_price_block(client, make_contract):
+    contract = make_contract(unit_price_pre_vat=Decimal("500000"), vat_rate=10,
+                             unit_price_vat=Decimal("550000"), total_amount=Decimal("13200000"))
+
+    resp = client.get(f"/contracts/{contract.id}")
+
+    assert resp.status_code == 200
+    assert "Đơn giá chưa VAT" in resp.text
+    assert "13.200.000" in resp.text
