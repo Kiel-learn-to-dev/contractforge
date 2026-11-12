@@ -68,6 +68,49 @@ def validate_format(number_format: str) -> str:
     return number_format
 
 
+#: Khuôn phụ lục trung tính. Khuôn thật của tổ chức nằm trong Cài đặt, không nằm ở đây.
+DEFAULT_ADDENDUM_FORMAT = "PL{seq}/{parent}"
+
+#: Chỗ điền của khuôn phụ lục: số thứ tự phụ lục và số hợp đồng gốc.
+ADDENDUM_PLACEHOLDERS = ("seq", "parent")
+
+
+def validate_addendum_format(fmt: str) -> str:
+    """Khuôn phụ lục phải có cả {seq} và {parent}. Trả về chính nó nếu hợp lệ.
+
+    Khuôn phụ lục là một thứ riêng, không chung với khuôn hợp đồng: không đổi
+    PLACEHOLDERS hay validate_format.
+    """
+    if not fmt or not fmt.strip():
+        raise InvalidNumberFormat("Khuôn số phụ lục không được để trống.")
+    found = set(re.findall(r"\{(\w+)\}", fmt))
+    unknown = found - set(ADDENDUM_PLACEHOLDERS)
+    if unknown:
+        raise InvalidNumberFormat(
+            f"Chỗ điền không hợp lệ: {sorted(unknown)}. "
+            f"Khuôn phụ lục chỉ dùng được: {list(ADDENDUM_PLACEHOLDERS)}"
+        )
+    missing = set(ADDENDUM_PLACEHOLDERS) - found
+    if missing:
+        raise InvalidNumberFormat(
+            "Khuôn phụ lục phải chứa {seq} và {parent}, "
+            "nếu không các phụ lục sẽ trùng số."
+        )
+    return fmt
+
+
+def build_addendum_number(parent_number: str, seq: str,
+                          fmt: Optional[str] = None) -> str:
+    """Ghép số phụ lục từ số hợp đồng gốc và số thứ tự phụ lục."""
+    f = validate_addendum_format(fmt or DEFAULT_ADDENDUM_FORMAT)
+    return f.format(seq=seq, parent=parent_number)
+
+
+def next_addendum_seq(used: set[int]) -> str:
+    """Số thứ tự phụ lục: cùng quy tắc lấp khoảng trống với hợp đồng."""
+    return next_seq(used)
+
+
 def build_number(seq: str, slug: str, number_format: Optional[str] = None,
                  year: int = 0) -> str:
     """Ghép một số hợp đồng hoàn chỉnh từ khuôn."""

@@ -141,6 +141,25 @@
         </form>
       </div>
     </div>
+
+    <div class="card">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-hash"></i><strong>Khuôn số phụ lục</strong>
+      </div>
+      <div class="card-body">
+        <form method="post" action="/settings/addendum-format" novalidate>
+          <label class="form-label">Khuôn số phụ lục</label>
+          <input type="text" name="addendum_number_format" class="form-control form-control-sm"
+                 value="{{ addendum_format }}" placeholder="VD: PL{seq}/{parent}">
+          <div class="form-text">Phải có {seq} (số thứ tự phụ lục) và {parent} (số hợp đồng gốc). Khuôn của tổ chức nhập ở đây, không nhập vào mã nguồn.</div>
+          <div class="d-flex gap-2 mt-3">
+            <button type="submit" class="btn btn-primary btn-sm">
+              <i class="bi bi-floppy me-1"></i>Lưu khuôn phụ lục
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 
   <div class="col-lg-5">

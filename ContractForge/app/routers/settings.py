@@ -4,7 +4,10 @@ from fastapi.templating import Jinja2Templates
 
 from app.database import SessionLocal
 from app.paths import TEMPLATES_DIR
-from app.services.settings_service import get_party_b_settings, set_setting
+from app.services.settings_service import get_party_b_settings, get_setting, set_setting
+from app.services.numbering import (
+    DEFAULT_ADDENDUM_FORMAT, InvalidNumberFormat, validate_addendum_format,
+)
 from app.services.customer_service import list_deleted_customers
 
 router = APIRouter()
@@ -16,6 +19,7 @@ def settings_page(request: Request):
     db = SessionLocal()
     try:
         pbs = get_party_b_settings(db)
+        addendum_format = get_setting(db, "addendum_number_format", DEFAULT_ADDENDUM_FORMAT)
         deleted_customers = list_deleted_customers(db)
     finally:
         db.close()
@@ -23,6 +27,7 @@ def settings_page(request: Request):
         "request": request,
         "page_title": "Cài đặt",
         "party_b": pbs,
+        "addendum_format": addendum_format,
         "deleted_customers": deleted_customers,
         "flash_msg": request.query_params.get("flash"),
         "flash_type": request.query_params.get("ft", "success"),
@@ -72,5 +77,26 @@ def save_party_b(
         db.close()
     return RedirectResponse(
         url="/settings?flash=Đã lưu thông tin Bên B thành công.&ft=success",
+        status_code=303,
+    )
+
+
+@router.post("/settings/addendum-format", response_class=HTMLResponse)
+def save_addendum_format(addendum_number_format: str = Form("")):
+    fmt = addendum_number_format.strip()
+    try:
+        validate_addendum_format(fmt)
+    except InvalidNumberFormat as exc:
+        return RedirectResponse(
+            url=f"/settings?flash={str(exc)}&ft=danger",
+            status_code=303,
+        )
+    db = SessionLocal()
+    try:
+        set_setting(db, "addendum_number_format", fmt)
+    finally:
+        db.close()
+    return RedirectResponse(
+        url="/settings?flash=Đã lưu khuôn số phụ lục.&ft=success",
         status_code=303,
     )

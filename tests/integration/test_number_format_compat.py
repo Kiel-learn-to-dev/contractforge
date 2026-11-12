@@ -236,3 +236,74 @@ def test_golden_file_covers_every_product_shape(db_engine):
     assert len(product_ids) >= 2, (
         "chỉ có 1 sản phẩm trong golden file — không đủ để bắt lỗi lẫn khuôn"
     )
+
+
+# ─── Task 4.1: khuôn số phụ lục (thêm mới, không sửa test cũ) ───────────────
+
+def test_default_addendum_format_is_neutral_and_builds_the_number():
+    from app.services.numbering import (
+        DEFAULT_ADDENDUM_FORMAT, build_addendum_number, validate_addendum_format,
+    )
+
+    assert DEFAULT_ADDENDUM_FORMAT == "PL{seq}/{parent}"
+    assert validate_addendum_format(DEFAULT_ADDENDUM_FORMAT) == DEFAULT_ADDENDUM_FORMAT
+    assert build_addendum_number("01/ABC/2026", "02") == "PL02/01/ABC/2026"
+
+
+def test_custom_addendum_format_is_used_when_given():
+    from app.services.numbering import build_addendum_number
+
+    assert build_addendum_number("HD-9", "03", "AP{seq}-{parent}") == "AP03-HD-9"
+
+
+def test_addendum_format_without_parent_is_refused():
+    from app.services.numbering import InvalidNumberFormat, validate_addendum_format
+
+    import pytest
+
+    with pytest.raises(InvalidNumberFormat):
+        validate_addendum_format("PL{seq}")
+
+
+def test_addendum_format_without_seq_is_refused():
+    from app.services.numbering import InvalidNumberFormat, validate_addendum_format
+
+    import pytest
+
+    with pytest.raises(InvalidNumberFormat):
+        validate_addendum_format("PL/{parent}")
+
+
+def test_addendum_format_rejects_unknown_placeholder():
+    from app.services.numbering import InvalidNumberFormat, validate_addendum_format
+
+    import pytest
+
+    with pytest.raises(InvalidNumberFormat):
+        validate_addendum_format("PL{seq}/{parent}/{year}")
+
+
+def test_addendum_seq_fills_gaps_like_contract_seq():
+    from app.services.numbering import next_addendum_seq
+
+    assert next_addendum_seq({1, 3}) == "02"
+    assert next_addendum_seq(set()) == "01"
+
+
+def test_settings_page_saves_a_valid_addendum_format_and_refuses_an_invalid_one(client, db_session):
+    from app.services.settings_service import get_setting
+
+    bad = client.post("/settings/addendum-format",
+                      data={"addendum_number_format": "PL{seq}"}, follow_redirects=False)
+    assert bad.status_code == 303
+    assert "ft=danger" in bad.headers["location"]
+    db_session.expire_all()
+    assert get_setting(db_session, "addendum_number_format", "") == ""
+
+    good = client.post("/settings/addendum-format",
+                       data={"addendum_number_format": "AP{seq}-{parent}"}, follow_redirects=False)
+    assert good.status_code == 303
+    assert "ft=success" in good.headers["location"]
+    db_session.expire_all()
+    assert get_setting(db_session, "addendum_number_format", "") == "AP{seq}-{parent}"
+    assert "AP{seq}-{parent}" in client.get("/settings").text
