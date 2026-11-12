@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb" style="font-size:0.82rem;">
+    <li class="breadcrumb-item"><a href="/products">Sản phẩm</a></li>
+    <li class="breadcrumb-item active">{{ form_title }}</li>
+  </ol>
+</nav>
+
+{% if errors %}
+<div class="al al-d">
+  <i class="bi bi-x-circle-fill"></i>
+  <ul class="mb-0 ps-3">{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+  <button class="al-x">×</button>
+</div>
+{% endif %}
+
+{% set v = values or {} %}
+
+<form method="post" action="{{ action }}" novalidate>
+  <div class="card mb12">
+    <div class="card-h">
+      <h6 class="fw-semibold" style="font-size:.85rem;"><i class="bi bi-box-seam text-primary"></i>Nhận diện sản phẩm</h6>
+    </div>
+    <div class="card-b">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="lbl">Mã sản phẩm <span class="text-danger">*</span></label>
+          <input type="text" name="code" class="fc fc-sm" required value="{{ v.get('code', '') }}">
+          <div class="form-text">Mã duy nhất, tự đổi thành chữ hoa.</div>
+        </div>
+        <div class="col-md-8">
+          <label class="lbl">Tên hiển thị <span class="text-danger">*</span></label>
+          <input type="text" name="name" class="fc fc-sm" required value="{{ v.get('name', '') }}">
+          <div class="form-text">Tên này in ra hợp đồng.</div>
+        </div>
+        <div class="col-md-4">
+          <label class="lbl">Loại</label>
+          <input type="text" name="product_type" class="fc fc-sm" value="{{ v.get('product_type', '') }}" placeholder="Ví dụ: Dịch vụ">
+        </div>
+        <div class="col-md-4">
+          <label class="lbl">Nhóm</label>
+          <input type="text" name="group_code" class="fc fc-sm" value="{{ v.get('group_code', '') }}">
+          <div class="form-text">Gói bổ sung phải cùng nhóm với gói chính để được ghép vào một hợp đồng.</div>
+        </div>
+        <div class="col-md-4">
+          <label class="lbl">Kiểu</label>
+          <select name="kind" class="fs fs-sm" size="1">
+            {% for key, label in kind_labels.items() %}
+            <option value="{{ key }}" {% if v.get('kind', 'main') == key %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+          <div class="form-text">Gói chính: bán độc lập. Gói bổ sung: mua kèm hoặc thêm sau.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb12">
+    <div class="card-h">
+      <h6 class="fw-semibold" style="font-size:.85rem;"><i class="bi bi-cash-coin text-success"></i>Giá và thuế</h6>
+    </div>
+    <div class="card-b">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="lbl">Đơn vị tính</label>
+          <input type="text" name="unit_label" class="fc fc-sm" value="{{ v.get('unit_label', '') }}" placeholder="Ví dụ: cơ sở, hồ sơ, GB">
+          <div class="form-text">In ra cột ĐVT của hợp đồng.</div>
+        </div>
+        <div class="col-md-4">
+          <label class="lbl">Đơn giá chưa thuế (VNĐ)</label>
+          <input type="text" name="default_price" class="fc fc-sm" value="{{ v.get('default_price', '') }}" placeholder="Ví dụ: 500.000">
+          <div class="form-text">Nhập số tiền có dấu chấm phân cách nghìn.</div>
+        </div>
+        <div class="col-md-4">
+          <label class="lbl">Thuế suất (%)</label>
+          <input type="text" name="default_vat_rate" class="fc fc-sm" value="{{ v.get('default_vat_rate', '') }}" placeholder="Ví dụ: 8 hoặc 8.5">
+        </div>
+        <div class="col-md-4">
+          <label class="lbl">Kỳ giá (tháng)</label>
+          <input type="number" name="price_period_months" class="fc fc-sm" min="1" value="{{ v.get('price_period_months', '') }}">
+          <div class="form-text">Đơn giá áp cho bao nhiêu tháng. 1 = giá tháng, 12 = giá năm.</div>
+        </div>
+        <div class="col-md-4">
+          <label class="lbl">Thời hạn mặc định (tháng)</label>
+          <input type="number" name="default_duration_months" class="fc fc-sm" min="1" value="{{ v.get('default_duration_months', '') }}">
+        </div>
+        <div class="col-md-4">
+          <label class="lbl">Thứ tự hiển thị</label>
+          <input type="number" name="sort_order" class="fc fc-sm" value="{{ v.get('sort_order', '0') }}">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb12">
+    <div class="card-h">
+      <h6 class="fw-semibold" style="font-size:.85rem;"><i class="bi bi-123 text-warning"></i>Số lượng</h6>
+    </div>
+    <div class="card-b">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="lbl">Nguồn số lượng</label>
+          <select name="quantity_source" class="fs fs-sm" size="1">
+            {% for key, label in source_labels.items() %}
+            <option value="{{ key }}" {% if v.get('quantity_source', 'units') == key %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="lbl">Số lượng tối thiểu</label>
+          <input type="number" name="min_quantity" class="fc fc-sm" min="0" value="{{ v.get('min_quantity', '') }}">
+          <div class="form-text">Số lượng nhỏ hơn mức này sẽ được nâng lên mức này.</div>
+        </div>
+        <div class="col-md-4">
+          <label class="lbl">Bước làm tròn</label>
+          <input type="number" name="quantity_step" class="fc fc-sm" min="1" value="{{ v.get('quantity_step', '') }}">
+          <div class="form-text">Số lượng được làm tròn LÊN theo bội số này. Ví dụ bước 500: 2.300 thành 2.500.</div>
+        </div>
+        <div class="col-md-4">
+          <label class="lbl">Số tài khoản kèm theo</label>
+          <input type="number" name="account_limit" class="fc fc-sm" min="0" value="{{ v.get('account_limit', '') }}">
+          <div class="form-text">Thông tin để in ra phụ lục. Không ảnh hưởng tiền.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb12">
+    <div class="card-h">
+      <h6 class="fw-semibold" style="font-size:.85rem;"><i class="bi bi-file-earmark-text text-info"></i>Hợp đồng và thay thế</h6>
+    </div>
+    <div class="card-b">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="lbl">Mẫu hợp đồng mặc định</label>
+          <select name="default_template_id" class="fs fs-sm" size="1">
+            <option value="">— Không chọn —</option>
+            {% for t in templates %}
+            <option value="{{ t.id }}" {% if v.get('default_template_id', '') == t.id|string %}selected{% endif %}>{{ t.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="lbl">Khuôn số hợp đồng</label>
+          <input type="text" name="contract_number_format" class="fc fc-sm" value="{{ v.get('contract_number_format', '') }}" placeholder="Ví dụ: {seq}/{slug}/{year}">
+          <div class="form-text">Phải có {seq}. Để trống thì dùng khuôn chung của hệ thống.</div>
+        </div>
+        <div class="col-md-6">
+          <label class="lbl">Gói thay thế</label>
+          <select name="replaced_by_id" class="fs fs-sm" size="1">
+            <option value="">— Không có —</option>
+            {% for p in products %}
+            <option value="{{ p.id }}" {% if v.get('replaced_by_id', '') == p.id|string %}selected{% endif %}>{{ p.code }} — {{ p.name }}</option>
+            {% endfor %}
+          </select>
+          <div class="form-text">Dùng khi gia hạn: hợp đồng cũ của gói này sẽ được gợi ý chuyển sang gói thay thế.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Lưu</button>
+    <a href="/products" class="btn btn-outline-secondary btn-sm">Hủy</a>
+  </div>
+</form>
+{% endblock %}

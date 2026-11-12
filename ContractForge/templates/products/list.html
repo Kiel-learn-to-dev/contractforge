@@ -1,12 +1,18 @@
 {% extends "base.html" %}
 {% block content %}
+{% if flash_msg %}
+<div class="alert alert-{{ flash_type }} alert-dismissible fade show mb-3">
+  <i class="bi bi-{% if flash_type == 'success' %}check-circle{% else %}exclamation-triangle{% endif %}-fill me-2"></i>
+  {{ flash_msg }}
+  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
+</div>
+{% endif %}
 <div class="card border-0 shadow-sm card-glass">
   <div class="card-header card-header-soft border-bottom py-3 d-flex justify-content-between align-items-center">
     <div>
       <h6 class="mb-0 fw-semibold"><i class="bi bi-box-seam me-2 text-primary"></i>Danh mục sản phẩm / dịch vụ</h6>
-      <div class="text-muted small mt-1">Trang này dùng để kiểm tra nhanh dữ liệu seed và cấu hình mặc định khi tạo hợp đồng.</div>
     </div>
-    <a href="/contracts/new" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg me-1"></i>Tạo hợp đồng</a>
+    <a href="/products/new" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg me-1"></i>Thêm sản phẩm</a>
   </div>
   <div class="card-body p-0">
     {% if products %}
@@ -14,40 +20,56 @@
       <table class="table table-sm align-middle mb-0 products-table">
         <thead class="table-head-soft">
           <tr>
-            <th class="px-3">Mã</th><th>Tên</th><th>Loại</th><th class="text-end">Đơn giá mặc định</th><th class="text-center">VAT</th><th class="text-center">Thời hạn</th><th class="text-center">Trạng thái</th>
+            <th class="px-3">Mã</th><th>Tên</th><th>Nhóm</th><th>Kiểu</th><th>Loại</th><th>ĐVT</th>
+            <th class="text-end">Đơn giá mặc định</th><th class="text-center">VAT</th><th class="text-center">Thời hạn</th>
+            <th class="text-center">Trạng thái</th><th class="text-center"></th>
           </tr>
         </thead>
         <tbody>
+          {% set ns = namespace(prev=None, started=False) %}
           {% for p in products %}
+          {% if not ns.started or p.group_code != ns.prev %}
+          <tr class="group-row">
+            <td colspan="11" class="px-3 fw-semibold small text-uppercase text-muted">
+              {{ p.group_code or 'Chưa thuộc nhóm nào' }}
+            </td>
+          </tr>
+          {% set ns.prev = p.group_code %}
+          {% set ns.started = True %}
+          {% endif %}
           <tr>
             <td class="px-3 fw-semibold theme-heading">{{ p.code }}</td>
             <td class="theme-heading">{{ p.name }}</td>
+            <td class="theme-heading">{{ p.group_code or '—' }}</td>
+            <td class="theme-heading">{{ kind_labels.get(p.kind, p.kind) }}</td>
             <td class="theme-heading">{{ p.product_type }}</td>
+            <td class="theme-heading">{{ p.unit_label or '—' }}</td>
             <td class="text-end theme-heading">{{ '{:,.0f}'.format(p.default_price).replace(',', '.') if p.default_price else '—' }}</td>
             <td class="text-center theme-heading">{{ p.default_vat_rate }}%</td>
             <td class="text-center theme-heading">{{ p.default_duration_months or '—' }} tháng</td>
             <td class="text-center">{% if p.is_active %}<span class="badge bg-success">Đang dùng</span>{% else %}<span class="badge bg-secondary">Ẩn</span>{% endif %}</td>
+            <td class="text-center"><a href="/products/{{ p.id }}/edit" class="btn btn-sm btn-outline-primary">Sửa</a></td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
     {% else %}
-    <div class="p-4 text-center text-muted">Chưa có sản phẩm nào.</div>
+    <div class="p-4 text-center text-muted">Chưa có sản phẩm nào. <a href="/products/new">Thêm sản phẩm</a>.</div>
     {% endif %}
   </div>
 </div>
 <style>
-.products-table td:nth-child(4),
-.products-table td:nth-child(5),
-.products-table td:nth-child(6),
+.products-table td:nth-child(7),
+.products-table td:nth-child(8),
+.products-table td:nth-child(9),
 .products-table td.theme-cell-strong,
 .products-table .theme-heading {
   color: var(--heading) !important;
 }
-:root[data-theme="dark"] .products-table td:nth-child(4),
-:root[data-theme="dark"] .products-table td:nth-child(5),
-:root[data-theme="dark"] .products-table td:nth-child(6),
+:root[data-theme="dark"] .products-table td:nth-child(7),
+:root[data-theme="dark"] .products-table td:nth-child(8),
+:root[data-theme="dark"] .products-table td:nth-child(9),
 :root[data-theme="dark"] .products-table td.theme-cell-strong,
 :root[data-theme="dark"] .products-table .theme-heading {
   color: var(--heading) !important;

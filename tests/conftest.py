@@ -291,3 +291,26 @@ def make_template(db_session):
         return t
 
     return _create
+
+
+@pytest.fixture()
+def client(db_engine, monkeypatch):
+    """TestClient nối vào ĐÚNG database tạm mà các fixture đang ghi vào.
+
+    Bản dùng chung, chép từ tests/integration/test_local_security.py. Router giữ
+    tham chiếu `SessionLocal` từ lúc import, nên phải vá từng module đang giữ nó.
+    Mỗi request có session riêng vì router nào cũng `db.close()` trong finally.
+    """
+    import sys
+
+    from sqlalchemy.orm import sessionmaker
+    from fastapi.testclient import TestClient
+
+    import main  # phải import trước khi quét: nó kéo theo mọi router
+
+    factory = sessionmaker(autocommit=False, autoflush=False, bind=db_engine)
+    for name, module in list(sys.modules.items()):
+        if (name == "main" or name.startswith("app.")) and hasattr(module, "SessionLocal"):
+            monkeypatch.setattr(module, "SessionLocal", factory, raising=False)
+
+    return TestClient(main.app)
