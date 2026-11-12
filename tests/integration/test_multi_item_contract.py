@@ -7,6 +7,7 @@ chạy xanh TRƯỚC khi sửa create_draft, để chứng minh nhánh cũ khôn
 """
 
 import json
+import pathlib
 from decimal import Decimal
 
 import pytest
@@ -386,3 +387,85 @@ def test_detail_of_a_legacy_contract_keeps_the_stored_price_block(client, make_c
     assert resp.status_code == 200
     assert "Đơn giá chưa VAT" in resp.text
     assert "13.200.000" in resp.text
+
+
+# ─── Task 2.5: form lập hợp đồng nhiều dòng ──────────────────────────────────
+
+FORM_PATH = pathlib.Path(__file__).resolve().parents[2] / "ContractForge" / "templates" / "contracts" / "form.html"
+
+
+def test_new_form_has_no_price_inputs_and_posts_items_json(client):
+    resp = client.get("/contracts/new")
+
+    assert resp.status_code == 200
+    assert 'name="unit_price_pre_vat"' not in resp.text
+    assert 'name="total_amount"' not in resp.text
+    assert 'name="quantity"' not in resp.text
+    assert 'name="items_json"' in resp.text
+    assert 'id="tbl-items"' in resp.text
+    assert 'name="payment_mode"' in resp.text
+
+
+def test_new_form_dropdown_lists_main_packages_only(client, make_product):
+    make_product(code="FORM-MAIN-HK", name="Gói chính hư cấu", kind="main", group_code="FG-1")
+    make_product(code="FORM-ADDON-HK", name="Gói kèm hư cấu", kind="addon", group_code="FG-1")
+
+    resp = client.get("/contracts/new")
+
+    assert 'data-code="FORM-MAIN-HK"' in resp.text
+    assert 'data-code="FORM-ADDON-HK"' not in resp.text
+
+
+def test_form_script_has_no_price_formula_left():
+    text = FORM_PATH.read_text(encoding="utf-8")
+    assert "* (1 +" not in text
+    assert "/ 100" not in text
+    assert "recalcPrice" not in text
+    assert "priceOfOption" not in text
+
+
+def test_posting_items_json_creates_a_multi_line_contract(client, db_session, make_customer,
+                                                          make_product):
+    from app.models.contract import Contract
+    from app.models.contract_item import ContractItem
+
+    customer = make_customer()
+    main = make_product(code="FP-MAIN", name="Gói chính POST", kind="main", group_code="FP-G",
+                        default_price=500_000, default_vat_rate=10)
+    addon = make_product(code="FP-ADD", name="Gói kèm POST", kind="addon", group_code="FP-G",
+                         default_price=150_000, default_vat_rate=10)
+    items = [_product_row(main.id, 1), _product_row(addon.id, 1)]
+
+    resp = client.post("/contracts/new", data=_items_form(
+        customer, main, items, contract_number="HD-POST-001"), follow_redirects=False)
+
+    assert resp.status_code == 303
+    location = resp.headers["location"]
+    contract_id = int(location.split("/contracts/")[1].split("?")[0])
+    db_session.expire_all()
+    contract = db_session.get(Contract, contract_id)
+    assert contract.pricing_model == "items"
+    # Trước thuế 6.000.000 + 1.800.000 = 7.800.000; thuế 10% = 780.000; tổng 8.580.000.
+    assert contract.total_amount == Decimal("8580000")
+    assert db_session.query(ContractItem).filter_by(contract_id=contract_id).count() == 2
+
+
+def test_posting_bad_items_json_returns_422_and_keeps_the_rows(client, make_customer,
+                                                              make_product):
+    customer = make_customer()
+    main = make_product(code="FQ-MAIN", name="Gói chính lỗi", kind="main", group_code="FQ-G")
+    addon = make_product(code="FQ-ADD", name="Gói kèm lỗi", kind="addon", group_code="FQ-G")
+    items = [_product_row(addon.id, 1), _product_row(main.id, 1)]
+
+    resp = client.post("/contracts/new", data=_items_form(
+        customer, main, items, contract_number="HD-POST-002"))
+
+    assert resp.status_code == 422
+    assert "Dòng 1 phải là gói chính" in resp.text
+    # Trường ẩn items_json phải giữ đúng các dòng đã gửi, để người dùng không phải nhập lại.
+    import html
+    import re
+    match = re.search(r'id="inp-items-json" value="([^"]*)"', resp.text)
+    assert match is not None
+    kept = json.loads(html.unescape(match.group(1)))
+    assert [row["product_id"] for row in kept] == [addon.id, main.id]

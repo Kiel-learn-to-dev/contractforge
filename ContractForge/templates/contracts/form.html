@@ -152,42 +152,11 @@
         </div>
         <div class="card-b">
           <div class="row g-3">
-            <div class="col-md-3">
-              <label class="lbl">Đơn giá chưa VAT <span class="text-danger">*</span></label>
-              <input type="text" name="unit_price_pre_vat" class="fc fc-sm"
-                     value="{{ pv('unit_price_pre_vat') }}" placeholder="VD: 500000" id="inp-price-pre">
-            </div>
-            <div class="col-md-2">
-              <label class="lbl">VAT (%)</label>
-              <input type="number" name="vat_rate" class="fc fc-sm"
-                     value="{{ pv('vat_rate', '0') }}" min="0" max="100" id="inp-vat">
-            </div>
-            <div class="col-md-3">
-              <label class="lbl">Đơn giá có VAT</label>
-              <input type="text" name="unit_price_vat" class="form-control form-control-sm bg-light"
-                     value="{{ pv('unit_price_vat') }}" id="inp-price-vat" readonly
-                     placeholder="Tự tính" tabindex="-1">
-            </div>
             <div class="col-md-2">
               <label class="lbl">Số cơ sở</label>
               <input type="number" name="unit_count" class="fc fc-sm"
-                     value="{{ pv('unit_count', '1') }}" min="1" id="inp-units">
-            </div>
-            <div class="col-md-2">
-              <label class="lbl">Số tháng</label>
-              <input type="number" name="month_count" class="fc fc-sm"
-                     value="{{ pv('month_count') }}" min="1" id="inp-months">
-            </div>
-            <div class="col-md-4">
-              <label class="lbl">Số lượng gói (số cơ sở × số tháng)</label>
-              <input type="text" name="quantity" class="form-control form-control-sm bg-light"
-                     value="{{ pv('quantity') }}" id="inp-qty" readonly tabindex="-1">
-            </div>
-            <div class="col-md-8">
-              <label class="lbl">Tổng giá trị (VNĐ)</label>
-              <input type="text" name="total_amount" class="form-control form-control-sm fw-bold"
-                     value="{{ pv('total_amount') }}" id="inp-total"
-                     placeholder="Tự tính từ đơn giá × cơ sở × tháng">
+                     value="{{ pv('unit_count', '1') }}" min="1" id="inp-units" readonly>
+              <div class="form-text" style="font-size:.7rem;color:#6c757d;">Theo số cơ sở đã tích bên dưới.</div>
             </div>
 
             <!-- Cơ sở áp dụng — chọn cơ sở nào sẽ mua (mặc định tích tất cả) -->
@@ -211,6 +180,48 @@
               </div>
               <input type="hidden" name="selected_units" id="inp-selected-units"
                      value="{{ pv('selected_units') }}">
+            </div>
+
+            <!-- Dòng giá trị: gói chính + gói bổ sung. JS chỉ gom dữ liệu và hiển thị; tiền do máy chủ tính. -->
+            <div class="col-12">
+              <label class="lbl">Dòng giá trị <span class="muted" style="font-weight:400;">(tiền do máy chủ tính)</span></label>
+              <div class="table-responsive">
+                <table class="table table-sm align-middle mb-1" id="tbl-items" style="font-size:.8rem;">
+                  <thead>
+                    <tr>
+                      <th>Dịch vụ</th><th>ĐVT</th>
+                      <th class="text-end" style="width:110px;">Số lượng</th>
+                      <th class="text-end" style="width:130px;">Đơn giá (VNĐ)</th>
+                      <th class="text-end" style="width:80px;">Thuế %</th>
+                      <th class="text-end">Trước thuế</th><th class="text-end">Thuế</th><th class="text-end">Sau thuế</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                  <tfoot>
+                    <tr><th colspan="7" class="text-end">Cộng trước thuế</th><th class="text-end" id="sum-pre"></th></tr>
+                    <tr><th colspan="7" class="text-end">Tiền thuế</th><th class="text-end" id="sum-vat"></th></tr>
+                    <tr><th colspan="7" class="text-end">Cộng sau thuế</th><th class="text-end fw-bold" id="sum-total"></th></tr>
+                  </tfoot>
+                </table>
+              </div>
+              <div class="small text-muted mb-1">Gói bổ sung cùng nhóm với gói chính (tích để thêm dòng):</div>
+              <div id="addon-picker" class="d-flex flex-wrap gap-3 mb-2"></div>
+              <div id="price-error" class="text-danger small"></div>
+              <input type="hidden" name="items_json" id="inp-items-json" value="{{ pv('items_json') }}">
+            </div>
+
+            <div class="col-md-4">
+              <label class="lbl">Hình thức thanh toán</label>
+              <select name="payment_mode" class="fs fs-sm" size="1">
+                <option value="">— Chưa chọn —</option>
+                <option value="prepaid" {% if pv('payment_mode') == 'prepaid' %}selected{% endif %}>Trả trước</option>
+                <option value="postpaid" {% if pv('payment_mode') == 'postpaid' %}selected{% endif %}>Trả sau</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="lbl">Chu kỳ thanh toán (tháng)</label>
+              <input type="number" name="payment_cycle_months" class="fc fc-sm" min="1"
+                     value="{{ pv('payment_cycle_months') }}">
             </div>
 
             <div class="col-12">
@@ -271,7 +282,7 @@
       <!-- Actions -->
       <div class="card">
         <div class="card-b">
-          <button type="submit" class="btn btn-danger w-100 ">
+          <button type="submit" class="btn btn-danger w-100" id="btn-save" disabled>
             <i class="bi bi-plus-lg "></i>Tạo hợp đồng
           </button>
           <a href="/contracts" class="btn btn-outline-secondary w-100">
@@ -366,95 +377,301 @@ function syncMonths(val) {
   if (t) t.value = val;
   if (v) v.value = val;
   calcEndDate();
-  recalcPrice();
+  refreshPreview();
 }
 var _mT = gid('inp-months-time'), _mV = gid('inp-months');
 if (_mT) _mT.addEventListener('input', function() { syncMonths(this.value); });
 if (_mV) _mV.addEventListener('input', function() { syncMonths(this.value); });
 
-// ─── TÍNH GIÁ TRỊ ─────────────────────────────────────────────────────────────
-var ONES  = ['','một','hai','ba','bốn','năm','sáu','bảy','tám','chín'];
-var TEENS = ['mười','mười một','mười hai','mười ba','mười bốn','mười lăm',
-             'mười sáu','mười bảy','mười tám','mười chín'];
-function sayThree(n) {
-  if (!n) return '';
-  var h = Math.floor(n/100), r = n%100, p = [];
-  if (h) p.push(ONES[h] + ' trăm');
-  if (r) {
-    if (r < 10 && h)   p.push('không mươi ' + ONES[r]);
-    else if (r < 10)   p.push(ONES[r]);
-    else if (r < 20)   p.push(TEENS[r-10]);
-    else {
-      var c = Math.floor(r/10), d = r%10, s = ONES[c] + ' mươi';
-      if (d===1) s+=' mốt'; else if (d===5&&c>1) s+=' lăm'; else if (d) s+=' '+ONES[d];
-      p.push(s);
-    }
-  }
-  return p.join(' ');
-}
-function amtToWords(n) {
-  n = Math.floor(Number(n)||0);
-  if (!n) return 'Không đồng';
-  var parts = [], t=Math.floor(n/1e9), tr=Math.floor((n%1e9)/1e6),
-      ng=Math.floor((n%1e6)/1e3), dv=n%1e3;
-  if (t)  parts.push(sayThree(t)  + ' tỷ');
-  if (tr) parts.push(sayThree(tr) + ' triệu');
-  if (ng) parts.push(sayThree(ng) + ' nghìn');
-  if (dv) parts.push(sayThree(dv));
-  var s = parts.join(', ') + ' đồng';
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
+// ─── TIỀN: JS chỉ gom dữ liệu, gửi đi và hiển thị kết quả ─────────────────────
+// Không có phép nhân, chia hay làm tròn tiền trong phần này. Mọi số tiền (thành
+// tiền, thuế, tổng, số bằng chữ, mô tả cách tính) do POST /contracts/price-preview
+// trả về, đi cùng đường tính với lúc lưu hợp đồng.
 function fmtN(n) { return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.'); }
 function parseN(s) { return parseFloat(String(s).replace(/\./g,'').replace(',','.'))||0; }
 
-// Giá lấy từ danh mục sản phẩm qua data-price / data-vat trên từng <option>.
-// Bản trước có một bảng giá viết cứng theo mã sản phẩm ngay trong template —
-// sản phẩm mới không tự điền giá được, và sửa giá phải sửa ở hai nơi.
-// LƯU Ý: dùng parseFloat, KHÔNG dùng parseN. parseN đọc số theo kiểu Việt Nam
-// (dấu chấm là phân cách nghìn), còn data-* là số thô từ DB — VAT "8.00" qua
-// parseN sẽ thành 800%.
-function priceOfOption(opt) {
-  if (!opt) return null;
-  var pre = parseFloat(opt.dataset.price || '') || 0;
-  if (!pre) return null;
-  var vat = parseFloat(opt.dataset.vat || '0') || 0;
-  return { pre: pre, vat: vat, post: Math.round(pre * (1 + vat / 100)) };
+// Chuỗi số máy → hiển thị để người dùng đọc và sửa. Số nguyên có dấu chấm nghìn;
+// số thập phân dùng dấu phẩy ("82,5") để parseN đọc lại đúng khi gửi đi.
+function showNum(v) {
+  if (v === null || v === undefined || v === '') return '';
+  var s = String(v);
+  if (/^-?\d+$/.test(s)) return fmtN(Number(s));
+  return /^-?\d+\.\d+$/.test(s) ? s.replace('.', ',') : s;
+}
+function setText(id, text) { var el = gid(id); if (el) el.textContent = text; }
+function setPriceError(msg) { setText('price-error', msg || ''); }
+function setSave(on) { var b = gid('btn-save'); if (b) b.disabled = !on; }
+
+var _lastOptions = null;   // kết quả gần nhất của /contracts/product-options
+var _optSeq = 0;           // chỉ áp dụng kết quả của yêu cầu mới nhất
+var _previewTimer = null;
+// Dòng đã nhập trước đó (form bị trả lại do lỗi): dựng lại bảng từ đây.
+var _prefillItems = (function() {
+  var el = gid('inp-items-json');
+  if (!el || !el.value) return null;
+  try { var a = JSON.parse(el.value); return Array.isArray(a) && a.length ? a : null; }
+  catch (e) { return null; }
+})();
+
+function itemsBody() { var t = gid('tbl-items'); return t ? t.querySelector('tbody') : null; }
+
+// Trạng thái các dòng đang có trên màn hình, kể cả ô người dùng đã sửa tay.
+function readRowState() {
+  var state = {};
+  var body = itemsBody(); if (!body) return state;
+  body.querySelectorAll('tr[data-product-id]').forEach(function(tr) {
+    var q = tr.querySelector('.inp-qty'), p = tr.querySelector('.inp-price'), v = tr.querySelector('.inp-vat');
+    state[tr.dataset.productId] = {
+      qty: q.value, qtyManual: !!q.dataset.manual,
+      price: p.value, priceManual: !!p.dataset.manual,
+      vat: v.value, vatManual: !!v.dataset.manual
+    };
+  });
+  return state;
 }
 
-function recalcPrice() {
-  var pre = parseN(gid('inp-price-pre') && gid('inp-price-pre').value);
-  if (!pre) return;
-  var vat = parseN(gid('inp-vat') && gid('inp-vat').value);
-  var u   = parseN(gid('inp-units') && gid('inp-units').value) || 1;
-  var m   = parseN(gid('inp-months') && gid('inp-months').value) || 1;
-  var evEl = gid('inp-price-vat');
-  var post = (evEl && evEl.dataset.fixed ? Number(evEl.dataset.fixed) : 0) || pre*(1+vat/100);
-  if (evEl) evEl.value = fmtN(post);
-  var qty = u * m;
-  var qEl = gid('inp-qty'); if (qEl) qEl.value = qty;
-  var total = post * u * m;
-  var tEl = gid('inp-total');
-  if (tEl) { tEl.value = fmtN(total); tEl.dataset.raw = Math.round(total); }
-  var wEl = gid('inp-amttext');
-  if (wEl && !wEl.dataset.manual) wEl.value = amtToWords(Math.round(total));
-  var dEl = gid('inp-pricing-desc');
-  if (dEl && !dEl.dataset.manual) {
-    var unitDetail = (typeof _customerUnitNames !== 'undefined' && _customerUnitNames.length > 1)
-      ? ' (' + _customerUnitNames.join('; ') + ')' : '';
-    dEl.value = 'Số tiền = Đơn giá có VAT (' + fmtN(Math.round(post)) + ' VNĐ) × ' + u + ' cơ sở' + unitDetail + ' × ' + m + ' tháng = ' + fmtN(Math.round(total)) + ' VNĐ';
-  }
+function checkedAddonIds() {
+  var ids = {};
+  document.querySelectorAll('#addon-picker input[type=checkbox][data-pid]').forEach(function(cb) {
+    if (cb.checked) ids[cb.dataset.pid] = true;
+  });
+  return ids;
 }
-// Nếu user sửa tay số cơ sở → đánh dấu manual, không ghi đè lại
+
+// Ô đã sửa tay thì giữ giá trị người dùng; còn lại lấy mặc định mới từ máy chủ.
+function keepOrDefault(saved, key, fallback) {
+  return (saved && saved[key + 'Manual']) ? saved[key] : fallback;
+}
+
+// raw=true: giữ nguyên chuỗi (thuế suất được đọc bằng parseFloat, cần dấu chấm).
+function makeInput(cls, value, manual, raw) {
+  var input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'fc fc-sm ' + cls;
+  input.value = raw ? String(value === null || value === undefined ? '' : value) : showNum(value);
+  if (manual) input.dataset.manual = '1';
+  return input;
+}
+
+function makeCell(cls, text) {
+  var td = document.createElement('td');
+  if (cls) td.className = cls;
+  td.textContent = text || '';
+  return td;
+}
+
+function makeRow(p, kind, saved) {
+  var tr = document.createElement('tr');
+  tr.dataset.productId = p.id;
+  tr.dataset.kind = kind;
+  tr.dataset.name = p.name;
+  tr.appendChild(makeCell('fw-semibold', p.name));
+  tr.appendChild(makeCell('', p.unit_label));
+  var qtyCell = document.createElement('td');
+  qtyCell.appendChild(makeInput('inp-qty text-end',
+    keepOrDefault(saved, 'qty', p.default_quantity), !!(saved && saved.qtyManual)));
+  tr.appendChild(qtyCell);
+  var priceCell = document.createElement('td');
+  priceCell.appendChild(makeInput('inp-price text-end',
+    keepOrDefault(saved, 'price', p.price), !!(saved && saved.priceManual)));
+  tr.appendChild(priceCell);
+  var vatCell = document.createElement('td');
+  vatCell.appendChild(makeInput('inp-vat text-end',
+    keepOrDefault(saved, 'vat', p.vat), !!(saved && saved.vatManual), true));
+  tr.appendChild(vatCell);
+  tr.appendChild(makeCell('text-end cell-pre', ''));
+  tr.appendChild(makeCell('text-end cell-vat', ''));
+  tr.appendChild(makeCell('text-end cell-total', ''));
+  return tr;
+}
+
+// Dựng lại bảng dòng và danh sách gói bổ sung từ kết quả của máy chủ.
+function buildTable(d, fresh) {
+  var body = itemsBody(); if (!body || !d || !d.main) return;
+  var prev = fresh ? {} : readRowState();
+  var checked = fresh ? {} : checkedAddonIds();
+  if (_prefillItems) {
+    _prefillItems.forEach(function(it) {
+      var key = String(it.product_id);
+      prev[key] = {
+        qty: showNum(it.quantity), qtyManual: true,
+        price: showNum(it.unit_price_pre_vat), priceManual: true,
+        vat: String(it.vat_rate), vatManual: true
+      };
+      checked[key] = true;
+    });
+    _prefillItems = null;
+  }
+
+  body.innerHTML = '';
+  body.appendChild(makeRow(d.main, 'main', prev[String(d.main.id)]));
+
+  var picker = gid('addon-picker');
+  if (picker) picker.innerHTML = '';
+  if (picker && !d.addons.length) {
+    var none = document.createElement('span');
+    none.className = 'text-muted small';
+    none.textContent = 'Không có gói bổ sung nào cùng nhóm.';
+    picker.appendChild(none);
+  }
+  d.addons.forEach(function(a) {
+    var key = String(a.id);
+    var on = !!checked[key];
+    if (picker) {
+      var label = document.createElement('label');
+      label.className = 'd-flex align-items-center gap-2 small';
+      label.style.cursor = 'pointer';
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = on;
+      cb.dataset.pid = key;
+      cb.addEventListener('change', function() {
+        buildTable(_lastOptions, false);
+        refreshPreview();
+      });
+      var span = document.createElement('span');
+      span.textContent = a.name + (a.unit_label ? ' (' + a.unit_label + ')' : '');
+      label.appendChild(cb);
+      label.appendChild(span);
+      picker.appendChild(label);
+    }
+    if (on) body.appendChild(makeRow(a, 'addon', prev[key]));
+  });
+}
+
+function clearSums() {
+  document.querySelectorAll('#tbl-items tbody .cell-pre, #tbl-items tbody .cell-vat, #tbl-items tbody .cell-total')
+    .forEach(function(td) { td.textContent = ''; });
+  ['sum-pre', 'sum-vat', 'sum-total'].forEach(function(id) { setText(id, ''); });
+}
+
+function clearPriceTable() {
+  var body = itemsBody(); if (body) body.innerHTML = '';
+  var picker = gid('addon-picker'); if (picker) picker.innerHTML = '';
+  _lastOptions = null;
+  clearSums();
+  setPriceError('');
+  setSave(false);
+}
+
+// Lấy gói chính + gói bổ sung từ máy chủ. fresh=true: bỏ mọi ô đã sửa tay.
+function loadProductOptions(fresh) {
+  var sel = gid('sel-product');
+  var pid = sel ? sel.value : '';
+  if (!pid) { clearPriceTable(); return; }
+  var custEl = gid('sel-customer'), unitsEl = gid('inp-units');
+  var url = '/contracts/product-options?product_id=' + encodeURIComponent(pid)
+          + '&customer_id=' + encodeURIComponent((custEl && custEl.value) || '0')
+          + '&unit_count=' + encodeURIComponent((unitsEl && unitsEl.value) || '1');
+  var seq = ++_optSeq;
+  fetch(url).then(function(r) { return r.json(); }).then(function(d) {
+    if (seq !== _optSeq) return;
+    if (!d || !d.main) { clearPriceTable(); return; }
+    _lastOptions = d;
+    buildTable(d, !!fresh);
+    refreshPreview();
+  }).catch(function() {
+    if (seq === _optSeq) { setPriceError('Không tải được danh mục gói.'); setSave(false); }
+  });
+}
+
+// Đọc các dòng trên màn hình thành dữ liệu gửi máy chủ. Ô tiền người dùng gõ
+// (kiểu "500.000") đổi về số máy bằng parseN; ô thuế dùng parseFloat.
+function collectItems() {
+  var out = [];
+  document.querySelectorAll('#tbl-items tbody tr[data-product-id]').forEach(function(tr) {
+    out.push({
+      product_id: Number(tr.dataset.productId),
+      description: tr.dataset.name || '',
+      quantity: String(parseN(tr.querySelector('.inp-qty').value)),
+      unit_price_pre_vat: String(parseN(tr.querySelector('.inp-price').value)),
+      vat_rate: String(parseFloat(tr.querySelector('.inp-vat').value) || 0)
+    });
+  });
+  return out;
+}
+
+function applyPreview(d) {
+  document.querySelectorAll('#tbl-items tbody tr[data-product-id]').forEach(function(tr, i) {
+    var line = d.lines[i];
+    if (!line) return;
+    tr.querySelector('.cell-pre').textContent = showNum(line.amount_pre_vat);
+    tr.querySelector('.cell-vat').textContent = showNum(line.vat_amount);
+    tr.querySelector('.cell-total').textContent = showNum(line.amount_total);
+  });
+  setText('sum-pre', showNum(d.totals.pre_vat));
+  setText('sum-vat', showNum(d.totals.vat));
+  setText('sum-total', showNum(d.totals.total));
+  var wEl = gid('inp-amttext');
+  if (wEl && !wEl.dataset.manual) wEl.value = d.totals.amount_text || '';
+  var dEl = gid('inp-pricing-desc');
+  if (dEl && !dEl.dataset.manual) dEl.value = d.description || '';
+}
+
+function doPreview() {
+  var items = collectItems();
+  if (!items.length) { clearSums(); setPriceError(''); setSave(false); return; }
+  var mEl = gid('inp-months-time');
+  var months = parseN(mEl ? mEl.value : '');
+  fetch('/contracts/price-preview', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({month_count: months, items: items})
+  }).then(function(r) {
+    return r.json().then(function(d) { return {ok: r.ok, d: d}; });
+  }).then(function(res) {
+    if (!res.ok) {
+      clearSums();
+      setPriceError((res.d && res.d.error) || 'Không tính được tiền.');
+      setSave(false);
+      return;
+    }
+    setPriceError('');
+    applyPreview(res.d);
+    setSave(true);
+  }).catch(function() {
+    setPriceError('Không kết nối được tới máy chủ.');
+    setSave(false);
+  });
+}
+
+// Gom các lần gọi liên tiếp (gõ số) thành một yêu cầu tới máy chủ.
+function refreshPreview() {
+  clearTimeout(_previewTimer);
+  _previewTimer = setTimeout(doPreview, 250);
+}
+
+// Ô số trong bảng: người dùng gõ là đánh dấu "sửa tay", để lần tải sau không ghi đè.
+var _tblItems = gid('tbl-items');
+if (_tblItems) _tblItems.addEventListener('input', function(e) {
+  var t = e.target;
+  if (!t || !t.classList) return;
+  if (t.classList.contains('inp-qty') || t.classList.contains('inp-price') || t.classList.contains('inp-vat')) {
+    t.dataset.manual = '1';
+    refreshPreview();
+  }
+});
+
+// Số cơ sở (chỉ sửa được khi không có danh sách cơ sở): tải lại gói và số lượng mặc định.
 var _unitsInput = gid('inp-units');
 if (_unitsInput) _unitsInput.addEventListener('input', function() {
   this.dataset.manualUnits = '1';
+  loadProductOptions(false);
 });
 
-['inp-price-pre','inp-vat','inp-units'].forEach(function(id) {
-  var el = gid(id); if (el) el.addEventListener('input', recalcPrice);
-});
 var _wEl = gid('inp-amttext');    if (_wEl) _wEl.addEventListener('input', function() { this.dataset.manual = this.value ? '1' : ''; });
 var _dEl = gid('inp-pricing-desc'); if (_dEl) _dEl.addEventListener('input', function() { this.dataset.manual = this.value ? '1' : ''; });
+
+// Trước khi gửi: ghi dòng vào trường ẩn items_json. Không có dòng nào thì không gửi.
+var _form = document.querySelector('form[action="/contracts/new"]');
+if (_form) _form.addEventListener('submit', function(e) {
+  var items = collectItems();
+  gid('inp-items-json').value = JSON.stringify(items);
+  if (!items.length) {
+    e.preventDefault();
+    setPriceError('Chọn sản phẩm trước khi tạo hợp đồng.');
+  }
+});
 
 // ─── LỌC MẪU HỢP ĐỒNG (native select) ────────────────────────────────────────
 var _allTpl = [];
@@ -483,26 +700,19 @@ function lockTemplate() {
 }
 
 // ─── XỬ LÝ KHI CHỌN SẢN PHẨM ─────────────────────────────────────────────────
+// Chọn gói chính: lọc mẫu, xóa ô văn bản đã tự sinh, dựng lại bảng dòng từ máy chủ.
 function onProductChange() {
   var sel = gid('sel-product');
-  if (!sel || !sel.value) { lockTemplate(); return; }
+  if (!sel || !sel.value) { lockTemplate(); clearPriceTable(); return; }
   var opt  = sel.options[sel.selectedIndex];
   var code = opt && opt.dataset.code || '';
-  // Điền giá
-  var fixed = priceOfOption(opt);
-  if (fixed) {
-    var eP = gid('inp-price-pre'); if (eP) eP.value = fmtN(fixed.pre);
-    var eR = gid('inp-vat');       if (eR) eR.value = fixed.vat;
-    var eV = gid('inp-price-vat');
-    if (eV) { eV.value = fmtN(fixed.post); eV.dataset.fixed = fixed.post; }
-  }
   // LỌC mẫu — KHÔNG set months (user tự nhập)
   filterTemplates(code);
   // Reset text tính toán
   var wEl = gid('inp-amttext'),    dEl = gid('inp-pricing-desc');
   if (wEl) { wEl.dataset.manual=''; wEl.value=''; }
   if (dEl) { dEl.dataset.manual=''; dEl.value=''; }
-  recalcPrice();
+  loadProductOptions(true);
   // Cập nhật gợi ý số HĐ nếu đã chọn khách hàng
   var custId = gid('sel-customer') && gid('sel-customer').value;
   if (custId) setTimeout(function() { suggestContractNumber(custId); }, 50);
@@ -540,7 +750,7 @@ function updateFacilitySelection() {
   if (hid) hid.value = JSON.stringify(names);
   var lbl = gid('facility-count-label');
   if (lbl) lbl.textContent = '— đã chọn ' + names.length + '/' + boxes.length + ' cơ sở';
-  recalcPrice();
+  loadProductOptions(false);
 }
 
 function renderFacilities(facilities) {
@@ -591,7 +801,7 @@ function fetchCustomerUnits(customerId) {
         var unitsEl = gid('inp-units');
         if (unitsEl) unitsEl.value = d.total_units;
         _customerUnitNames = d.unit_names || [];
-        recalcPrice();
+        loadProductOptions(false);
       }
     })
     .catch(function(err) { console.warn('customer-units lỗi:', err); });
@@ -608,11 +818,6 @@ function fetchCustomerUnits(customerId) {
   if (allEl)  allEl.addEventListener('click',  function(e) { setAll(true,  e); });
   if (noneEl) noneEl.addEventListener('click', function(e) { setAll(false, e); });
 })();
-
-function updatePricingDesc() {
-  var priceEl = gid('inp-price-pre');
-  if (priceEl && priceEl.value) recalcPrice();
-}
 
 function suggestContractNumber(customerId) {
   if (!customerId) return;
@@ -656,6 +861,7 @@ if (_selCust) _selCust.addEventListener('change', function() {
     suggestContractNumber(this.value);
     autoFillSignLocation(this);
     fetchCustomerUnits(this.value);
+    loadProductOptions(false);
   }
 });
 
@@ -850,7 +1056,6 @@ document.addEventListener('DOMContentLoaded', function() {
       autoFillSignLocation(sc);
     }
   }
-  if (gid('inp-price-pre') && gid('inp-price-pre').value) recalcPrice();
 });
 </script>
 {% endblock %}

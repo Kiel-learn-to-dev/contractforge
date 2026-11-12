@@ -216,13 +216,15 @@ def test_vat_from_data_attribute_is_not_parsed_as_vietnamese_number():
     """
     source = (TEMPLATE_DIR / "contracts" / "form.html").read_text(encoding="utf-8")
 
-    body = source[source.index("function priceOfOption"):]
+    # Task 2.5 thay priceOfOption bằng collectItems; chỗ đọc thuế nằm ở đó.
+    body = source[source.index("function collectItems"):]
     body = body[:body.index("\n}")]
+    vat_line = next(line for line in body.splitlines() if "vat_rate" in line)
 
-    assert "parseN(" not in body, (
-        "priceOfOption phải dùng parseFloat cho data-*, parseN sẽ đọc sai VAT"
+    assert "parseN(" not in vat_line, (
+        "collectItems phải dùng parseFloat cho thuế, parseN sẽ đọc sai VAT"
     )
-    assert "parseFloat(" in body
+    assert "parseFloat(" in vat_line
 
 
 @pytest.mark.skipif(not GOLDEN.is_file(), reason="không có golden file")

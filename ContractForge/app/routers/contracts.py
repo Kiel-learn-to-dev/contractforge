@@ -128,7 +128,7 @@ def contract_list(
             })
 
         statuses = SELECTABLE_STATUSES
-        products = db.query(Product).filter(Product.is_active == True).order_by(Product.name).all()
+        products = db.query(Product).filter(Product.is_active == True, Product.kind == 'main').order_by(Product.name).all()
         customers = (
             db.query(Customer)
             .filter(Customer.is_active == True, Customer.is_deleted == False)
@@ -301,7 +301,7 @@ def new_form(request: Request, customer_id: int = 0, template_id: int = 0):
     try:
         customers_rows, _ = list_customers(db, CustomerFilters(active_only=True, per_page=500, sort_by='code', sort_dir='asc'))
         customers = [c for c, *_ in customers_rows]
-        products  = db.query(Product).filter(Product.is_active == True).order_by(Product.name).all()
+        products  = db.query(Product).filter(Product.is_active == True, Product.kind == 'main').order_by(Product.name).all()
         tpls      = db.query(ContractTemplate).filter(ContractTemplate.is_active == True).order_by(ContractTemplate.name).all()
         # preselected
         sel_customer = db.query(Customer).filter(Customer.id == customer_id).first() if customer_id else None
@@ -349,7 +349,7 @@ async def new_submit(request: Request):
         # Re-render form with error
         customers_rows, _ = list_customers(db, CustomerFilters(active_only=True, per_page=500, sort_by='code', sort_dir='asc'))
         customers = [c for c, *_ in customers_rows]
-        products  = db.query(Product).filter(Product.is_active == True).all()
+        products  = db.query(Product).filter(Product.is_active == True, Product.kind == 'main').order_by(Product.name).all()
         tpls      = db.query(ContractTemplate).filter(ContractTemplate.is_active == True).all()
         # NOTE: không gọi db.close() ở đây — finally block bên dưới sẽ xử lý
         return templates.TemplateResponse(request, "contracts/form.html", {
