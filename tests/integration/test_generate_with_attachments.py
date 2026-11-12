@@ -84,7 +84,7 @@ def test_a_template_of_another_kind_is_refused_before_anything_is_written(
     wrong = make_template(file_path=str(_docx(s["tmp"] / "hd2.docx", "x")),
                           contract_type="Hợp đồng", name="Mẫu hợp đồng khác")
 
-    with pytest.raises(ValueError, match="không phải văn bản kèm theo"):
+    with pytest.raises(ValueError, match="không dùng được ở đây"):
         generate_docx(db_session, s["contract"].id, [str(wrong.id)], [])
 
     db_session.expire_all()

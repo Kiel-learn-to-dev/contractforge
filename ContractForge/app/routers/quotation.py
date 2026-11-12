@@ -23,7 +23,7 @@ from app.models.contract_template import ContractTemplate
 from app.paths import TEMPLATES_DIR
 from app.services import contract_service, pricing
 from app.services.docx_renderer import apply_template_mapping, lists_from_lines, render_docx, _fmt_number
-from app.services.template_service import QUOTATION_TYPE
+from app.services.template_service import QUOTATION_TYPE, ROLE_QUOTATION, check_template_for
 from app.utils.amount_to_words_vi import amount_to_words
 from app.utils.date_helpers import split_date_parts, parse_date_input
 
@@ -99,6 +99,8 @@ def resolve_quotation_selection(db, product_id: int, template_id: int):
             f"'{template.name}' là mẫu {template.contract_type}, không phải mẫu "
             f"{QUOTATION_TYPE}. Hãy chọn một mẫu {QUOTATION_TYPE}."
         )
+    # Mẫu báo giá cũng phải đúng nhóm sản phẩm đã chọn (ném ValueError như trên).
+    check_template_for(template, product.group_code, ROLE_QUOTATION)
     return product, template
 
 

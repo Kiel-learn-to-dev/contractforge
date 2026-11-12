@@ -31,6 +31,9 @@ from app.models.contract_template import ContractTemplate
 from app.models.product import Product
 from app.services import lifecycle, numbering, pricing
 from app.services.docx_renderer import render_docx, build_render_context, build_render_lists
+from app.services.template_service import (
+    ROLE_CONTRACT, check_template_for, group_of_contract, normalize_group, role_of_doc_kind,
+)
 from app.utils.amount_to_words_vi import amount_to_words, amount_to_words_chan
 from app.utils.date_helpers import (
     parse_date_input, compute_end_date, months_between, format_date_vn
@@ -522,11 +525,18 @@ def price_preview(db: Session, items, month_count) -> dict:
 
 # ─── Create draft ─────────────────────────────────────────────────────────────
 
-def create_draft(db: Session, form_data: dict, *, require_main: bool = True) -> Contract:
+_UNSET = object()
+
+
+def create_draft(db: Session, form_data: dict, *, require_main: bool = True,
+                 template_role: str = ROLE_CONTRACT, template_group=_UNSET) -> Contract:
     """
     Tạo bản nháp hợp đồng từ form data.
     Validates + computes derived fields.
     Raises ValueError cho lỗi validation.
+
+    `template_role` và `template_group` quyết định mẫu được nhận (xem template_service).
+    Mặc định: mẫu hợp đồng, nhóm lấy từ sản phẩm chính.
     """
     # Validate required
     contract_number = (form_data.get("contract_number") or "").strip()
@@ -555,6 +565,18 @@ def create_draft(db: Session, form_data: dict, *, require_main: bool = True) -> 
 
     if get_by_number(db, contract_number):
         raise ValueError(f"Số hợp đồng '{contract_number}' đã tồn tại.")
+
+    # Mẫu phải đúng vai trò và đúng nhóm sản phẩm. Kiểm ở đây, không chỉ ở form.
+    if template_id is not None:
+        template = db.get(ContractTemplate, template_id)
+        if template is None:
+            raise ValueError("Mẫu không tồn tại.")
+        if not template.is_active:
+            raise ValueError(f"Mẫu '{template.name}' đang tắt.")
+        if template_group is _UNSET:
+            sp = db.get(Product, product_id) if product_id else None
+            template_group = normalize_group(sp.group_code) if sp else None
+        check_template_for(template, template_group, template_role)
 
     # Parse dates
     sign_date        = _safe_parse_date(form_data.get("sign_date"))
@@ -688,13 +710,15 @@ def generate_docx(db: Session, contract_id: int, attachment_ids=(),
     ).first()
     if not template:
         raise ValueError("Mẫu hợp đồng không tồn tại.")
+    # Không kiểm đang bật/tắt ở đây: hợp đồng đã sinh phải sinh lại được dù mẫu đã tắt.
+    check_template_for(template, group_of_contract(contract), role_of_doc_kind(contract.doc_kind))
     if not template.file_path or not os.path.exists(template.file_path):
         raise FileNotFoundError(
             f"File template không tìm thấy trên disk: {template.file_path!r}"
         )
 
     from app.services.attachment_service import resolve_attachment_templates, render_attachments
-    attachment_templates = resolve_attachment_templates(db, attachment_ids)
+    attachment_templates = resolve_attachment_templates(db, attachment_ids, contract)
 
     customer = db.query(Customer).filter(Customer.id == contract.customer_id).first()
     if not customer:

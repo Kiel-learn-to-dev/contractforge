@@ -176,7 +176,7 @@ def test_renewal_appendix_refuses_a_template_of_another_kind(db_session, legacy_
 
     p = legacy_parent
     wrong = make_template(name="Hợp đồng sai loại", contract_type="Khác")
-    with pytest.raises(AddendumError, match="cho phụ lục"):
+    with pytest.raises(AddendumError, match="không dùng được ở đây"):
         create_renewal_appendix(db_session, p["parent"].id, {
             "start_date": "2026-01-01", "month_count": "12", "template_id": str(wrong.id),
             "items_json": json.dumps([{"product_id": p["new"].id}]),

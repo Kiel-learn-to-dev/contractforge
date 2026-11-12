@@ -208,6 +208,12 @@ def run_batch(
             if line_info is not None:
                 from app.services.contract_service import add_line_rows, apply_lines
                 apply_lines(contract, *line_info)
+            # Mẫu phải đúng nhóm sản phẩm chính của dòng này. Lỗi chỉ làm dòng này thất bại.
+            from app.models.product import Product as _Product
+            from app.services.template_service import ROLE_CONTRACT, check_template_for, normalize_group
+            row_product = db.get(_Product, contract.product_id) if contract.product_id else None
+            check_template_for(template, normalize_group(row_product.group_code) if row_product else None,
+                               ROLE_CONTRACT)
             db.add(contract)
             db.flush()   # flush để có ID
             if line_info is not None:

@@ -25,26 +25,38 @@ from app.services.contract_service import (
     _add_event, _default_quantity, _parse_items_json, _safe_parse_date, create_draft,
 )
 from app.services.settings_service import get_setting
+from app.services.template_service import (
+    ROLE_ADDON, ROLE_RENEWAL, TemplateMismatch, check_template_for, default_template_for,
+    group_of_contract,
+)
 
 KIND_ADDON = "addon"
 DOC_KIND_ADDON = "addendum_addon"
-APPENDIX_TEMPLATE_TYPE = "Phụ lục"
 
 
 class AddendumError(ValueError):
     """Không lập được phụ lục. Thông báo đọc được trên form."""
 
 
-def _appendix_template_id(db: Session, raw) -> Optional[int]:
-    """Mẫu phụ lục là tùy chọn. Trả về id đã kiểm tra, hoặc None nếu không chọn."""
+def _appendix_template_id(db: Session, raw, parent: Contract, role: str) -> Optional[int]:
+    """Mẫu phụ lục là tùy chọn. Không chọn thì lấy mẫu riêng của nhóm nếu có đúng một.
+
+    Mẫu chọn tay phải đúng vai trò và đúng nhóm của hợp đồng gốc.
+    """
+    group = group_of_contract(parent)
     if not raw:
-        return None
+        default = default_template_for(db, group, role)
+        return default.id if default else None
     try:
         template = db.get(ContractTemplate, int(raw))
     except (TypeError, ValueError):
         template = None
-    if template is None or template.contract_type != APPENDIX_TEMPLATE_TYPE:
-        raise AddendumError(f"Chọn mẫu loại '{APPENDIX_TEMPLATE_TYPE}' cho phụ lục.")
+    if template is None:
+        raise AddendumError("Mẫu phụ lục không tồn tại.")
+    try:
+        check_template_for(template, group, role)
+    except TemplateMismatch as exc:
+        raise AddendumError(str(exc)) from exc
     return template.id
 
 
@@ -157,7 +169,7 @@ def create_addendum(db: Session, parent_id: int, kind: str, form_data: dict) -> 
             line["quantity"] = qty
         filled.append(line)
 
-    template_id = _appendix_template_id(db, form_data.get("template_id"))
+    template_id = _appendix_template_id(db, form_data.get("template_id"), parent, ROLE_ADDON)
 
     fmt = _format(db)
     number = numbering.build_addendum_number(
@@ -174,7 +186,8 @@ def create_addendum(db: Session, parent_id: int, kind: str, form_data: dict) -> 
         "sign_location": parent.sign_location or "",
         "items_json": json.dumps(filled),
     }
-    child = create_draft(db, form, require_main=False)
+    child = create_draft(db, form, require_main=False, template_role=ROLE_ADDON,
+                         template_group=group_of_contract(parent))
     child.parent_contract_id = parent.id
     child.doc_kind = DOC_KIND_ADDON
     _add_event(db, child.id, "addendum", f"Phụ lục bổ sung của {parent.contract_number}", "user")
@@ -308,7 +321,7 @@ def create_renewal_appendix(db: Session, parent_id: int, form_data: dict) -> Con
     if months < 1:
         raise AddendumError("Số tháng gia hạn phải từ 1 trở lên.")
     items = _fill_quantities(db, parent, _renewal_items(db, _parse_items_json(form_data.get("items_json"))))
-    template_id = _appendix_template_id(db, form_data.get("template_id"))
+    template_id = _appendix_template_id(db, form_data.get("template_id"), parent, ROLE_RENEWAL)
     fmt = _format(db)
     number = numbering.build_addendum_number(
         parent.contract_number, numbering.next_addendum_seq(_used_seqs(db, parent, fmt)), fmt)
@@ -323,7 +336,8 @@ def create_renewal_appendix(db: Session, parent_id: int, form_data: dict) -> Con
         "sign_location": parent.sign_location or "",
         "items_json": json.dumps(items),
     }
-    child = create_draft(db, form, require_main=True)
+    child = create_draft(db, form, require_main=True, template_role=ROLE_RENEWAL,
+                         template_group=group_of_contract(parent))
     child.parent_contract_id = parent.id
     child.doc_kind = DOC_KIND_RENEWAL
     _add_event(db, child.id, "renewal", f"Phụ lục gia hạn của {parent.contract_number}", "user")
@@ -343,10 +357,13 @@ def create_renewal_contract(db: Session, parent_id: int, form_data: dict) -> Con
     if start is None or start <= parent.end_date:
         raise AddendumError("Hợp đồng gia hạn phải bắt đầu sau ngày hết hạn của hợp đồng cũ.")
     items = _fill_quantities(db, parent, _renewal_items(db, _parse_items_json(form_data.get("items_json"))))
+    first = db.get(Product, int(items[0]["product_id"]))
+    template_raw = form_data.get("template_id") or (first.default_template_id if first else None)
     form = {
         "contract_number": number,
         "customer_id": str(parent.customer_id),
         "product_id": str(items[0]["product_id"]),
+        "template_id": str(template_raw) if template_raw else "",
         "sign_date": form_data.get("sign_date") or date.today().isoformat(),
         "start_date": start.isoformat(),
         "month_count": str(form_data.get("month_count") or ""),

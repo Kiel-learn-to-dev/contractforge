@@ -18,7 +18,9 @@ from app.services.docx_renderer import build_render_context, build_render_lists,
 from app.utils.file_naming import make_output_filename
 
 #: Loại mẫu được phép sinh như văn bản kèm theo. Mẫu hợp đồng và báo giá không nằm ở đây.
-from app.services.template_service import ATTACHMENT_TYPES  # noqa: F401 — chuyển về template_service
+from app.services.template_service import (
+    ATTACHMENT_TYPES, ROLE_ATTACHMENT, TemplateMismatch, check_template_for, group_of_contract,
+)
 
 
 class AttachmentError(ValueError):
@@ -32,10 +34,10 @@ def render_attachment(db: Session, contract_id: int, template_id: int) -> tuple[
     template = db.get(ContractTemplate, template_id)
     if template is None:
         raise LookupError("Không tìm thấy mẫu.")
-    if template.contract_type not in ATTACHMENT_TYPES:
-        raise AttachmentError(
-            f"Mẫu loại '{template.contract_type}' không sinh được như văn bản kèm theo. "
-            f"Chỉ dùng được các loại: {', '.join(ATTACHMENT_TYPES)}.")
+    try:
+        check_template_for(template, group_of_contract(contract), ROLE_ATTACHMENT)
+    except TemplateMismatch as exc:
+        raise AttachmentError(str(exc)) from exc
     if not template.file_path or not os.path.exists(template.file_path):
         raise FileNotFoundError("File mẫu không tồn tại trên đĩa.")
 
@@ -51,10 +53,11 @@ def render_attachment(db: Session, contract_id: int, template_id: int) -> tuple[
     return data, fname
 
 
-def resolve_attachment_templates(db: Session, raw_ids) -> list[ContractTemplate]:
+def resolve_attachment_templates(db: Session, raw_ids, contract: Contract) -> list[ContractTemplate]:
     """Kiểm tra toàn bộ lựa chọn trước khi render bất kỳ văn bản nào.
 
-    Bỏ trùng nhưng giữ thứ tự chọn. Một lựa chọn không hợp lệ thì ném AttachmentError.
+    Bỏ trùng nhưng giữ thứ tự chọn. Sai loại hoặc khác nhóm sản phẩm của hợp đồng
+    thì ném AttachmentError.
     """
     ids: list[int] = []
     for raw in raw_ids or ():
@@ -69,9 +72,10 @@ def resolve_attachment_templates(db: Session, raw_ids) -> list[ContractTemplate]
             raise AttachmentError(f"Không tìm thấy văn bản kèm theo #{tid}.")
         if not tpl.is_active:
             raise AttachmentError(f"Mẫu '{tpl.name}' đang tắt.")
-        if tpl.contract_type not in ATTACHMENT_TYPES:
-            raise AttachmentError(
-                f"Mẫu '{tpl.name}' loại '{tpl.contract_type}' không phải văn bản kèm theo.")
+        try:
+            check_template_for(tpl, group_of_contract(contract), ROLE_ATTACHMENT)
+        except TemplateMismatch as exc:
+            raise AttachmentError(str(exc)) from exc
         if not tpl.file_path or not os.path.exists(tpl.file_path):
             raise AttachmentError(f"File của mẫu '{tpl.name}' không tồn tại trên đĩa.")
         templates.append(tpl)
