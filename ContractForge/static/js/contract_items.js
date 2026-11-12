@@ -189,6 +189,12 @@ function loadProductOptions(fresh) {
   var seq = ++_optSeq;
   fetch(url).then(function(r) { return r.json(); }).then(function(d) {
     if (seq !== _optSeq) return;
+    // Mẫu hợp đồng và văn bản kèm theo: chỉ thay khi đổi gói (fresh) hoặc ô mẫu còn trống,
+    // để đổi khách hàng không làm mất lựa chọn đang có. Trang báo giá không có hàm này.
+    if (d && d.templates && typeof applyTemplateOptions === 'function') {
+      var tplEl = gid('sel-template');
+      if (fresh === true || !(tplEl && tplEl.value)) applyTemplateOptions(d.templates, fresh === true);
+    }
     if (!d || !d.main) { clearPriceTable(); return; }
     _lastOptions = d;
     buildTable(d, !!fresh);

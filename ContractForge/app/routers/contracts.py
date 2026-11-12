@@ -336,29 +336,20 @@ def new_form(request: Request, customer_id: int = 0, template_id: int = 0):
         customers_rows, _ = list_customers(db, CustomerFilters(active_only=True, per_page=500, sort_by='code', sort_dir='asc'))
         customers = [c for c, *_ in customers_rows]
         products  = db.query(Product).filter(Product.is_active == True, Product.kind == 'main').order_by(Product.name).all()
-        tpls      = db.query(ContractTemplate).filter(ContractTemplate.is_active == True).order_by(ContractTemplate.name).all()
         # preselected
         sel_customer = db.query(Customer).filter(Customer.id == customer_id).first() if customer_id else None
         sel_template = db.query(ContractTemplate).filter(ContractTemplate.id == template_id).first() if template_id else None
-        # Mẫu nào thuộc sản phẩm nào — để form lọc danh sách mẫu theo sản phẩm
-        # đang chọn. Quan hệ này lấy từ Product.default_template_id, thay cho
-        # bản cũ dò chuỗi trong mã mẫu.
-        product_code_by_template = {
-            p.default_template_id: p.code
-            for p in products if p.default_template_id
-        }
-        attachment_options = _attachment_options(db)
     finally:
         db.close()
 
+    # Mẫu của form lấy theo sản phẩm chọn qua /contracts/product-options, không in sẵn ở đây.
     return templates.TemplateResponse(request, "contracts/form.html", {
         "request": request, "page_title": "Sinh hợp đồng",
         "form_title": "Tạo hợp đồng mới",
-        "customers": customers, "products": products, "templates": tpls,
+        "customers": customers, "products": products, "templates": [],
         "sel_customer": sel_customer, "sel_template": sel_template,
-        "product_code_by_template": product_code_by_template,
-        "errors": [], "prefill": {},
-        "attachment_templates": attachment_options,
+        "errors": [], "prefill": {}, "prefill_attachment_ids": [],
+        "attachment_templates": [],
         "status_labels": STATUS_LABELS,
     })
 
@@ -393,19 +384,15 @@ async def new_submit(request: Request):
         customers_rows, _ = list_customers(db, CustomerFilters(active_only=True, per_page=500, sort_by='code', sort_dir='asc'))
         customers = [c for c, *_ in customers_rows]
         products  = db.query(Product).filter(Product.is_active == True, Product.kind == 'main').order_by(Product.name).all()
-        tpls      = db.query(ContractTemplate).filter(ContractTemplate.is_active == True).all()
         # NOTE: không gọi db.close() ở đây — finally block bên dưới sẽ xử lý
         return templates.TemplateResponse(request, "contracts/form.html", {
             "request": request, "page_title": "Sinh hợp đồng",
             "form_title": "Tạo hợp đồng mới",
-            "customers": customers, "products": products, "templates": tpls,
+            "customers": customers, "products": products, "templates": [],
             "sel_customer": None, "sel_template": None,
-            "product_code_by_template": {
-                p.default_template_id: p.code
-                for p in products if p.default_template_id
-            },
             "errors": [str(e)], "prefill": data,
-            "attachment_templates": _attachment_options(db),
+            "prefill_attachment_ids": attachment_ids,
+            "attachment_templates": [],
             "status_labels": STATUS_LABELS,
         }, status_code=422)
     finally:
@@ -414,13 +401,11 @@ async def new_submit(request: Request):
     return _flash(f"/contracts/{contract.id}", flash_msg, flash_type)
 
 
-def _attachment_options(db):
-    """Các mẫu văn bản kèm theo đang bật, để tick khi sinh hợp đồng."""
-    from app.services.attachment_service import ATTACHMENT_TYPES
+def _template_options(db, group, role):
+    """Mẫu đang bật đúng vai trò, thuộc nhóm `group` hoặc dùng chung. Một nguồn cho mọi form."""
+    from app.services.template_service import templates_for
     return [{"id": t.id, "name": t.name, "type": t.contract_type}
-            for t in db.query(ContractTemplate).filter(
-                ContractTemplate.is_active == True,  # noqa: E712
-                ContractTemplate.contract_type.in_(ATTACHMENT_TYPES)).order_by(ContractTemplate.name).all()]
+            for t in templates_for(db, group, role)]
 
 
 def _bundle_download(contract_number: str, bundle):
@@ -624,12 +609,8 @@ def contract_detail(request: Request, contract_id: int):
         addenda  = list(c.addenda or [])
         parent_contract = c.parent
         can_addendum = addendum_service.can_add_addendum(c)
-        from app.services.attachment_service import ATTACHMENT_TYPES
-        attachment_templates = [
-            {"id": t.id, "name": t.name, "type": t.contract_type}
-            for t in db.query(ContractTemplate).filter(
-                ContractTemplate.is_active == True,  # noqa: E712
-                ContractTemplate.contract_type.in_(ATTACHMENT_TYPES)).order_by(ContractTemplate.name).all()]
+        from app.services.template_service import ROLE_ATTACHMENT, group_of_contract
+        attachment_templates = _template_options(db, group_of_contract(c), ROLE_ATTACHMENT)
         allowed_next = [s.value for s in VALID_TRANSITIONS.get(c.status, set())]
     finally:
         db.close()
@@ -668,10 +649,10 @@ def _addendum_context(db, parent, kind, start, errors, values):
         defaults = addendum_defaults(db, parent.id, kind, start)
     except (AddendumError, _pricing.PricingError) as exc:
         errs.append(str(exc))
-    templates_list = (db.query(ContractTemplate)
-                      .filter(ContractTemplate.contract_type == "Phụ lục",
-                              ContractTemplate.is_active == True)  # noqa: E712
-                      .all())
+    from app.services.template_service import ROLE_ADDON, default_template_for, group_of_contract, templates_for
+    group = group_of_contract(parent)
+    templates_list = templates_for(db, group, ROLE_ADDON)
+    default_tpl = default_template_for(db, group, ROLE_ADDON)
     return {
         "request": None,
         "page_title": "Phụ lục bổ sung",
@@ -694,6 +675,7 @@ def _addendum_context(db, parent, kind, start, errors, values):
             {"id": p.id, "code": p.code, "name": p.name, "unit_label": p.unit_label or ""}
             for p in defaults["candidates"]],
         "template_options": [{"id": t.id, "name": t.name} for t in templates_list],
+        "default_template_id": default_tpl.id if default_tpl else None,
         "errors": errs,
         "values": values,
     }
@@ -757,17 +739,16 @@ def _money(v) -> str:
 def _renewal_context(db, parent, errors, values):
     """Dữ liệu cho form gia hạn. Mọi giá trị đã đổi sang dict, không giữ ORM ngoài phiên."""
     from app.services.addendum_service import renewal_defaults, AddendumError
-    from app.services.template_service import LEGACY_APPENDIX_TYPE
+    from app.services.template_service import ROLE_RENEWAL, default_template_for, group_of_contract, templates_for
     defaults = None
     errs = list(errors)
     try:
         defaults = renewal_defaults(db, parent.id)
     except AddendumError as exc:
         errs.append(str(exc))
-    templates_list = (db.query(ContractTemplate)
-                      .filter(ContractTemplate.contract_type == LEGACY_APPENDIX_TYPE,
-                              ContractTemplate.is_active == True)  # noqa: E712
-                      .order_by(ContractTemplate.name).all())
+    group = group_of_contract(parent)
+    templates_list = templates_for(db, group, ROLE_RENEWAL)
+    default_tpl = default_template_for(db, group, ROLE_RENEWAL)
     lines = []
     if defaults is not None:
         for row in defaults["lines"]:
@@ -786,6 +767,7 @@ def _renewal_context(db, parent, errors, values):
         "start": defaults["start_date"].isoformat() if defaults else "",
         "months": defaults["month_count"] if defaults else "",
         "template_options": [{"id": t.id, "name": t.name} for t in templates_list],
+        "default_template_id": default_tpl.id if default_tpl else None,
         "lines": lines,
         "candidates": [] if defaults is None else [
             {"id": p.id, "code": p.code, "name": p.name} for p in defaults["candidates"]],

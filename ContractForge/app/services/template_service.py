@@ -120,6 +120,17 @@ def default_template_for(db: Session, group, role: str) -> Optional[ContractTemp
     return own[0] if len(own) == 1 else None
 
 
+#: Biên bản được tick sẵn khi lập hợp đồng (Q11): bàn giao và nghiệm thu của nhóm.
+PRESELECT_ATTACHMENT_TYPES = ("Bàn giao", "Nghiệm thu")
+
+
+def preselected_attachment(template) -> bool:
+    """Mẫu kèm theo có được tick sẵn không: mẫu riêng của nhóm (không phải mẫu dùng chung)
+    và loại là Bàn giao hoặc Nghiệm thu. Biên bản thanh lý, khác và mẫu dùng chung không tick sẵn."""
+    return (normalize_group(template.product_group) is not None
+            and template.contract_type in PRESELECT_ATTACHMENT_TYPES)
+
+
 def check_template_for(template, group, role: str) -> None:
     """Ném TemplateMismatch nếu mẫu sai vai trò, hoặc mẫu có nhóm mà khác `group`."""
     if not has_role(template.contract_type or "", role):

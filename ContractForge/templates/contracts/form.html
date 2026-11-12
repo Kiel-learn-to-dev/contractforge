@@ -86,15 +86,9 @@
             </div>
             <div class="col-md-6">
               <label class="lbl">Mẫu hợp đồng <span class="text-danger">*</span></label>
-              <select name="template_id" class="fs fs-sm" id="sel-template" disabled data-native-select="true">
+              <select name="template_id" class="fs fs-sm" id="sel-template" disabled data-native-select="true"
+                      data-selected="{{ prefill.get('template_id', '') if prefill else (sel_template.id if sel_template else '') }}">
                 <option value="">— Chọn sản phẩm trước —</option>
-                {% for t in templates %}
-                <option value="{{ t.id }}"
-                  {% if (prefill and prefill.get('template_id')|string == t.id|string) or (sel_template and sel_template.id == t.id) %}selected{% endif %}
-                  data-product-code="{{ product_code_by_template.get(t.id, '') }}">
-                  {{ t.name }}
-                </option>
-                {% endfor %}
               </select>
             </div>
           </div>
@@ -279,23 +273,18 @@
         </div>
       </div>
 
-      <!-- Văn bản kèm theo (tùy chọn) -->
-      {% if attachment_templates %}
-      <div class="card mb12">
+      <!-- Văn bản kèm theo (tùy chọn): JS dựng danh sách theo nhóm của gói chính -->
+      <div class="card mb12" id="attachment-card" style="display:none;">
         <div class="card-h">
           <h6 class="fw-semibold" style="font-size:.85rem;"><i class="bi bi-file-earmark-plus"></i>Sinh kèm văn bản (tùy chọn)</h6>
         </div>
         <div class="card-b">
-          {% for t in attachment_templates %}
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" name="attachment_ids" value="{{ t.id }}" id="att-{{ t.id }}">
-            <label class="form-check-label" for="att-{{ t.id }}">[{{ t.type }}] {{ t.name }}</label>
-          </div>
-          {% endfor %}
+          <div id="attachment-box"
+               data-prefilled="{{ '1' if prefill else '' }}"
+               data-selected="{{ (prefill_attachment_ids or [])|join(',') }}"></div>
           <div class="form-text">Có tick thì tải về một file ZIP gồm hợp đồng và các văn bản đã chọn. Cần chọn mẫu hợp đồng. Nếu một văn bản lỗi thì hủy cả lượt sinh.</div>
         </div>
       </div>
-      {% endif %}
 
       <!-- Actions -->
       <div class="card">
@@ -402,41 +391,88 @@ var _mT = gid('inp-months-time'), _mV = gid('inp-months');
 if (_mT) _mT.addEventListener('input', function() { syncMonths(this.value); });
 if (_mV) _mV.addEventListener('input', function() { syncMonths(this.value); });
 
-// ─── LỌC MẪU HỢP ĐỒNG (native select) ────────────────────────────────────────
-var _allTpl = [];
-(function() {
-  var opts = document.querySelectorAll('#sel-template option');
-  for (var i = 0; i < opts.length; i++) {
-    var o = opts[i];
-    if (o.value) _allTpl.push({value:o.value, text:o.text, code:o.dataset.productCode||''});
-  }
-})();
-
-function filterTemplates(code) {
-  var sel = gid('sel-template'); if (!sel) return;
-  var ok = _allTpl.filter(function(t) { return !code || t.code === code; });
-  sel.disabled = false;
-  for (var i = 0; i < sel.options.length; i++) {
-    var o = sel.options[i];
-    o.style.display = (!o.value || ok.some(function(t) { return t.value === o.value; })) ? '' : 'none';
-  }
-  sel.value = ok.length ? ok[0].value : '';
+// ─── MẪU THEO NHÓM SẢN PHẨM ──────────────────────────────────────────────────
+// Danh sách do máy chủ trả về theo gói chính (/contracts/product-options). Trình duyệt
+// không tự lọc: mọi mẫu hiển thị đã đúng nhóm. Dựng bằng DOM API, không nối HTML thô.
+function _idList(s) {
+  return String(s || '').split(',').filter(function(x) { return x !== ''; });
 }
+
+// t = {contract: [...], attachments: [...], default_id}. fresh = nạp mới khi đổi gói.
+function applyTemplateOptions(t, fresh) {
+  var sel = gid('sel-template');
+  var box = gid('attachment-box');
+  var card = gid('attachment-card');
+  if (!sel) return;
+  var contract = (t && t.contract) || [];
+  var attachments = (t && t.attachments) || [];
+
+  // 1. Ô mẫu hợp đồng: chọn theo prefill (sau lỗi) → mẫu mặc định của gói → rỗng.
+  var prefillTpl = sel.dataset.selected || '';
+  sel.innerHTML = '';
+  sel.add(new Option('— Chọn mẫu —', ''));
+  var ids = [];
+  contract.forEach(function(m) {
+    ids.push(String(m.id));
+    sel.add(new Option(m.name + (m.own ? '' : ' (dùng chung)'), String(m.id)));
+  });
+  var chosen = '';
+  if (prefillTpl && ids.indexOf(prefillTpl) !== -1) chosen = prefillTpl;
+  else if (t && t.default_id && ids.indexOf(String(t.default_id)) !== -1) chosen = String(t.default_id);
+  sel.value = chosen;
+  sel.disabled = false;
+  sel.dataset.selected = '';  // chỉ dùng một lần
+
+  // 2. Văn bản kèm theo: giữ tick đang có; sau lỗi thì theo prefill; nạp mới thì tick sẵn biên bản của nhóm.
+  if (!box) return;
+  var wasPrefilled = box.dataset.prefilled === '1';
+  var prefillAtt = _idList(box.dataset.selected);
+  var prevChecked = {};
+  box.querySelectorAll('input[name="attachment_ids"]').forEach(function(cb) {
+    if (cb.checked) prevChecked[cb.value] = true;
+  });
+  box.innerHTML = '';
+  attachments.forEach(function(a) {
+    var id = String(a.id);
+    var checked = wasPrefilled
+      ? prefillAtt.indexOf(id) !== -1
+      : (!!prevChecked[id] || (!!fresh && !!a.preselect));
+    var wrap = document.createElement('div');
+    wrap.className = 'form-check';
+    var cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.className = 'form-check-input';
+    cb.name = 'attachment_ids';
+    cb.value = id;
+    cb.id = 'att-' + id;
+    cb.checked = checked;
+    var lb = document.createElement('label');
+    lb.className = 'form-check-label';
+    lb.htmlFor = 'att-' + id;
+    lb.textContent = '[' + a.type + '] ' + a.name;
+    wrap.appendChild(cb);
+    wrap.appendChild(lb);
+    box.appendChild(wrap);
+  });
+  box.dataset.prefilled = '';  // prefill chỉ áp một lần
+  if (card) card.style.display = attachments.length ? '' : 'none';
+}
+
 function lockTemplate() {
   var sel = gid('sel-template'); if (!sel) return;
+  sel.innerHTML = '';
+  sel.add(new Option('— Chọn sản phẩm trước —', ''));
   sel.disabled = true; sel.value = '';
-  for (var i = 0; i < sel.options.length; i++) sel.options[i].style.display = '';
+  var box = gid('attachment-box'); if (box) box.innerHTML = '';
+  var card = gid('attachment-card'); if (card) card.style.display = 'none';
 }
 
 // ─── XỬ LÝ KHI CHỌN SẢN PHẨM ─────────────────────────────────────────────────
-// Chọn gói chính: lọc mẫu, xóa ô văn bản đã tự sinh, dựng lại bảng dòng từ máy chủ.
+// Chọn gói chính: nạp lại mẫu theo nhóm, xóa ô văn bản đã tự sinh, dựng lại bảng dòng từ máy chủ.
 function onProductChange() {
   var sel = gid('sel-product');
   if (!sel || !sel.value) { lockTemplate(); clearPriceTable(); return; }
-  var opt  = sel.options[sel.selectedIndex];
-  var code = opt && opt.dataset.code || '';
-  // LỌC mẫu — KHÔNG set months (user tự nhập)
-  filterTemplates(code);
+  // Mẫu và văn bản kèm theo được nạp lại trong loadProductOptions (theo nhóm của gói này).
   // Reset text tính toán
   var wEl = gid('inp-amttext'),    dEl = gid('inp-pricing-desc');
   if (wEl) { wEl.dataset.manual=''; wEl.value=''; }

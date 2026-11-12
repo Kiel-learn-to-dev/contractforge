@@ -70,8 +70,9 @@
           <label class="lbl">Mẫu phụ lục (khi lập phụ lục)</label>
           <select name="template_id" class="fs fs-sm" size="1">
             <option value="">— Không chọn —</option>
+            {% set chosen_tpl = values.get('template_id') or (default_template_id|string if default_template_id else '') %}
             {% for t in template_options %}
-            <option value="{{ t.id }}" {% if values.get('template_id', '') == t.id|string %}selected{% endif %}>{{ t.name }}</option>
+            <option value="{{ t.id }}" {% if chosen_tpl == t.id|string %}selected{% endif %}>{{ t.name }}</option>
             {% endfor %}
           </select>
           <div class="form-text">Mẫu có loại "Phụ lục". Dùng để sinh văn bản phụ lục gia hạn.</div>

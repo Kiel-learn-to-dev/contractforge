@@ -285,7 +285,8 @@ def test_product_options_default_quantity_follows_the_quantity_source(
 
 def test_product_options_for_a_missing_product_returns_no_main(client):
     assert client.get("/contracts/product-options?product_id=999999").json() == {
-        "main": None, "addons": []}
+        "main": None, "addons": [],
+        "templates": {"contract": [], "attachments": [], "default_id": None}}
 
 
 def test_price_preview_returns_lines_totals_and_description_as_strings(client, make_product):

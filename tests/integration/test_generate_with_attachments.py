@@ -115,17 +115,19 @@ def test_generate_route_without_ticks_keeps_the_old_redirect(client, db_session,
     assert "/contracts/" in resp.headers["location"]
 
 
-def test_contract_form_offers_only_attachment_kinds(client, make_template, tmp_path):
+def test_contract_form_offers_only_attachment_kinds(client, make_template, make_product, tmp_path):
+    # Form hợp đồng lấy mẫu theo sản phẩm qua /contracts/product-options, không in sẵn trong HTML.
+    prod = make_product(code="OA-P", name="Gói tick", kind="main", default_price=1000, default_vat_rate=10)
     att = make_template(file_path=str(_docx(tmp_path / "a.docx", "x")), contract_type="Bàn giao",
                         name="Biên bản bàn giao hiện trên form")
     main = make_template(file_path=str(_docx(tmp_path / "b.docx", "x")), contract_type="Hợp đồng",
                          name="Mẫu hợp đồng không tick được")
 
-    resp = client.get("/contracts/new")
+    data = client.get(f"/contracts/product-options?product_id={prod.id}").json()
 
-    assert resp.status_code == 200
-    assert f'name="attachment_ids" value="{att.id}"' in resp.text
-    assert f'name="attachment_ids" value="{main.id}"' not in resp.text
+    att_ids = [a["id"] for a in data["templates"]["attachments"]]
+    assert att.id in att_ids
+    assert main.id not in att_ids
 
 
 def test_biên_bản_is_kinded_by_its_heading_not_by_fields():

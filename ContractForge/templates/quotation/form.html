@@ -43,6 +43,7 @@
                         data-price="{{ p.default_price or 0 }}"
                         data-vat="{{ p.default_vat_rate or 0 }}"
                         data-duration="{{ p.default_duration_months or 12 }}"
+                        data-group="{{ p.group_code or '' }}"
                         data-default-template="{{ p.default_template_id or '' }}">
                   [{{ p.code }}] {{ p.name }}
                 </option>
@@ -54,7 +55,7 @@
               <select class="form-select" name="template_id" id="template_id" required data-native-select="true">
                 <option value="">— Chọn mẫu —</option>
                 {% for tpl in quotation_templates %}
-                <option value="{{ tpl.id }}">[{{ tpl.code }}] {{ tpl.name }}</option>
+                <option value="{{ tpl.id }}" data-group="{{ tpl.product_group or '' }}">[{{ tpl.code }}] {{ tpl.name }}</option>
                 {% endfor %}
               </select>
               <div class="form-text">Chỉ hiện mẫu phân loại "Báo giá". Placeholder và mapping lấy từ mẫu đã chọn.</div>
@@ -148,13 +149,34 @@
   var monthInput = document.getElementById("inp-months-time");
   var unitsInput = document.getElementById("inp-units");
 
+  // Ẩn mẫu của nhóm khác với gói đang chọn (mẫu dùng chung luôn hiện). Chọn mẫu mặc định
+  // của gói nếu còn hiện, không thì mẫu hiện đầu tiên.
+  function filterTemplatesByGroup(force) {
+    var selected = productSelect.options[productSelect.selectedIndex];
+    var group = (selected && selected.dataset.group) || "";
+    var preferred = (selected && selected.dataset.defaultTemplate) || "";
+    var firstVisible = "";
+    var preferredVisible = false;
+    Array.prototype.forEach.call(templateSelect.options, function(o) {
+      if (!o.value) return;
+      var og = o.dataset.group || "";
+      var visible = !og || og === group;
+      o.hidden = !visible;
+      o.disabled = !visible;
+      if (visible && !firstVisible) firstVisible = o.value;
+      if (visible && o.value === preferred) preferredVisible = true;
+    });
+    // Đổi sản phẩm (force): chọn lại theo gói. Tải trang: giữ lựa chọn còn hợp lệ.
+    var current = templateSelect.value;
+    var currentOpt = current && templateSelect.querySelector('option[value="' + current + '"]');
+    var keep = !force && currentOpt && !currentOpt.disabled;
+    if (!keep) templateSelect.value = preferredVisible ? preferred : firstVisible;
+  }
+
   productSelect.addEventListener("change", function() {
     var selected = productSelect.options[productSelect.selectedIndex];
-    var preferred = selected && selected.dataset.defaultTemplate;
     var duration = selected && Number(selected.dataset.duration || 0);
-    if (preferred && templateSelect.querySelector('option[value="' + preferred + '"]')) {
-      templateSelect.value = preferred;
-    }
+    filterTemplatesByGroup(true);
     if (duration > 0) monthInput.value = duration;
     loadProductOptions(true);
   });
@@ -167,6 +189,7 @@
   if (productSelect.value) {
     var opt = customerSelect.options[customerSelect.selectedIndex];
     unitsInput.value = (opt && opt.dataset.units) || "1";
+    filterTemplatesByGroup(false);
     loadProductOptions(true);
   }
 })();

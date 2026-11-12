@@ -37,19 +37,26 @@ def test_checkbox_toggles_and_returns_to_the_list(client, db_session, attachment
 
 
 def test_off_template_is_hidden_from_pickers_and_kept_in_the_library(
-        client, db_session, attachment_template):
+        client, db_session, attachment_template, make_product):
     from app.models.contract_template import ContractTemplate
 
+    prod = make_product(code="TG-P", name="Gói bật tắt", kind="main",
+                        default_price=1000, default_vat_rate=10)
     tid = attachment_template.id
-    assert f'name="attachment_ids" value="{tid}"' in client.get("/contracts/new").text
+
+    def offered():
+        data = client.get(f"/contracts/product-options?product_id={prod.id}").json()
+        return tid in [a["id"] for a in data["templates"]["attachments"]]
+
+    assert offered()
 
     client.post(f"/templates/{tid}/toggle", data={"next": "/templates"}, follow_redirects=False)
 
-    assert f'name="attachment_ids" value="{tid}"' not in client.get("/contracts/new").text
+    assert not offered()
     assert db_session.get(ContractTemplate, tid) is not None  # vẫn còn trong thư viện
 
     client.post(f"/templates/{tid}/toggle", data={"next": "/templates"}, follow_redirects=False)
-    assert f'name="attachment_ids" value="{tid}"' in client.get("/contracts/new").text
+    assert offered()
 
 
 def test_toggle_refuses_a_foreign_redirect(client, attachment_template):

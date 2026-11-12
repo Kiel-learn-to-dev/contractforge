@@ -32,7 +32,8 @@ from app.models.product import Product
 from app.services import lifecycle, numbering, pricing
 from app.services.docx_renderer import render_docx, build_render_context, build_render_lists
 from app.services.template_service import (
-    ROLE_CONTRACT, check_template_for, group_of_contract, normalize_group, role_of_doc_kind,
+    ROLE_ATTACHMENT, ROLE_CONTRACT, check_template_for, group_of_contract, normalize_group,
+    preselected_attachment, role_of_doc_kind, templates_for,
 )
 from app.utils.amount_to_words_vi import amount_to_words, amount_to_words_chan
 from app.utils.date_helpers import (
@@ -463,7 +464,8 @@ def product_options(db: Session, product_id: int, customer_id: int, unit_count: 
     product = db.get(Product, product_id) if product_id else None
     customer = db.get(Customer, customer_id) if customer_id else None
     if product is None:
-        return {"main": None, "addons": []}
+        return {"main": None, "addons": [],
+                "templates": {"contract": [], "attachments": [], "default_id": None}}
 
     addons: list[dict] = []
     if product.group_code:
@@ -478,7 +480,29 @@ def product_options(db: Session, product_id: int, customer_id: int, unit_count: 
         )
         addons = [_product_brief(p, customer, unit_count) for p in rows]
 
-    return {"main": _product_brief(product, customer, unit_count), "addons": addons}
+    return {"main": _product_brief(product, customer, unit_count), "addons": addons,
+            "templates": _template_lists_for(db, product)}
+
+
+def _template_lists_for(db: Session, product: Product) -> dict:
+    """Mẫu hợp đồng và văn bản kèm theo đúng nhóm của gói chính (kèm mẫu dùng chung)."""
+    group = normalize_group(product.group_code)
+    contract_rows = templates_for(db, group, ROLE_CONTRACT)
+    attachment_rows = templates_for(db, group, ROLE_ATTACHMENT)
+    ids = [t.id for t in contract_rows]
+    if product.default_template_id in ids:
+        default_id = product.default_template_id
+    else:
+        default_id = ids[0] if ids else None
+    return {
+        "contract": [{"id": t.id, "name": t.name, "own": t.product_group is not None}
+                     for t in contract_rows],
+        "attachments": [{"id": t.id, "name": t.name, "type": t.contract_type,
+                         "own": t.product_group is not None,
+                         "preselect": preselected_attachment(t)}
+                        for t in attachment_rows],
+        "default_id": default_id,
+    }
 
 
 def price_preview(db: Session, items, month_count) -> dict:

@@ -140,6 +140,7 @@
           {% endmacro %}
           {% set fmt_amt = '{:,.0f}'.format(c.total_amount).replace(',','.') if c.total_amount else '—' %}
           {{ gv("Sản phẩm", product.name if product else '') }}
+          {{ gv("Nhóm sản phẩm", (product.group_code if product and product.group_code else '—')) }}
           {% if c.pricing_model == 'items' %}
           {% macro money(v) %}{{ '{:,.0f}'.format(v).replace(',','.') if v is not none else '—' }}{% endmacro %}
           {{ gv("Số tháng", c.month_count) }}
