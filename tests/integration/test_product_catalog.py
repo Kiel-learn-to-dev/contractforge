@@ -552,3 +552,69 @@ def test_stopped_product_contract_still_regenerates_its_file(db_session, make_pr
     assert result.status.value == "Generated"
     assert result.output_file_path and os.path.exists(result.output_file_path)
     assert product.is_active is False
+
+
+def test_feature_text_saves_and_reads_back_through_the_product_form(client, db_session):
+    from app.models.product import Product
+
+    text = "Đăng nhập | Xác thực người dùng\n\nBáo cáo\n   \n| dòng không có tên"
+    resp = client.post("/products/new", data=_form(code="ft-form", group_code="NHOM-FT",
+                                                   feature_text=text), follow_redirects=False)
+
+    assert resp.status_code == 303
+    db_session.expire_all()
+    product = db_session.query(Product).filter_by(code="FT-FORM").one()
+    assert product.feature_list == [
+        {"no": 1, "name": "Đăng nhập", "description": "Xác thực người dùng"},
+        {"no": 2, "name": "Báo cáo", "description": ""},
+    ]
+    page = client.get(f"/products/{product.id}/edit").text
+    assert "Đăng nhập | Xác thực người dùng" in page
+    assert "Báo cáo" in page
+
+
+def test_addendum_document_gets_one_table_row_per_feature_of_its_package(
+        db_session, make_customer, make_product, make_template, make_contract, tmp_path, data_root):
+    import io
+    import json
+    from datetime import date
+    from decimal import Decimal
+
+    import docx
+
+    from app.models.contract import ContractStatus
+    from app.services.addendum_service import create_addendum
+    from app.services.contract_service import generate_docx
+
+    customer = make_customer(legal_name="Khách chức năng hư cấu")
+    main = make_product(code="FT-MAIN", name="Gói chính FT", kind="main", group_code="FT-G",
+                        unit_label="cơ sở", default_price=500_000, default_vat_rate=10)
+    addon = make_product(code="FT-ADD", name="Gói bổ sung FT", kind="addon", group_code="FT-G",
+                         unit_label="cơ sở", default_price=150_000, default_vat_rate=10)
+    addon.feature_list = [{"no": 1, "name": "Đăng nhập", "description": "x"},
+                          {"no": 2, "name": "Báo cáo", "description": ""}]
+    db_session.commit()
+    parent = make_contract(customer=customer, product=main, status=ContractStatus.Invoiced,
+                           contract_number="HD-FT-P", start_date=date(2026, 1, 1),
+                           end_date=date(2026, 12, 31), month_count=12, unit_count=1,
+                           total_amount=Decimal("6600000"), vat_rate=10)
+
+    doc = docx.Document()
+    table = doc.add_table(rows=2, cols=2)
+    table.rows[0].cells[0].text = "STT"
+    table.rows[0].cells[1].text = "Chức năng"
+    table.rows[1].cells[0].text = "{{FEATURE_NO}}"
+    table.rows[1].cells[1].text = "{{FEATURE_NAME}}"
+    path = tmp_path / "pl_chuc_nang.docx"
+    doc.save(str(path))
+    tpl = make_template(file_path=str(path), contract_type="Phụ lục bổ sung")
+
+    child = create_addendum(db_session, parent.id, "addon", {
+        "start_date": "2026-07-01", "template_id": str(tpl.id),
+        "items_json": json.dumps([{"product_id": addon.id}])})
+    bundle: list = []
+    generate_docx(db_session, child.id, [], bundle)
+
+    out = docx.Document(io.BytesIO(bundle[0][1]))
+    rows = [[c.text for c in r.cells] for r in out.tables[0].rows]
+    assert rows == [["STT", "Chức năng"], ["1", "Đăng nhập"], ["2", "Báo cáo"]]

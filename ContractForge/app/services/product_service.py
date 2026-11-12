@@ -206,6 +206,9 @@ def clean_form(db, data: dict, product_id: Optional[int] = None) -> dict:
         errors.append("Thời hạn mặc định phải từ 1 tháng trở lên.")
     out["default_duration_months"] = duration
 
+    if "feature_text" in data:  # chỉ form gửi ô này; nhập Excel giữ nguyên feature_list
+        out["feature_list"] = parse_feature_text(str(data.get("feature_text") or ""))
+
     template_id = _optional_int(data, "default_template_id", errors, "Mẫu hợp đồng")
     template_row = db.get(ContractTemplate, template_id) if template_id is not None else None
     if template_id is not None and template_row is None:
@@ -306,6 +309,30 @@ def toggle_active(db, product_id: int) -> Product:
     return product
 
 
+def parse_feature_text(text: str) -> list[dict]:
+    """Mỗi dòng: "Tên chức năng | Mô tả" (mô tả tùy chọn). Dòng trống hoặc không có tên bị bỏ."""
+    out: list[dict] = []
+    for raw in (text or "").splitlines():
+        name, _, desc = raw.partition("|")
+        name = name.strip()
+        if not name:
+            continue
+        out.append({"no": len(out) + 1, "name": name, "description": desc.strip()})
+    return out
+
+
+def feature_text(product: Product) -> str:
+    """Ngược lại: danh sách chức năng của gói thành văn bản để điền sẵn form."""
+    lines = []
+    for feat in product.feature_list or []:
+        name = str(feat.get("name", "")).strip()
+        if not name:
+            continue
+        desc = str(feat.get("description", "") or "").strip()
+        lines.append(f"{name} | {desc}" if desc else name)
+    return "\n".join(lines)
+
+
 def form_values(product: Product) -> dict:
     """Biến một sản phẩm thành dict chuỗi để điền sẵn form sửa."""
     def plain(v):
@@ -334,6 +361,7 @@ def form_values(product: Product) -> dict:
         "contract_number_format": product.contract_number_format or "",
         "replaced_by_id": plain(product.replaced_by_id),
         "sort_order": plain(product.sort_order),
+        "feature_text": feature_text(product),
     }
 
 
