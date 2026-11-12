@@ -285,7 +285,7 @@ def lists_from_lines(lines, feature_lists) -> dict[str, list[dict[str, str]]]:
 
     `feature_lists` là danh sách feature_list của gói tương ứng từng dòng, theo thứ tự.
     Mọi giá trị đã là chuỗi hiển thị. Chức năng gộp và bỏ trùng theo tên.
-    ITEM_QTY hiện là số lượng × số kỳ (mặc định); câu hỏi 5 của kế hoạch còn mở.
+    ITEM_QTY là số cơ sở × số tháng (đã xác nhận: số lượng = số cơ sở × số tháng).
     """
     items: list[dict[str, str]] = []
     features: list[dict[str, str]] = []

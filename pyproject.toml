@@ -13,7 +13,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "contractforge"
-version = "0.8.0"
+version = "0.9.0"
 description = "Neutral, single-user, offline-first desktop contract manager."
 readme = "README.md"
 requires-python = ">=3.11"

@@ -3,6 +3,33 @@
 Định dạng theo [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 đánh phiên bản theo [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] — chưa phát hành
+
+Danh mục gói cước, hợp đồng theo dòng, phụ lục và gia hạn, văn bản kèm theo.
+
+### Thêm mới
+
+- **Danh mục sản phẩm** thêm, sửa, ngừng bán và bật lại trên giao diện; nhập và
+  xuất bằng Excel (xem trước trước khi ghi, không ghi một phần khi có dòng lỗi).
+  Sản phẩm có nhóm, kiểu gói chính / bổ sung / lưu trữ, đơn vị tính, kỳ giá.
+- **Hợp đồng theo dòng:** một hợp đồng có gói chính và các gói bổ sung cùng nhóm;
+  tiền tính theo từng dòng trên máy chủ. Hợp đồng cũ giữ nguyên số đã lưu.
+- **Báo giá nhiều dòng** và **sinh hàng loạt theo dòng**, dùng cùng một cách tính.
+- **Biểu mẫu Word** lặp dòng cho bảng giá trị và bảng chức năng.
+- **Phụ lục bổ sung gói** giữa kỳ: thời hạn là phần còn lại của hợp đồng gốc.
+- **Gia hạn** bằng phụ lục gia hạn hoặc bằng hợp đồng mới, người dùng chọn.
+  Hợp đồng đã gia hạn không còn nằm trong danh sách sắp hết hạn.
+- **Văn bản kèm theo** (nghiệm thu, bàn giao, thanh lý, khác) sinh từ mẫu bất kỳ
+  của loại đó, không đổi trạng thái hợp đồng.
+- **Xuất Excel** có thêm trước thuế, thuế, loại văn bản, hợp đồng gốc và sheet
+  chi tiết từng dòng.
+- **Cài đặt:** khuôn số phụ lục, và đầu mối liên hệ của Bên B.
+
+### Thay đổi
+
+- Giá trên form hợp đồng và báo giá do máy chủ tính; trình duyệt không còn tính tiền.
+- Khi xóa hợp đồng còn phụ lục, hệ thống từ chối và nói rõ cần xóa phụ lục trước.
+
 ## [0.8.0] — chưa phát hành
 
 Bản đầu tiên đủ điều kiện công khai mã nguồn.

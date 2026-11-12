@@ -10,7 +10,7 @@ Bump both together when cutting a release.
 
 from __future__ import annotations
 
-__version__ = "0.8.0"
+__version__ = "0.9.0"
 
 # Human-facing application name. Kept here so the window title, the FastAPI
 # title, and the packaging metadata cannot drift apart either.

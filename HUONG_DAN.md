@@ -101,3 +101,15 @@ Copy nguyên thư mục `data/` ra USB/Google Drive là đủ.
 
 **Mất dữ liệu:**
 → Kiểm tra thư mục `data/contract_manager.db` còn không
+
+## Danh mục sản phẩm, phụ lục và gia hạn (0.9.0)
+
+- **Danh mục:** vào Sản phẩm để thêm, sửa, ngừng bán. Nhập nhiều gói bằng
+  "Nhập / xuất Excel": tải file mẫu, điền, xem trước, rồi mới ghi.
+- **Gói bổ sung:** chỉ được ghép vào hợp đồng khi cùng nhóm với gói chính.
+  Nếu không bán kèm, không tạo gói bổ sung trong danh mục.
+- **Phụ lục bổ sung:** trên trang hợp đồng đang phục vụ, bấm "Tạo phụ lục bổ sung".
+  Thời hạn tự tính đến ngày hết hạn của hợp đồng gốc.
+- **Gia hạn:** bấm "Gia hạn", chọn phụ lục gia hạn hoặc hợp đồng mới. Gói cũ đã
+  ngừng được gợi ý thay bằng gói thay thế; so sánh giá theo tháng hiện ngay trên form.
+- **Khuôn số phụ lục:** đặt trong Cài đặt, phải có {seq} và {parent}.
