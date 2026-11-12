@@ -113,3 +113,7 @@ Copy nguyên thư mục `data/` ra USB/Google Drive là đủ.
 - **Gia hạn:** bấm "Gia hạn", chọn phụ lục gia hạn hoặc hợp đồng mới. Gói cũ đã
   ngừng được gợi ý thay bằng gói thay thế; so sánh giá theo tháng hiện ngay trên form.
 - **Khuôn số phụ lục:** đặt trong Cài đặt, phải có {seq} và {parent}.
+- **Văn bản kèm theo khi sinh hợp đồng:** trong form tạo hợp đồng hoặc ở chi tiết,
+  mở "Kèm văn bản" rồi tick các biên bản cần thiết. Có tick thì tải về một file ZIP
+  gồm hợp đồng chính và các văn bản đã chọn. Mẫu Phụ lục 01 BM02 / BM03 (tích hợp,
+  cho thuê bổ sung) là mẫu hợp đồng chính: chọn trong ô "Mẫu hợp đồng".

@@ -39,7 +39,21 @@
       <div class="d-flex gap-2 flex-wrap align-items-center">
         <!-- Generate button -->
         {% if c.template_id %}
-        <form method="post" action="/contracts/{{ c.id }}/generate">
+        <form method="post" action="/contracts/{{ c.id }}/generate" class="d-flex gap-2 align-items-center flex-wrap">
+          {% if attachment_templates %}
+          <details class="small">
+            <summary class="text-nowrap" style="cursor:pointer;">Kèm văn bản</summary>
+            <div class="mt-1 p-2 border rounded bg-white">
+              {% for t in attachment_templates %}
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="attachment_ids" value="{{ t.id }}" id="gen-att-{{ t.id }}">
+                <label class="form-check-label" for="gen-att-{{ t.id }}">[{{ t.type }}] {{ t.name }}</label>
+              </div>
+              {% endfor %}
+              <div class="form-text">Có tick thì tải về file ZIP gồm hợp đồng và văn bản đã chọn. Lỗi một văn bản thì hủy cả lượt.</div>
+            </div>
+          </details>
+          {% endif %}
           <button type="submit" class="btn btn-sm btn-danger"
             onclick="return confirm('Sinh file .docx? File cũ (nếu có) sẽ bị ghi đè.')">
             <i class="bi bi-magic me-1"></i>Sinh file .docx

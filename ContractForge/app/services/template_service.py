@@ -280,8 +280,35 @@ def _bundled_template_code(file_bytes: bytes) -> str:
     return f"BUNDLED-{hashlib.sha256(file_bytes).hexdigest()[:12].upper()}"
 
 
-def _template_kind(placeholders: list[str]) -> str:
+def _document_heading(file_bytes: bytes) -> str:
+    """Tiêu đề biên bản: dòng bắt đầu bằng 'BIÊN BẢN' trong 10 đoạn đầu, cộng hai dòng kế tiếp.
+
+    Biên bản bàn giao không có trường ACCEPTANCE_DATE nên chỉ nhận ra được qua tiêu đề.
+    """
+    import io
+
+    import docx
+
+    try:
+        doc = docx.Document(io.BytesIO(file_bytes))
+    except Exception:
+        return ""
+    lines = [p.text.strip() for p in doc.paragraphs if p.text.strip()][:10]
+    for i, line in enumerate(lines):
+        if line.upper().startswith("BIÊN BẢN"):
+            return " ".join(lines[i:i + 3])
+    return ""
+
+
+def _template_kind(placeholders: list[str], heading: str = "") -> str:
     fields = set(placeholders)
+    title = heading.upper()
+    if "BIÊN BẢN" in title:
+        # Bàn giao trước: biên bản bàn giao và nghiệm thu được xếp vào loại bàn giao.
+        if "BÀN GIAO" in title:
+            return "Bàn giao"
+        if "NGHIỆM THU" in title:
+            return "Nghiệm thu"
     if any(field.startswith("QUOTE_DATE") for field in fields):
         return QUOTATION_TYPE
     if any(field.startswith("ACCEPTANCE_DATE") for field in fields):
@@ -329,7 +356,7 @@ def _import_bundled_template_if_missing(db: Session, source_path):
         db=db,
         code=code,
         name=source_path.stem.replace("_", " "),
-        contract_type=_template_kind(result.placeholders),
+        contract_type=_template_kind(result.placeholders, _document_heading(file_bytes)),
         file_bytes=file_bytes,
         original_filename=source_path.name,
         description="Mẫu DOCX được phát hiện từ thư mục assets cục bộ.",

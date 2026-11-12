@@ -6,7 +6,9 @@ Chỉ đọc: không ghi file, không đổi trạng thái hay đường dẫn f
 
 from __future__ import annotations
 
+import io
 import os
+import zipfile
 
 from sqlalchemy.orm import Session
 
@@ -47,3 +49,59 @@ def render_attachment(db: Session, contract_id: int, template_id: int) -> tuple[
         contract_type=template.contract_type,
     )
     return data, fname
+
+
+def resolve_attachment_templates(db: Session, raw_ids) -> list[ContractTemplate]:
+    """Kiểm tra toàn bộ lựa chọn trước khi render bất kỳ văn bản nào.
+
+    Bỏ trùng nhưng giữ thứ tự chọn. Một lựa chọn không hợp lệ thì ném AttachmentError.
+    """
+    ids: list[int] = []
+    for raw in raw_ids or ():
+        try:
+            ids.append(int(raw))
+        except (TypeError, ValueError):
+            raise AttachmentError("Mã văn bản kèm theo không hợp lệ.")
+    templates: list[ContractTemplate] = []
+    for tid in dict.fromkeys(ids):
+        tpl = db.get(ContractTemplate, tid)
+        if tpl is None:
+            raise AttachmentError(f"Không tìm thấy văn bản kèm theo #{tid}.")
+        if not tpl.is_active:
+            raise AttachmentError(f"Mẫu '{tpl.name}' đang tắt.")
+        if tpl.contract_type not in ATTACHMENT_TYPES:
+            raise AttachmentError(
+                f"Mẫu '{tpl.name}' loại '{tpl.contract_type}' không phải văn bản kèm theo.")
+        if not tpl.file_path or not os.path.exists(tpl.file_path):
+            raise AttachmentError(f"File của mẫu '{tpl.name}' không tồn tại trên đĩa.")
+        templates.append(tpl)
+    return templates
+
+
+def render_attachments(db: Session, contract_id: int,
+                       templates: list[ContractTemplate]) -> list[tuple[str, bytes]]:
+    """Render trong bộ nhớ. Không ghi file, không đổi trạng thái. Lỗi một mẫu thì ném AttachmentError."""
+    out: list[tuple[str, bytes]] = []
+    for tpl in templates:
+        try:
+            data, fname = render_attachment(db, contract_id, tpl.id)
+        except Exception as exc:
+            raise AttachmentError(f"Không sinh được '{tpl.name}': {exc}") from exc
+        out.append((fname, data))
+    return out
+
+
+def build_bundle_zip(items: list[tuple[str, bytes]]) -> bytes:
+    """Đóng gói các văn bản thành một file ZIP trong bộ nhớ. Tên trùng thì thêm _2, _3."""
+    buf = io.BytesIO()
+    used: set[str] = set()
+    with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for fname, data in items:
+            name, n = fname, 2
+            while name in used:
+                stem, dot, ext = fname.rpartition(".")
+                name = f"{stem}_{n}.{ext}" if dot else f"{fname}_{n}"
+                n += 1
+            used.add(name)
+            zf.writestr(name, data)
+    return buf.getvalue()

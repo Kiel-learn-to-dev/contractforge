@@ -347,6 +347,7 @@ def new_form(request: Request, customer_id: int = 0, template_id: int = 0):
             p.default_template_id: p.code
             for p in products if p.default_template_id
         }
+        attachment_options = _attachment_options(db)
     finally:
         db.close()
 
@@ -357,6 +358,7 @@ def new_form(request: Request, customer_id: int = 0, template_id: int = 0):
         "sel_customer": sel_customer, "sel_template": sel_template,
         "product_code_by_template": product_code_by_template,
         "errors": [], "prefill": {},
+        "attachment_templates": attachment_options,
         "status_labels": STATUS_LABELS,
     })
 
@@ -365,6 +367,7 @@ def new_form(request: Request, customer_id: int = 0, template_id: int = 0):
 async def new_submit(request: Request):
     form = await request.form()
     data = dict(form)
+    attachment_ids = form.getlist("attachment_ids")
 
     db = SessionLocal()
     try:
@@ -374,11 +377,17 @@ async def new_submit(request: Request):
 
         if contract.template_id:
             try:
-                contract = generate_docx(db, contract.id)
+                bundle = [] if attachment_ids else None
+                contract = generate_docx(db, contract.id, attachment_ids, bundle)
+                if bundle:
+                    return _bundle_download(contract.contract_number, bundle)
                 flash_msg = f"Đã tạo hợp đồng và sinh file {contract.output_file_name}"
             except (LookupError, FileNotFoundError, ValueError) as gen_err:
                 flash_msg = f"Đã tạo bản nháp nhưng chưa sinh được file: {gen_err}"
                 flash_type = "warning"
+        elif attachment_ids:
+            flash_msg = "Đã tạo bản nháp. Chưa chọn mẫu hợp đồng nên chưa sinh văn bản kèm theo."
+            flash_type = "warning"
     except ValueError as e:
         # Re-render form with error
         customers_rows, _ = list_customers(db, CustomerFilters(active_only=True, per_page=500, sort_by='code', sort_dir='asc'))
@@ -396,12 +405,34 @@ async def new_submit(request: Request):
                 for p in products if p.default_template_id
             },
             "errors": [str(e)], "prefill": data,
+            "attachment_templates": _attachment_options(db),
             "status_labels": STATUS_LABELS,
         }, status_code=422)
     finally:
         db.close()
 
     return _flash(f"/contracts/{contract.id}", flash_msg, flash_type)
+
+
+def _attachment_options(db):
+    """Các mẫu văn bản kèm theo đang bật, để tick khi sinh hợp đồng."""
+    from app.services.attachment_service import ATTACHMENT_TYPES
+    return [{"id": t.id, "name": t.name, "type": t.contract_type}
+            for t in db.query(ContractTemplate).filter(
+                ContractTemplate.is_active == True,  # noqa: E712
+                ContractTemplate.contract_type.in_(ATTACHMENT_TYPES)).order_by(ContractTemplate.name).all()]
+
+
+def _bundle_download(contract_number: str, bundle):
+    """Trả về một file ZIP gồm hợp đồng chính và các văn bản kèm theo đã tick."""
+    from app.services.attachment_service import build_bundle_zip
+    safe = re.sub(r'[\\/:*?"<>|]+', "-", contract_number or "").strip() or "hop-dong"
+    data = build_bundle_zip(bundle)
+    return StreamingResponse(
+        io.BytesIO(data),
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{safe}_kem_theo.zip"'},
+    )
 
 
 
@@ -838,11 +869,16 @@ def download_attachment(contract_id: int, template_id: int):
 
 
 @router.post("/{contract_id}/generate")
-def do_generate(request: Request, contract_id: int):
+async def do_generate(request: Request, contract_id: int):
+    form = await request.form()
+    attachment_ids = form.getlist("attachment_ids")
     db = SessionLocal()
     try:
-        contract = generate_docx(db, contract_id)
+        bundle = [] if attachment_ids else None
+        contract = generate_docx(db, contract_id, attachment_ids, bundle)
         fname = contract.output_file_name
+        if bundle:
+            return _bundle_download(contract.contract_number, bundle)
     except (LookupError, FileNotFoundError, ValueError) as e:
         return _flash(f"/contracts/{contract_id}", str(e), "danger")
     finally:

@@ -665,10 +665,15 @@ def create_draft(db: Session, form_data: dict, *, require_main: bool = True) -> 
 
 # ─── Generate DOCX ────────────────────────────────────────────────────────────
 
-def generate_docx(db: Session, contract_id: int) -> Contract:
+def generate_docx(db: Session, contract_id: int, attachment_ids=(),
+                  bundle: Optional[list] = None) -> Contract:
     """
     Render file .docx từ template + dữ liệu hợp đồng.
     Cập nhật status → Generated, lưu đường dẫn file vào DB.
+
+    `attachment_ids`: các mẫu văn bản kèm theo được chọn cùng lúc. Tất cả được kiểm tra
+    và render trong bộ nhớ trước khi ghi file hay đổi trạng thái: một lỗi thì hủy cả lượt.
+    `bundle`: nếu truyền list, sẽ nhận (tên file, bytes) của hợp đồng chính rồi các văn bản kèm theo.
     Raises LookupError, FileNotFoundError, ValueError.
     """
     contract = get_contract(db, contract_id)
@@ -687,6 +692,9 @@ def generate_docx(db: Session, contract_id: int) -> Contract:
         raise FileNotFoundError(
             f"File template không tìm thấy trên disk: {template.file_path!r}"
         )
+
+    from app.services.attachment_service import resolve_attachment_templates, render_attachments
+    attachment_templates = resolve_attachment_templates(db, attachment_ids)
 
     customer = db.query(Customer).filter(Customer.id == contract.customer_id).first()
     if not customer:
@@ -722,14 +730,15 @@ def generate_docx(db: Session, contract_id: int) -> Contract:
     ctx = build_render_context(contract, customer, template=template, db=db)
     lists = build_render_lists(contract)
 
-    # Snapshot render_data vào contract (kèm dữ liệu dòng lặp để tái tạo được)
-    contract.render_data = {**ctx, "_lists": lists}
-
-    # Render
+    # Render hết trong bộ nhớ trước khi chạm vào render_data, file hay trạng thái
     try:
         rendered_bytes = render_docx(template.file_path, ctx, lists=lists)
     except Exception as e:
         raise ValueError(f"Lỗi khi render .docx: {e}")
+    attachments = render_attachments(db, contract.id, attachment_templates)
+
+    # Snapshot render_data vào contract (kèm dữ liệu dòng lặp để tái tạo được)
+    contract.render_data = {**ctx, "_lists": lists}
 
     # Lưu file output
     os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -739,6 +748,9 @@ def generate_docx(db: Session, contract_id: int) -> Contract:
         contract_type=template.contract_type,
     )
     fpath = os.path.join(OUTPUT_DIR, fname)
+    if bundle is not None:
+        bundle.append((fname, rendered_bytes))
+        bundle.extend(attachments)
 
     # Ghi file mới TRƯỚC khi cập nhật DB — nếu write fail thì DB không đổi (safe)
     with open(fpath, "wb") as f:
