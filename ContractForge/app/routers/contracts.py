@@ -710,6 +710,99 @@ async def addendum_submit(request: Request, contract_id: int):
         db.close()
 
 
+# ─── GIA HẠN ─────────────────────────────────────────────────────────────────
+
+def _money(v) -> str:
+    return "" if v is None else f"{int(v):,}".replace(",", ".")
+
+
+def _renewal_context(db, parent, errors, values):
+    """Dữ liệu cho form gia hạn. Mọi giá trị đã đổi sang dict, không giữ ORM ngoài phiên."""
+    from app.services.addendum_service import renewal_defaults, AddendumError
+    defaults = None
+    errs = list(errors)
+    try:
+        defaults = renewal_defaults(db, parent.id)
+    except AddendumError as exc:
+        errs.append(str(exc))
+    lines = []
+    if defaults is not None:
+        for row in defaults["lines"]:
+            old, new = row["old_product"], row["product"]
+            lines.append({
+                "old_name": old.name if old else "(gói đã xóa)",
+                "suggested_id": str(new.id) if new else "",
+                "suggested_name": new.name if new else "",
+            })
+    cmp_ = defaults["comparison"] if defaults else None
+    return {
+        "page_title": "Gia hạn",
+        "parent": {"id": parent.id, "number": parent.contract_number,
+                   "end": parent.end_date.isoformat() if parent.end_date else ""},
+        "errors": errs,
+        "start": defaults["start_date"].isoformat() if defaults else "",
+        "months": defaults["month_count"] if defaults else "",
+        "lines": lines,
+        "candidates": [] if defaults is None else [
+            {"id": p.id, "code": p.code, "name": p.name} for p in defaults["candidates"]],
+        "comparison": None if cmp_ is None else {
+            "old": _money(cmp_["old_per_month"]), "new": _money(cmp_["new_per_month"]),
+            "diff": _money(cmp_["diff"])},
+        "values": values,
+    }
+
+
+@router.get("/{contract_id}/renewal/new", response_class=HTMLResponse)
+def renewal_form(request: Request, contract_id: int):
+    db = SessionLocal()
+    try:
+        parent = db.get(Contract, contract_id)
+        if parent is None:
+            raise HTTPException(404, "Không tìm thấy hợp đồng")
+        ctx = _renewal_context(db, parent, [], {"mode": "addendum"})
+    finally:
+        db.close()
+    ctx["request"] = request
+    return templates.TemplateResponse(request, "contracts/renewal_form.html", ctx)
+
+
+@router.post("/{contract_id}/renewal/new", response_class=HTMLResponse)
+async def renewal_submit(request: Request, contract_id: int):
+    from app.services.addendum_service import create_renewal_appendix, create_renewal_contract
+    form = await request.form()
+    data = dict(form)
+    mode = data.get("mode") or "addendum"
+    raw_lines = form.getlist("line_product")
+    items, line_error = [], ""
+    for idx, val in enumerate(raw_lines, start=1):
+        if str(val).strip().isdigit():
+            items.append({"product_id": int(val)})
+        else:
+            line_error = line_error or f"Dòng {idx}: chưa chọn gói cho gia hạn."
+    data["items_json"] = json.dumps(items)
+
+    db = SessionLocal()
+    try:
+        try:
+            if line_error:
+                raise ValueError(line_error)
+            if mode == "contract":
+                child = create_renewal_contract(db, contract_id, data)
+                return _flash(f"/contracts/{child.id}", f"Đã tạo hợp đồng gia hạn {child.contract_number}", "success")
+            child = create_renewal_appendix(db, contract_id, data)
+            return _flash(f"/contracts/{child.id}", f"Đã lập phụ lục gia hạn {child.contract_number}", "success")
+        except ValueError as exc:
+            parent = db.get(Contract, contract_id)
+            if parent is None:
+                raise HTTPException(404, "Không tìm thấy hợp đồng")
+            ctx = _renewal_context(db, parent, [str(exc)], {**data, "line_ids": raw_lines})
+            ctx["request"] = request
+            return templates.TemplateResponse(request, "contracts/renewal_form.html", ctx,
+                                              status_code=422)
+    finally:
+        db.close()
+
+
 @router.post("/{contract_id}/generate")
 def do_generate(request: Request, contract_id: int):
     db = SessionLocal()

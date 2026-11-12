@@ -208,6 +208,7 @@
         <h6 class="mb-0 fw-semibold" style="font-size:.85rem;"><i class="bi bi-files me-2 text-info"></i>Phụ lục</h6>
         {% if can_addendum %}
         <a href="/contracts/{{ c.id }}/addendum/new?kind=addon" class="btn btn-sm btn-outline-primary">Tạo phụ lục bổ sung</a>
+        <a href="/contracts/{{ c.id }}/renewal/new" class="btn btn-sm btn-outline-success ms-1">Gia hạn</a>
         {% endif %}
       </div>
       <div class="card-body px-3 py-2" style="font-size:.85rem;">

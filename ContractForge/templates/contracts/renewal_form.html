@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb" style="font-size:0.82rem;">
+    <li class="breadcrumb-item"><a href="/contracts">Hợp đồng</a></li>
+    <li class="breadcrumb-item"><a href="/contracts/{{ parent.id }}">{{ parent.number }}</a></li>
+    <li class="breadcrumb-item active">Gia hạn</li>
+  </ol>
+</nav>
+
+{% if errors %}
+<div class="al al-d">
+  <i class="bi bi-x-circle-fill"></i>
+  <ul class="mb-0 ps-3">{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+  <button class="al-x">×</button>
+</div>
+{% endif %}
+
+{% if comparison %}
+<div class="card mb12">
+  <div class="card-h">
+    <h6 class="fw-semibold" style="font-size:.85rem;"><i class="bi bi-graph-up text-primary"></i>So sánh giá theo tháng (VNĐ)</h6>
+  </div>
+  <div class="card-b" style="font-size:.85rem;">
+    <div class="row">
+      <div class="col-md-4">Hợp đồng cũ: <strong>{{ comparison.old }}</strong></div>
+      <div class="col-md-4">Gia hạn (giá hiện tại): <strong>{{ comparison.new }}</strong></div>
+      <div class="col-md-4">Chênh lệch: <strong>{{ comparison.diff }}</strong></div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<form method="post" action="/contracts/{{ parent.id }}/renewal/new" novalidate>
+  <div class="card mb12">
+    <div class="card-h">
+      <h6 class="fw-semibold" style="font-size:.85rem;"><i class="bi bi-signpost-split text-info"></i>Cách gia hạn</h6>
+    </div>
+    <div class="card-b">
+      <div class="form-check">
+        <input class="form-check-input" type="radio" name="mode" id="mode-appendix" value="addendum"
+               {% if values.get('mode', 'addendum') == 'addendum' %}checked{% endif %}>
+        <label class="form-check-label" for="mode-appendix">Phụ lục gia hạn trên hợp đồng này</label>
+      </div>
+      <div class="form-check mt-1">
+        <input class="form-check-input" type="radio" name="mode" id="mode-contract" value="contract"
+               {% if values.get('mode') == 'contract' %}checked{% endif %}>
+        <label class="form-check-label" for="mode-contract">Hợp đồng mới (liên kết về hợp đồng này)</label>
+      </div>
+      <div class="row g-3 mt-2">
+        <div class="col-md-4">
+          <label class="lbl">Số hợp đồng mới (chỉ khi chọn hợp đồng mới)</label>
+          <input type="text" name="contract_number" class="fc fc-sm" value="{{ values.get('contract_number', '') }}">
+        </div>
+        <div class="col-md-4">
+          <label class="lbl">Ngày bắt đầu <span class="text-danger">*</span></label>
+          <input type="date" name="start_date" class="fc fc-sm" required value="{{ values.get('start_date', start) }}">
+          <div class="form-text">Sau ngày hết hạn của hợp đồng cũ.</div>
+        </div>
+        <div class="col-md-4">
+          <label class="lbl">Số tháng <span class="text-danger">*</span></label>
+          <input type="number" name="month_count" class="fc fc-sm" min="1" required value="{{ values.get('month_count', months) }}">
+          <div class="form-text">Mặc định theo thời hạn của gói chính hiện tại.</div>
+        </div>
+        <div class="col-md-4">
+          <label class="lbl">Ngày ký</label>
+          <input type="date" name="sign_date" class="fc fc-sm" value="{{ values.get('sign_date', '') }}">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb12">
+    <div class="card-h">
+      <h6 class="fw-semibold" style="font-size:.85rem;"><i class="bi bi-box-seam text-success"></i>Gói cho từng dòng</h6>
+    </div>
+    <div class="card-b">
+      {% if lines %}
+      {% for ln in lines %}
+      <div class="row g-2 align-items-center mb-2">
+        <div class="col-md-4 small text-muted">Dòng {{ loop.index }} — gói cũ: {{ ln.old_name }}</div>
+        <div class="col-md-8">
+          <select name="line_product" class="fs fs-sm" size="1">
+            <option value="">— chọn gói —</option>
+            {% for p in candidates %}
+            <option value="{{ p.id }}"
+              {% set picked = values.get('line_ids', [])[loop.index0] if values.get('line_ids') and loop.index0 < values.get('line_ids')|length else (ln.suggested_id if ln.suggested_id else '') %}
+              {% if picked|string == p.id|string %}selected{% endif %}>[{{ p.code }}] {{ p.name }}</option>
+            {% endfor %}
+          </select>
+          {% if not ln.suggested_id %}<div class="form-text text-danger">Gói cũ đã ngừng và không có gói thay thế: hãy chọn gói.</div>{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+      {% else %}
+      <div class="text-muted">Không lấy được dòng gợi ý cho hợp đồng này.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-primary btn-sm" {% if not lines %}disabled{% endif %}>
+      <i class="bi bi-check-lg me-1"></i>Lập gia hạn
+    </button>
+    <a href="/contracts/{{ parent.id }}" class="btn btn-outline-secondary btn-sm">Hủy</a>
+  </div>
+</form>
+{% endblock %}

@@ -212,6 +212,7 @@ def run_migrations(db: Session) -> None:
             ("payment_cycle_months", "ALTER TABLE contracts ADD COLUMN payment_cycle_months INTEGER"),
             ("parent_contract_id",   "ALTER TABLE contracts ADD COLUMN parent_contract_id INTEGER REFERENCES contracts(id)"),
             ("doc_kind",             "ALTER TABLE contracts ADD COLUMN doc_kind VARCHAR(20) NOT NULL DEFAULT 'contract'"),
+            ("renewed_from_id",      "ALTER TABLE contracts ADD COLUMN renewed_from_id INTEGER REFERENCES contracts(id)"),
         ]
         for col_name, sql in _contract_item_migrations:
             if col_name not in cols_ct2:

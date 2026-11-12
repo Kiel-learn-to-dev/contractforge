@@ -154,6 +154,8 @@ class Contract(Base):
                                   comment="Chu kỳ thanh toán, tính bằng tháng")
     parent_contract_id = Column(Integer, ForeignKey("contracts.id"), nullable=True, index=True,
                                 comment="Hợp đồng gốc, nếu đây là phụ lục")
+    renewed_from_id = Column(Integer, ForeignKey("contracts.id"), nullable=True, index=True,
+                             comment="Hợp đồng gốc mà hợp đồng mới này gia hạn (khi gia hạn bằng hợp đồng mới)")
     doc_kind = Column(String(20), nullable=False, default="contract",
                       comment="contract | addendum_addon | addendum_renewal")
 
@@ -172,7 +174,8 @@ class Contract(Base):
                          cascade="all, delete-orphan")
 
     # Phụ lục (Task 2.1). Quan hệ cha–con dùng chung bảng contracts.
-    parent = relationship("Contract", remote_side=[id], backref="addenda")
+    parent = relationship("Contract", remote_side=[id],
+                          foreign_keys=[parent_contract_id], backref="addenda")
 
     # --- Helpers ---
     @property
