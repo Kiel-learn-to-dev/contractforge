@@ -28,6 +28,8 @@ from docx.shared import Pt
 
 OUT = (Path(__file__).resolve().parent.parent
        / "ContractForge" / "assets" / "default_templates" / "sample_form_08a.docx")
+OUT_SERVICE = (Path(__file__).resolve().parent.parent
+               / "ContractForge" / "assets" / "default_templates" / "sample_service_contract.docx")
 
 
 def _para(doc, text="", *, bold=False, italic=False, align=None, size=11):
@@ -41,7 +43,7 @@ def _para(doc, text="", *, bold=False, italic=False, align=None, size=11):
     return p
 
 
-def build() -> Document:
+def build_form_08a() -> Document:
     doc = Document()
     style = doc.styles["Normal"]
     style.font.name = "Times New Roman"
@@ -115,11 +117,74 @@ def build() -> Document:
 
     return doc
 
+def build_service_contract() -> Document:
+    """Hợp đồng dịch vụ hư cấu: bảng giá trị và bảng chức năng lặp theo dòng.
+
+    Câu chữ được viết mới, không chép từ mẫu của tổ chức nào.
+    """
+    doc = Document()
+    style = doc.styles["Normal"]
+    style.font.name = "Times New Roman"
+    style.font.size = Pt(12)
+
+    _para(doc, "HỢP ĐỒNG DỊCH VỤ MẪU", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, size=13)
+    _para(doc, "Số: {{CONTRACT_NUMBER}}", align=WD_ALIGN_PARAGRAPH.CENTER)
+    _para(doc)
+    _para(doc, "Bên A (Khách hàng): {{PARTY_A_NAME}}")
+    _para(doc, "Địa chỉ: {{PARTY_A_ADDRESS}}")
+    _para(doc, "Điện thoại: {{PARTY_A_PHONE}}    Người liên hệ: {{PARTY_A_CONTACT_NAME}}")
+    _para(doc, "Bên B (Nhà cung cấp): {{PARTY_B_NAME}}")
+    _para(doc, "Địa chỉ: {{PARTY_B_ADDRESS}}")
+    _para(doc, "Đại diện: {{PARTY_B_REPRESENTATIVE}}    Chức vụ: {{PARTY_B_TITLE}}")
+    _para(doc)
+    _para(doc, "1. Giá trị hợp đồng", bold=True)
+
+    value_head = ["TT", "Dịch vụ", "ĐVT", "Số lượng", "Đơn giá",
+                  "Thành tiền trước thuế", "Thuế suất", "Tiền thuế GTGT", "Thành tiền sau thuế"]
+    value_row = ["{{ITEM_NO}}", "{{ITEM_NAME}}", "{{ITEM_UNIT}}", "{{ITEM_QTY}}",
+                 "{{ITEM_PRICE}}", "{{ITEM_AMOUNT_PRE_VAT}}", "{{ITEM_VAT_RATE}}",
+                 "{{ITEM_VAT_AMOUNT}}", "{{ITEM_AMOUNT_TOTAL}}"]
+    value_total = ["Tổng cộng", "", "", "", "", "{{TOTAL_PRE_VAT}}", "", "{{TOTAL_VAT}}",
+                   "{{TOTAL_AMOUNT}}"]
+    value = doc.add_table(rows=3, cols=9)
+    value.style = "Table Grid"
+    for table_row, values in zip(value.rows, [value_head, value_row, value_total]):
+        for cell, text in zip(table_row.cells, values):
+            cell.text = text
+
+    _para(doc, "Bằng chữ: {{AMOUNT_TEXT}}", italic=True)
+    _para(doc, "Cách tính: {{PRICING_DESCRIPTION}}", size=10)
+    _para(doc)
+    _para(doc, "2. Chức năng", bold=True)
+
+    feature = doc.add_table(rows=2, cols=3)
+    feature.style = "Table Grid"
+    for table_row, values in zip(feature.rows, [["STT", "Chức năng", "Mô tả"],
+                                                ["{{FEATURE_NO}}", "{{FEATURE_NAME}}",
+                                                 "{{FEATURE_DESC}}"]]):
+        for cell, text in zip(table_row.cells, values):
+            cell.text = text
+
+    _para(doc)
+    _para(doc, "3. Thời hạn từ {{START_DATE}} đến {{END_DATE}}. "
+               "Chu kỳ thanh toán: {{PAYMENT_CYCLE_MONTHS}} tháng.")
+    _para(doc)
+
+    sign = doc.add_table(rows=2, cols=2)
+    for cell, text in zip(sign.rows[0].cells, ["ĐẠI DIỆN BÊN A", "ĐẠI DIỆN BÊN B"]):
+        cell.text = text
+    for cell, text in zip(sign.rows[1].cells,
+                          ["{{PARTY_A_REPRESENTATIVE}}", "{{PARTY_B_REPRESENTATIVE}}"]):
+        cell.text = text
+    return doc
+
 
 def main() -> int:
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    build().save(OUT)
+    build_form_08a().save(OUT)
     print(f"Đã ghi {OUT} ({OUT.stat().st_size} bytes)")
+    build_service_contract().save(OUT_SERVICE)
+    print(f"Đã ghi {OUT_SERVICE} ({OUT_SERVICE.stat().st_size} bytes)")
     return 0
 
 

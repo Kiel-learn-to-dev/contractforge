@@ -118,3 +118,31 @@ def test_form_08a_template_actually_exists(db_engine):
     assert FORM_08A_TEMPLATE.is_file(), (
         f"không tìm thấy mẫu 08a tại {FORM_08A_TEMPLATE}"
     )
+
+
+SERVICE_SAMPLE = ASSETS / "sample_service_contract.docx"
+
+
+def test_service_contract_sample_is_committed():
+    assert SERVICE_SAMPLE.is_file(), (
+        "thiếu sample_service_contract.docx — chạy scripts/make_sample_templates.py"
+    )
+
+
+def test_service_contract_sample_has_both_repeat_tables_and_no_warnings():
+    from app.services.template_analyzer import analyze
+
+    result = analyze(SERVICE_SAMPLE)
+
+    assert result.ok, result.error
+    assert result.repeat_groups == ["features", "items"]
+    assert result.row_warnings == []
+
+
+def test_service_contract_sample_placeholders_all_have_a_mapping():
+    from app.services.template_analyzer import analyze
+
+    result = analyze(SERVICE_SAMPLE)
+
+    unmapped = [ph for ph in result.placeholders if not result.mapping.get(ph)]
+    assert unmapped == []
