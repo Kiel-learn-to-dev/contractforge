@@ -18,7 +18,7 @@ from app.services.docx_renderer import build_render_context, build_render_lists,
 from app.utils.file_naming import make_output_filename
 
 #: Loại mẫu được phép sinh như văn bản kèm theo. Mẫu hợp đồng và báo giá không nằm ở đây.
-ATTACHMENT_TYPES = ("Nghiệm thu", "Bàn giao", "Thanh lý", "Khác")
+from app.services.template_service import ATTACHMENT_TYPES  # noqa: F401 — chuyển về template_service
 
 
 class AttachmentError(ValueError):

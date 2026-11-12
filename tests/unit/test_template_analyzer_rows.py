@@ -83,7 +83,8 @@ def test_appendix_kind_is_recognised_by_parent_contract_number():
     from app.services.template_service import CONTRACT_TYPES, _template_kind
 
     assert "Bàn giao" in CONTRACT_TYPES
-    assert _template_kind(["CONTRACT_NUMBER", "PARENT_CONTRACT_NUMBER"]) == "Phụ lục"
+    assert _template_kind(["CONTRACT_NUMBER", "PARENT_CONTRACT_NUMBER"]) == "Phụ lục bổ sung"
+    assert _template_kind(["CONTRACT_NUMBER", "PARENT_CONTRACT_NUMBER", "START_DATE", "END_DATE"]) == "Phụ lục gia hạn"
     assert _template_kind(["CONTRACT_NUMBER", "TOTAL_AMOUNT"]) == "Hợp đồng"
     assert _template_kind(["ACCEPTANCE_DATE_DAY", "PARENT_CONTRACT_NUMBER"]) == "Nghiệm thu"
 

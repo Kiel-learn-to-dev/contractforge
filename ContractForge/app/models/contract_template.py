@@ -27,6 +27,8 @@ class ContractTemplate(Base):
                   comment="Tên hiển thị trong giao diện")
     contract_type = Column(String(80), nullable=False,
                            comment="Nhãn phân loại tự do, VD: Hợp đồng | Phụ lục | Nghiệm thu")
+    product_group = Column(String(50), nullable=True, index=True,
+                           comment="Nhóm sản phẩm sở hữu mẫu; NULL = dùng chung")
 
     # File storage
     file_path = Column(String(500), nullable=True,

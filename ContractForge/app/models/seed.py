@@ -225,6 +225,12 @@ def run_migrations(db: Session) -> None:
             conn.execute(text("ALTER TABLE customers ADD COLUMN record_count INTEGER"))
             conn.commit()
 
+        # ── contract_templates — nhóm sản phẩm của mẫu (bộ văn bản theo sản phẩm) ──
+        cols_tpl = [row[1] for row in conn.execute(text("PRAGMA table_info(contract_templates)")).fetchall()]
+        if "product_group" not in cols_tpl:
+            conn.execute(text("ALTER TABLE contract_templates ADD COLUMN product_group VARCHAR(50)"))
+            conn.commit()
+
     _backfill_contract_number_formats(db)
     _backfill_contract_items(db)
 

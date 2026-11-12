@@ -134,4 +134,5 @@ def test_biên_bản_is_kinded_by_its_heading_not_by_fields():
     assert _template_kind([], "Biểu mẫu 01 BIÊN BẢN BÀN GIAO VÀ NGHIỆM THU") == "Bàn giao"
     assert _template_kind([], "BIÊN BẢN NGHIỆM THU HOÀN THÀNH CUNG CẤP DỊCH VỤ") == "Nghiệm thu"
     assert _template_kind(["CONTRACT_NUMBER"], "") == "Hợp đồng"
-    assert _template_kind(["PARENT_CONTRACT_NUMBER"], "PHỤ LỤC GIA HẠN") == "Phụ lục"
+    # Mẫu gia hạn thật có START_DATE và END_DATE; tiêu đề một mình không đủ để xếp gia hạn.
+    assert _template_kind(["PARENT_CONTRACT_NUMBER", "START_DATE", "END_DATE"], "PHỤ LỤC GIA HẠN") == "Phụ lục gia hạn"

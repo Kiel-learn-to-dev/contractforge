@@ -38,7 +38,99 @@ QUOTATION_TYPE = "Báo giá"
 
 # Nhóm mẫu hợp đồng gợi ý trong form. Đây là nhãn phân loại tự do — người dùng
 # gõ giá trị khác cũng được; danh sách này chỉ để bấm cho nhanh.
-CONTRACT_TYPES = ["Hợp đồng", "Phụ lục", "Nghiệm thu", "Thanh lý", "Bàn giao", QUOTATION_TYPE, "Khác"]
+ADDON_TYPE = "Phụ lục bổ sung"
+RENEWAL_TYPE = "Phụ lục gia hạn"
+#: Nhãn cũ của mọi phụ lục. Mẫu mang nhãn này được cả hai form phụ lục chấp nhận.
+LEGACY_APPENDIX_TYPE = "Phụ lục"
+
+#: Văn bản kèm theo hợp đồng (biên bản): tick trên form hợp đồng.
+ATTACHMENT_TYPES = ("Nghiệm thu", "Bàn giao", "Thanh lý", "Khác")
+
+CONTRACT_TYPES = ["Hợp đồng", ADDON_TYPE, RENEWAL_TYPE, "Nghiệm thu", "Bàn giao", "Thanh lý",
+                  QUOTATION_TYPE, "Khác"]
+
+# Vai trò của mẫu. Suy ra từ `contract_type`, không có cột riêng.
+ROLE_CONTRACT = "contract"
+ROLE_ADDON = "addon"
+ROLE_RENEWAL = "renewal"
+ROLE_ATTACHMENT = "attachment"
+ROLE_QUOTATION = "quotation"
+
+_ROLE_TYPES = {
+    ROLE_ADDON: (ADDON_TYPE, LEGACY_APPENDIX_TYPE),
+    ROLE_RENEWAL: (RENEWAL_TYPE, LEGACY_APPENDIX_TYPE),
+    ROLE_ATTACHMENT: ATTACHMENT_TYPES,
+    ROLE_QUOTATION: (QUOTATION_TYPE,),
+}
+_NON_CONTRACT = {t for types in _ROLE_TYPES.values() for t in types}
+
+
+class TemplateMismatch(ValueError):
+    """Mẫu sai vai trò hoặc thuộc nhóm sản phẩm khác."""
+
+
+def has_role(contract_type: str, role: str) -> bool:
+    """Loại mẫu có đóng vai trò này không. Mọi nhãn không thuộc vai trò phụ trợ là vai trò hợp đồng."""
+    if role == ROLE_CONTRACT:
+        return contract_type not in _NON_CONTRACT
+    return contract_type in _ROLE_TYPES[role]
+
+
+def normalize_group(raw) -> Optional[str]:
+    value = str(raw or "").strip()
+    return value or None
+
+
+def group_of_contract(contract) -> Optional[str]:
+    """Nhóm của văn bản = nhóm của sản phẩm chính của hợp đồng gốc (phụ lục lấy theo cha)."""
+    root = contract.parent if getattr(contract, "parent", None) is not None else contract
+    product = root.product
+    return normalize_group(product.group_code) if product else None
+
+
+def role_of_doc_kind(doc_kind: Optional[str]) -> str:
+    return {"addendum_addon": ROLE_ADDON, "addendum_renewal": ROLE_RENEWAL}.get(doc_kind or "contract",
+                                                                              ROLE_CONTRACT)
+
+
+def templates_for(db: Session, group, role: str, active_only: bool = True) -> list[ContractTemplate]:
+    """Mẫu đúng vai trò, thuộc nhóm `group` hoặc dùng chung. Mẫu của nhóm đứng trước, rồi theo tên."""
+    g = normalize_group(group)
+    query = db.query(ContractTemplate)
+    if active_only:
+        query = query.filter(ContractTemplate.is_active == True)  # noqa: E712
+    rows = []
+    for tpl in query.all():
+        if not has_role(tpl.contract_type or "", role):
+            continue
+        tg = normalize_group(tpl.product_group)
+        if tg is not None and tg != g:
+            continue
+        rows.append(tpl)
+    rows.sort(key=lambda t: (normalize_group(t.product_group) is None, (t.name or "").lower()))
+    return rows
+
+
+def default_template_for(db: Session, group, role: str) -> Optional[ContractTemplate]:
+    """Mẫu RIÊNG của nhóm nếu có đúng một; ngược lại None."""
+    g = normalize_group(group)
+    if g is None:
+        return None
+    own = [t for t in templates_for(db, g, role) if normalize_group(t.product_group) == g]
+    return own[0] if len(own) == 1 else None
+
+
+def check_template_for(template, group, role: str) -> None:
+    """Ném TemplateMismatch nếu mẫu sai vai trò, hoặc mẫu có nhóm mà khác `group`."""
+    if not has_role(template.contract_type or "", role):
+        raise TemplateMismatch(
+            f"Mẫu '{template.name}' loại '{template.contract_type}' không dùng được ở đây.")
+    tg = normalize_group(template.product_group)
+    g = normalize_group(group)
+    if tg is not None and tg != g:
+        where = g or "chưa có nhóm"
+        raise TemplateMismatch(
+            f"Mẫu '{template.name}' thuộc nhóm sản phẩm '{tg}', không dùng cho nhóm '{where}'.")
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -89,6 +181,7 @@ def create_template(
     original_filename: str,
     description: str = "",
     mode: str = "placeholder",
+    product_group: str = "",
 ) -> tuple[ContractTemplate, AnalysisResult]:
     """
     Tạo template mới:
@@ -131,6 +224,7 @@ def create_template(
         code=code,
         name=name,
         contract_type=contract_type,
+        product_group=normalize_group(product_group),
         description=description,
         mode=mode,
         is_active=True,
@@ -169,6 +263,7 @@ def update_metadata(
     name: str,
     contract_type: str,
     description: str = "",
+    product_group: str = "",
 ) -> ContractTemplate:
     tpl = get_template(db, template_id)
     if not tpl:
@@ -178,6 +273,7 @@ def update_metadata(
         raise ValueError("Tên template không được để trống.")
     tpl.name = name
     tpl.contract_type = contract_type
+    tpl.product_group = normalize_group(product_group)
     tpl.description = description
     db.commit()
     db.refresh(tpl)
@@ -316,7 +412,9 @@ def _template_kind(placeholders: list[str], heading: str = "") -> str:
     if any(field.startswith("LIQUIDATION_DATE") for field in fields):
         return "Thanh lý"
     if "PARENT_CONTRACT_NUMBER" in fields:
-        return "Phụ lục"
+        if {"START_DATE", "END_DATE"} <= fields:
+            return RENEWAL_TYPE
+        return ADDON_TYPE
     return "Hợp đồng"
 
 

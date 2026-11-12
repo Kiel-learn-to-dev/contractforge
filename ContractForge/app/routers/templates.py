@@ -191,9 +191,16 @@ def edit_form(request: Request, template_id: int):
         "action": f"/templates/{template_id}/edit",
         "tpl": tpl,
         "next_code": tpl.code,
-        "contract_types": CONTRACT_TYPES,
+        "contract_types": _type_choices(tpl.contract_type),
         "errors": [],
     })
+
+
+def _type_choices(current: str | None) -> list[str]:
+    """Danh sách loại để chọn. Nhãn cũ đang có (ví dụ "Phụ lục") được giữ lên đầu, không bị đổi ngầm."""
+    if current and current not in CONTRACT_TYPES:
+        return [current, *CONTRACT_TYPES]
+    return list(CONTRACT_TYPES)
 
 
 @router.post("/{template_id}/edit")
@@ -206,8 +213,11 @@ async def edit_submit(
 ):
     db = SessionLocal()
     try:
-        tpl = update_metadata(db, template_id, name=name,
-                              contract_type=contract_type, description=description)
+        # Nhóm sản phẩm được giữ nguyên cho tới khi form có ô chọn nhóm.
+        current = get_template(db, template_id)
+        keep_group = current.product_group if current else ""
+        tpl = update_metadata(db, template_id, name=name, contract_type=contract_type,
+                              description=description, product_group=keep_group or "")
     except (ValueError, LookupError) as e:
         db2 = SessionLocal()
         orig = get_template(db2, template_id)
@@ -219,7 +229,7 @@ async def edit_submit(
             "action": f"/templates/{template_id}/edit",
             "tpl": orig,
             "next_code": orig.code if orig else "",
-            "contract_types": CONTRACT_TYPES,
+            "contract_types": _type_choices(orig.contract_type if orig else None),
             "errors": [str(e)],
         }, status_code=422)
     finally:
