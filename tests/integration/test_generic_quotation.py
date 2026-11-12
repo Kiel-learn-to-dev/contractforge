@@ -99,7 +99,7 @@ def test_generate_uses_user_selected_product_and_template(
                              contract_type="Báo giá")
     captured = {}
 
-    def fake_render(path, context):
+    def fake_render(path, context, lists=None):
         captured["path"] = path
         captured["context"] = context
         return b"rendered-docx"
@@ -249,3 +249,100 @@ def test_product_default_template_is_a_contract_template_not_a_quotation_one(
 
     assert product.default_template_id == contract_tpl.id
     assert contract_tpl.id not in {t.id for t in list_quotation_templates(db_session)}
+
+
+# ─── Task 5.2: báo giá nhiều dòng ───────────────────────────────────────────
+
+def _quote_template_docx(path):
+    import docx
+
+    doc = docx.Document()
+    doc.add_paragraph("Báo giá {{PRODUCT_CODE}} cho {{PARTY_A_NAME}}")
+    t = doc.add_table(rows=3, cols=3)
+    for i, h in enumerate(["TT", "Dịch vụ", "Thành tiền"]):
+        t.rows[0].cells[i].text = h
+    for i, v in enumerate(["{{ITEM_NO}}", "{{ITEM_NAME}}", "{{ITEM_AMOUNT_TOTAL}}"]):
+        t.rows[1].cells[i].text = v
+    t.rows[2].cells[0].text = "Tổng"
+    t.rows[2].cells[2].text = "{{TOTAL_AMOUNT}}"
+    doc.save(str(path))
+    return path
+
+
+def test_form_shows_the_line_table_and_no_client_side_calculation(db_session, monkeypatch):
+    import app.routers.quotation as quotation
+
+    monkeypatch.setattr(quotation, "SessionLocal", lambda: db_session)
+    response = quotation.quotation_form(Request({
+        "type": "http", "method": "GET", "path": "/quotation",
+        "query_string": b"", "headers": [],
+    }))
+    body = response.body.decode("utf-8")
+
+    assert 'id="tbl-items"' in body
+    assert 'name="items_json"' in body
+    assert "data-items-form" in body
+    assert "disp-total" not in body
+    assert "/static/js/contract_items.js" in body
+
+
+def test_two_line_quotation_renders_both_lines_and_the_server_total(
+    db_session, make_customer, make_product, make_template, tmp_path, monkeypatch,
+):
+    import io
+
+    import docx
+
+    import app.routers.quotation as quotation
+
+    customer = make_customer(legal_name="Công ty báo giá hư cấu")
+    main = make_product(code="QT-MAIN", name="Gói chính báo giá", kind="main", group_code="QT-G",
+                        unit_label="cơ sở", default_price=500_000, default_vat_rate=10)
+    addon = make_product(code="QT-ADD", name="Gói kèm báo giá", kind="addon", group_code="QT-G",
+                         unit_label="cơ sở", default_price=150_000, default_vat_rate=10)
+    path = _quote_template_docx(tmp_path / "quote_items.docx")
+    template = make_template(file_path=str(path), contract_type="Báo giá")
+    monkeypatch.setattr(quotation, "SessionLocal", lambda: db_session)
+
+    items = ('[{"product_id": %d, "quantity": "2"}, {"product_id": %d, "quantity": "1"}]'
+             % (main.id, addon.id))
+    response = quotation.quotation_generate(
+        request=Request({"type": "http", "method": "POST", "path": "/quotation/generate",
+                         "query_string": b"", "headers": []}),
+        product_id=main.id, template_id=template.id, customer_id=customer.id,
+        quote_date="2026-07-11", month_count=12, items_json=items,
+    )
+
+    out = docx.Document(io.BytesIO(response.body))
+    rows = [[c.text for c in r.cells] for r in out.tables[0].rows]
+    assert rows[1] == ["1", "Gói chính báo giá", "13.200.000"]  # gồm VAT: ITEM_AMOUNT_TOTAL
+    assert rows[2] == ["2", "Gói kèm báo giá", "1.980.000"]
+    assert rows[3][2] == "15.180.000"  # 13.800.000 trước thuế + 1.380.000 thuế
+    assert "{{" not in "\n".join(p.text for p in out.paragraphs)
+
+
+def test_quotation_whose_first_line_is_an_add_on_is_refused(
+    db_session, make_customer, make_product, make_template, tmp_path, monkeypatch,
+):
+    import app.routers.quotation as quotation
+
+    customer = make_customer()
+    main = make_product(code="QT-M2", name="Gói chính", kind="main", group_code="QT-H")
+    addon = make_product(code="QT-A2", name="Gói kèm", kind="addon", group_code="QT-H")
+    path = _quote_template_docx(tmp_path / "quote_refuse.docx")
+    template = make_template(file_path=str(path), contract_type="Báo giá")
+    monkeypatch.setattr(quotation, "SessionLocal", lambda: db_session)
+
+    response = quotation.quotation_generate(
+        request=Request({"type": "http", "method": "POST", "path": "/quotation/generate",
+                         "query_string": b"", "headers": []}),
+        product_id=main.id, template_id=template.id, customer_id=customer.id,
+        quote_date="2026-07-11", month_count=12,
+        items_json='[{"product_id": %d, "quantity": "1"}]' % addon.id,
+    )
+
+    assert response.status_code == 303
+    from urllib.parse import unquote
+
+    message = unquote(response.headers["location"])
+    assert "Dòng 1 phải là gói chính" in message

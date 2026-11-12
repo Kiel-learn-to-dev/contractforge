@@ -32,11 +32,11 @@
         <span class="fw-bold" style="font-family:var(--font-heading);"><i class="bi bi-file-earmark-ruled me-2"></i>Thông tin báo giá</span>
       </div>
       <div class="card-body">
-        <form method="post" action="/quotation/generate" id="quotation-form">
+        <form method="post" action="/quotation/generate" id="quotation-form" data-items-form>
           <div class="row g-3 mb-4">
             <div class="col-md-6">
-              <label class="form-label" for="product_id">Sản phẩm / dịch vụ <span class="text-danger">*</span></label>
-              <select class="form-select" name="product_id" id="product_id" required data-native-select="true">
+              <label class="form-label" for="sel-product">Sản phẩm / dịch vụ <span class="text-danger">*</span></label>
+              <select class="form-select" name="product_id" id="sel-product" required data-native-select="true">
                 <option value="">— Chọn sản phẩm —</option>
                 {% for p in products %}
                 <option value="{{ p.id }}"
@@ -62,8 +62,8 @@
           </div>
 
           <div class="mb-4">
-            <label class="form-label" for="customer_id">Khách hàng <span class="text-danger">*</span></label>
-            <select class="form-select" name="customer_id" id="customer_id" required data-native-select="true">
+            <label class="form-label" for="sel-customer">Khách hàng <span class="text-danger">*</span></label>
+            <select class="form-select" name="customer_id" id="sel-customer" required data-native-select="true">
               <option value="">— Chọn khách hàng —</option>
               {% for c in customers %}
               <option value="{{ c.id }}" data-units="{{ customer_units[c.id] }}">
@@ -79,28 +79,41 @@
               <input type="date" class="form-control" name="quote_date" id="quote_date" value="{{ today }}" required>
             </div>
             <div class="col-md-6">
-              <label class="form-label" for="month_count">Số tháng <span class="text-danger">*</span></label>
-              <input type="number" class="form-control" name="month_count" id="month_count" value="12" min="1" max="120" required>
+              <label class="form-label" for="inp-months-time">Số tháng <span class="text-danger">*</span></label>
+              <input type="number" class="form-control" name="month_count" id="inp-months-time" value="12" min="1" max="120" required>
             </div>
           </div>
 
-          <div class="card panel-note mb-4" id="calc-panel" style="display:none!important;">
-            <div class="card-body py-3">
-              <div class="fw-bold mb-2" style="font-family:var(--font-heading);font-size:0.9rem;">
-                <i class="bi bi-calculator me-1"></i> Tính toán từ cấu hình sản phẩm
-              </div>
-              <div class="row g-2 text-sm">
-                <div class="col-6"><span class="text-muted">Đơn giá trước VAT:</span> <strong id="disp-price">—</strong></div>
-                <div class="col-6"><span class="text-muted">VAT:</span> <strong id="disp-vat">—</strong></div>
-                <div class="col-6"><span class="text-muted">Số đơn vị:</span> <strong id="disp-units">—</strong></div>
-                <div class="col-6"><span class="text-muted">Số lượng (đơn vị × tháng):</span> <strong id="disp-qty">—</strong></div>
-                <div class="col-12"><span class="text-muted">Tổng tiền:</span> <strong id="disp-total" class="text-primary">—</strong></div>
-              </div>
+          <div class="mb-4">
+            <label class="form-label">Dòng báo giá <span class="text-muted small">(tiền do máy chủ tính)</span></label>
+            <div class="table-responsive">
+              <table class="table table-sm align-middle mb-1" id="tbl-items" style="font-size:.85rem;">
+                <thead>
+                  <tr>
+                    <th>Dịch vụ</th><th>ĐVT</th>
+                    <th class="text-end" style="width:110px;">Số lượng</th>
+                    <th class="text-end" style="width:130px;">Đơn giá (VNĐ)</th>
+                    <th class="text-end" style="width:80px;">Thuế %</th>
+                    <th class="text-end">Trước thuế</th><th class="text-end">Thuế</th><th class="text-end">Sau thuế</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+                <tfoot>
+                  <tr><th colspan="7" class="text-end">Cộng trước thuế</th><th class="text-end" id="sum-pre"></th></tr>
+                  <tr><th colspan="7" class="text-end">Tiền thuế</th><th class="text-end" id="sum-vat"></th></tr>
+                  <tr><th colspan="7" class="text-end">Cộng sau thuế</th><th class="text-end fw-bold" id="sum-total"></th></tr>
+                </tfoot>
+              </table>
             </div>
+            <div class="small text-muted mb-1">Gói bổ sung cùng nhóm với gói chính (tích để thêm dòng):</div>
+            <div id="addon-picker" class="d-flex flex-wrap gap-3 mb-2"></div>
+            <div id="price-error" class="text-danger small"></div>
+            <input type="hidden" name="items_json" id="inp-items-json">
+            <input type="hidden" id="inp-units" value="1">
           </div>
 
           <div class="d-flex gap-3 pt-2">
-            <button type="submit" class="btn btn-primary" {% if not products or not quotation_templates %}disabled{% endif %}>
+            <button type="submit" class="btn btn-primary" id="btn-save" disabled>
               <i class="bi bi-download me-2"></i>Sinh và tải file báo giá
             </button>
             <a href="/quotation" class="btn btn-outline-secondary"><i class="bi bi-arrow-counterclockwise me-1"></i>Đặt lại</a>
@@ -126,51 +139,36 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="/static/js/contract_items.js"></script>
 <script>
 (function() {
-  const productSelect = document.getElementById('product_id');
-  const templateSelect = document.getElementById('template_id');
-  const customerSelect = document.getElementById('customer_id');
-  const monthInput = document.getElementById('month_count');
-  const calcPanel = document.getElementById('calc-panel');
+  var productSelect = document.getElementById("sel-product");
+  var templateSelect = document.getElementById("template_id");
+  var customerSelect = document.getElementById("sel-customer");
+  var monthInput = document.getElementById("inp-months-time");
+  var unitsInput = document.getElementById("inp-units");
 
-  function number(value) { return Number(value || 0); }
-  function format(value) { return Math.round(value).toLocaleString('vi-VN'); }
-
-  function recalc() {
-    const product = productSelect.options[productSelect.selectedIndex];
-    const customer = customerSelect.options[customerSelect.selectedIndex];
-    const price = number(product && product.dataset.price);
-    const vat = number(product && product.dataset.vat);
-    const units = number(customer && customer.dataset.units);
-    const months = number(monthInput.value);
-
-    if (price > 0 && units > 0 && months > 0) {
-      const priceWithVat = Math.round(price * (1 + vat / 100));
-      document.getElementById('disp-price').textContent = format(price) + ' VNĐ';
-      document.getElementById('disp-vat').textContent = vat + '%';
-      document.getElementById('disp-units').textContent = units;
-      document.getElementById('disp-qty').textContent = units * months;
-      document.getElementById('disp-total').textContent = format(priceWithVat * units * months) + ' VNĐ';
-      calcPanel.style.removeProperty('display');
-    } else {
-      calcPanel.style.setProperty('display', 'none', 'important');
-    }
-  }
-
-  productSelect.addEventListener('change', function() {
-    const selected = productSelect.options[productSelect.selectedIndex];
-    const preferred = selected && selected.dataset.defaultTemplate;
-    const duration = selected && Number(selected.dataset.duration || 0);
+  productSelect.addEventListener("change", function() {
+    var selected = productSelect.options[productSelect.selectedIndex];
+    var preferred = selected && selected.dataset.defaultTemplate;
+    var duration = selected && Number(selected.dataset.duration || 0);
     if (preferred && templateSelect.querySelector('option[value="' + preferred + '"]')) {
       templateSelect.value = preferred;
     }
     if (duration > 0) monthInput.value = duration;
-    recalc();
+    loadProductOptions(true);
   });
-  customerSelect.addEventListener('change', recalc);
-  monthInput.addEventListener('input', recalc);
-  recalc();
+  customerSelect.addEventListener("change", function() {
+    var opt = customerSelect.options[customerSelect.selectedIndex];
+    unitsInput.value = (opt && opt.dataset.units) || "1";
+    loadProductOptions(false);
+  });
+  monthInput.addEventListener("input", function() { refreshPreview(); });
+  if (productSelect.value) {
+    var opt = customerSelect.options[customerSelect.selectedIndex];
+    unitsInput.value = (opt && opt.dataset.units) || "1";
+    loadProductOptions(true);
+  }
 })();
 </script>
 {% endblock %}

@@ -214,7 +214,8 @@ def test_vat_from_data_attribute_is_not_parsed_as_vietnamese_number():
     8% biến thành 800% và giá sau thuế sai gấp ~8 lần. Đây là lỗi đã xảy ra
     thật khi chuyển từ bảng giá cứng sang đọc danh mục.
     """
-    source = (TEMPLATE_DIR / "contracts" / "form.html").read_text(encoding="utf-8")
+    # collectItems nằm trong file JS dùng chung (static/js/contract_items.js) từ Task 5.2.
+    source = (TEMPLATE_DIR.parent / "static" / "js" / "contract_items.js").read_text(encoding="utf-8")
 
     # Task 2.5 thay priceOfOption bằng collectItems; chỗ đọc thuế nằm ở đó.
     body = source[source.index("function collectItems"):]

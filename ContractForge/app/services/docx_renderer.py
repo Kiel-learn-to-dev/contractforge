@@ -280,13 +280,13 @@ def render_docx(
     return buf.getvalue()
 
 
-def build_render_lists(contract) -> dict[str, list[dict[str, str]]]:
-    """Dữ liệu cho các dòng lặp trong mẫu: ITEM_* (bảng giá trị) và FEATURE_* (bảng chức năng).
+def lists_from_lines(lines, feature_lists) -> dict[str, list[dict[str, str]]]:
+    """Dữ liệu dòng lặp từ các dòng đã tính (ContractItem hoặc pricing.Line).
 
-    Mọi giá trị đã là chuỗi hiển thị. Chức năng gộp từ gói của các dòng, bỏ trùng theo tên.
+    `feature_lists` là danh sách feature_list của gói tương ứng từng dòng, theo thứ tự.
+    Mọi giá trị đã là chuỗi hiển thị. Chức năng gộp và bỏ trùng theo tên.
     ITEM_QTY hiện là số lượng × số kỳ (mặc định); câu hỏi 5 của kế hoạch còn mở.
     """
-    lines = sorted(contract.items or [], key=lambda i: (i.sort_order or 0))
     items: list[dict[str, str]] = []
     features: list[dict[str, str]] = []
     seen: set[str] = set()
@@ -303,8 +303,8 @@ def build_render_lists(contract) -> dict[str, list[dict[str, str]]]:
             "ITEM_VAT_AMOUNT": _fmt_currency(line.vat_amount),
             "ITEM_AMOUNT_TOTAL": _fmt_currency(line.amount_total),
         })
-        product = line.product
-        for feat in (product.feature_list if product else []):
+    for feat_list in feature_lists:
+        for feat in (feat_list or []):
             name = str(feat.get("name", "")).strip()
             if not name or name in seen:
                 continue
@@ -315,6 +315,12 @@ def build_render_lists(contract) -> dict[str, list[dict[str, str]]]:
                 "FEATURE_DESC": str(feat.get("description", "") or ""),
             })
     return {"items": items, "features": features}
+
+
+def build_render_lists(contract) -> dict[str, list[dict[str, str]]]:
+    """Dữ liệu dòng lặp của một hợp đồng: các dòng theo sort_order và feature của gói."""
+    lines = sorted(contract.items or [], key=lambda i: (i.sort_order or 0))
+    return lists_from_lines(lines, [line.product.feature_list if line.product else [] for line in lines])
 
 
 def build_render_context(

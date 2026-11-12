@@ -21,7 +21,8 @@ from app.models.customer import Customer
 from app.models.product import Product
 from app.models.contract_template import ContractTemplate
 from app.paths import TEMPLATES_DIR
-from app.services.docx_renderer import apply_template_mapping, render_docx
+from app.services import contract_service, pricing
+from app.services.docx_renderer import apply_template_mapping, lists_from_lines, render_docx, _fmt_number
 from app.services.template_service import QUOTATION_TYPE
 from app.utils.amount_to_words_vi import amount_to_words
 from app.utils.date_helpers import split_date_parts, parse_date_input
@@ -104,6 +105,49 @@ def resolve_quotation_selection(db, product_id: int, template_id: int):
 def _fmt_currency(n: Decimal) -> str:
     """Format số tiền VNĐ: 24000000 → '24.000.000'."""
     return f"{int(n):,}".replace(",", ".")
+
+
+def _build_context_from_lines(customer, main_product, quote_date, month_count, lines, totals) -> dict:
+    """Ngữ cảnh báo giá theo dòng. Tiền lấy từ pricing; khóa đơn lấy từ dòng gói chính."""
+    ctx = {}
+    ctx["PARTY_A_NAME"] = customer.legal_name or ""
+    parts = split_date_parts(quote_date)
+    ctx["QUOTE_DATE"]       = quote_date.strftime("%d/%m/%Y")
+    ctx["QUOTE_DATE_DAY"]   = parts["day"]
+    ctx["QUOTE_DATE_MONTH"] = parts["month"]
+    ctx["QUOTE_DATE_YEAR"]  = parts["year"]
+    main = lines[0]
+    ctx["UNIT_COUNT"]  = _fmt_number(main.quantity)
+    ctx["MONTH_COUNT"] = str(month_count)
+    ctx["PRODUCT_CODE"] = main_product.code or ""
+    ctx["PRODUCT_NAME"] = main_product.name or ""
+    ctx["UNIT_PRICE_PRE_VAT"] = _fmt_currency(main.unit_price_pre_vat)
+    ctx["VAT_RATE"] = f"{main.vat_rate.normalize()}%"
+    ctx["UNIT_PRICE_VAT"] = _fmt_currency(
+        pricing.round_money(main.unit_price_pre_vat * (1 + main.vat_rate / 100)))
+    ctx["QUANTITY"] = _fmt_number(main.quantity * main.period_count)
+    ctx["TOTAL_PRE_VAT"] = _fmt_currency(totals.pre_vat)
+    ctx["TOTAL_VAT"]     = _fmt_currency(totals.vat)
+    ctx["TOTAL_AMOUNT"]  = _fmt_currency(totals.total)
+    ctx["AMOUNT_TEXT"]   = totals.amount_text
+    ctx["PRICING_UNITS"] = "; ".join(customer.unit_names_list())
+    ctx["PRICING_DESCRIPTION"] = pricing.describe(lines, totals)
+    return ctx
+
+
+def _items_context_and_lists(db, customer, quote_date, month_count, raw_items: str):
+    """Đường báo giá nhiều dòng: cùng _build_lines và sum_lines với hợp đồng."""
+    items = contract_service._parse_items_json(raw_items)
+    lines = contract_service._build_lines(db, items, month_count)
+    totals = pricing.sum_lines(lines)
+    main_product = db.get(Product, lines[0].product_id)
+    feature_lists = []
+    for line in lines:
+        p = db.get(Product, line.product_id) if line.product_id else None
+        feature_lists.append(p.feature_list if p else [])
+    lists = lists_from_lines(lines, feature_lists)
+    ctx = _build_context_from_lines(customer, main_product, quote_date, month_count, lines, totals)
+    return ctx, lists
 
 
 def _content_disposition(filename: str) -> str:
@@ -233,6 +277,7 @@ def quotation_generate(
     customer_id:   int  = Form(...),
     quote_date:    str  = Form(...),
     month_count:   int  = Form(...),
+    items_json:    str  = Form(""),
 ):
     db = SessionLocal()
     try:
@@ -266,11 +311,17 @@ def quotation_generate(
         if not template.file_path:
             return _error_redirect(request, "Mẫu đã chọn chưa có file DOCX.")
 
-        # Build context và render
-        ctx = apply_template_mapping(
-            _build_context(customer, product, qdate, month_count), template
-        )
-        docx_bytes = render_docx(template.file_path, ctx)
+        # Build context và render. items_json có dòng → báo giá nhiều dòng; không có → đường cũ.
+        raw_items = items_json if isinstance(items_json, str) else ""
+        if raw_items.strip():
+            ctx, lists = _items_context_and_lists(db, customer, qdate, month_count, raw_items)
+            ctx = apply_template_mapping(ctx, template)
+        else:
+            ctx = apply_template_mapping(
+                _build_context(customer, product, qdate, month_count), template
+            )
+            lists = None
+        docx_bytes = render_docx(template.file_path, ctx, lists=lists)
 
         # Tên file output
         slug = (customer.short_name or customer.legal_name or "KH").replace(" ", "_")[:30]
