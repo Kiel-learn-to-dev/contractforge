@@ -45,6 +45,10 @@ def save_party_b(
     party_b_representative:       str = Form(""),
     party_b_authorization_number: str = Form(""),
     party_b_authorization_date:   str = Form(""),
+    # ── Đầu mối liên hệ ────────────────────────────────────────────────────
+    party_b_phone:          str = Form(""),
+    party_b_contact_name:   str = Form(""),
+    party_b_contact_email:  str = Form(""),
 ):
     db = SessionLocal()
     try:
@@ -59,6 +63,9 @@ def save_party_b(
             ("party_b_representative",       party_b_representative),
             ("party_b_authorization_number", party_b_authorization_number),
             ("party_b_authorization_date",   party_b_authorization_date),
+            ("party_b_phone",                party_b_phone),
+            ("party_b_contact_name",         party_b_contact_name),
+            ("party_b_contact_email",        party_b_contact_email),
         ]:
             set_setting(db, key, val.strip())
     finally:

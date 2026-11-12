@@ -280,6 +280,43 @@ def render_docx(
     return buf.getvalue()
 
 
+def build_render_lists(contract) -> dict[str, list[dict[str, str]]]:
+    """Dữ liệu cho các dòng lặp trong mẫu: ITEM_* (bảng giá trị) và FEATURE_* (bảng chức năng).
+
+    Mọi giá trị đã là chuỗi hiển thị. Chức năng gộp từ gói của các dòng, bỏ trùng theo tên.
+    ITEM_QTY hiện là số lượng × số kỳ (mặc định); câu hỏi 5 của kế hoạch còn mở.
+    """
+    lines = sorted(contract.items or [], key=lambda i: (i.sort_order or 0))
+    items: list[dict[str, str]] = []
+    features: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for no, line in enumerate(lines, start=1):
+        qty = (line.quantity or 0) * (line.period_count or 0)
+        items.append({
+            "ITEM_NO": str(no),
+            "ITEM_NAME": line.description or "",
+            "ITEM_UNIT": line.unit_label or "",
+            "ITEM_QTY": _fmt_number(qty),
+            "ITEM_PRICE": _fmt_currency(line.unit_price_pre_vat),
+            "ITEM_AMOUNT_PRE_VAT": _fmt_currency(line.amount_pre_vat),
+            "ITEM_VAT_RATE": _fmt_vat(line.vat_rate),
+            "ITEM_VAT_AMOUNT": _fmt_currency(line.vat_amount),
+            "ITEM_AMOUNT_TOTAL": _fmt_currency(line.amount_total),
+        })
+        product = line.product
+        for feat in (product.feature_list if product else []):
+            name = str(feat.get("name", "")).strip()
+            if not name or name in seen:
+                continue
+            seen.add(name)
+            features.append({
+                "FEATURE_NO": str(len(features) + 1),
+                "FEATURE_NAME": name,
+                "FEATURE_DESC": str(feat.get("description", "") or ""),
+            })
+    return {"items": items, "features": features}
+
+
 def build_render_context(
     contract,          # Contract ORM object
     customer,          # Customer ORM object
@@ -333,6 +370,9 @@ def build_render_context(
             "representative":       PARTY_B_DEFAULTS["party_b_representative"],
             "authorization_number": PARTY_B_DEFAULTS["party_b_authorization_number"],
             "authorization_date":   PARTY_B_DEFAULTS["party_b_authorization_date"],
+            "phone":                PARTY_B_DEFAULTS["party_b_phone"],
+            "contact_name":         PARTY_B_DEFAULTS["party_b_contact_name"],
+            "contact_email":        PARTY_B_DEFAULTS["party_b_contact_email"],
         }
 
     # Thông tin tổ chức Bên B (từ AppSetting, trước đây hardcode trong template Word)
@@ -351,6 +391,23 @@ def build_render_context(
 
     # ── Số hợp đồng ─────────────────────────────────────────────────────────
     ctx["CONTRACT_NUMBER"] = contract.contract_number or ""
+
+    # ── Task 3.2: liên hệ, tổng theo dòng, thanh toán, sản phẩm, phụ lục ──
+    ctx["PARTY_A_PHONE"]                  = customer.phone or ""
+    ctx["PARTY_A_EMAIL"]                  = customer.email or ""
+    ctx["PARTY_A_CONTACT_NAME"]           = customer.contact_name or ""
+    ctx["PARTY_A_ESTABLISHMENT_DECISION"] = customer.establishment_decision or ""
+    ctx["PARTY_A_ESTABLISHMENT_DATE"]     = format_date_vn(customer.establishment_date)
+    ctx["PARTY_B_PHONE"]                  = _pbs.get("phone", "")
+    ctx["PARTY_B_CONTACT_NAME"]           = _pbs.get("contact_name", "")
+    ctx["PARTY_B_CONTACT_EMAIL"]          = _pbs.get("contact_email", "")
+    ctx["TOTAL_PRE_VAT"]                  = _fmt_currency(contract.total_pre_vat)
+    ctx["TOTAL_VAT"]                      = _fmt_currency(contract.total_vat)
+    ctx["PAYMENT_CYCLE_MONTHS"]           = str(contract.payment_cycle_months or "")
+    ctx["PRODUCT_NAME"]                   = contract.product.name if contract.product else ""
+    parent = contract.parent
+    ctx["PARENT_CONTRACT_NUMBER"]         = parent.contract_number if parent else ""
+    ctx["PARENT_SIGN_DATE"]               = format_date_vn(parent.sign_date) if parent else ""
     # Địa điểm ký: lấy từ form, fallback về tên khách hàng
     ctx["SIGN_LOCATION"] = (contract.sign_location or "").strip() or (customer.legal_name or "")
 

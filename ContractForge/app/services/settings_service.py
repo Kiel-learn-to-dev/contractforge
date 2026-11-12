@@ -18,6 +18,9 @@ PARTY_B_DEFAULTS = {
     "party_b_beneficiary":          "",
     "party_b_tax_code":             "",
     "party_b_title":                "",
+    "party_b_phone":                "",
+    "party_b_contact_name":         "",
+    "party_b_contact_email":        "",
 }
 
 
@@ -62,4 +65,8 @@ def get_party_b_settings(db: Session) -> dict:
         "beneficiary":  _g("party_b_beneficiary"),
         "tax_code":     _g("party_b_tax_code"),
         "title":        _g("party_b_title"),
+        # Đầu mối liên hệ
+        "phone":         _g("party_b_phone"),
+        "contact_name":  _g("party_b_contact_name"),
+        "contact_email": _g("party_b_contact_email"),
     }

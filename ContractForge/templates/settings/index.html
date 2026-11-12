@@ -67,6 +67,24 @@
           </div>
 
           <div class="row g-3 mb-3">
+            <div class="col-md-4">
+              <label class="form-label">Điện thoại</label>
+              <input type="text" name="party_b_phone" class="form-control form-control-sm"
+                     value="{{ party_b.phone }}">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Người liên hệ</label>
+              <input type="text" name="party_b_contact_name" class="form-control form-control-sm"
+                     value="{{ party_b.contact_name }}">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Email liên hệ</label>
+              <input type="email" name="party_b_contact_email" class="form-control form-control-sm"
+                     value="{{ party_b.contact_email }}">
+            </div>
+          </div>
+
+          <div class="row g-3 mb-3">
             <div class="col-md-6">
               <label class="form-label">Số tài khoản ngân hàng</label>
               <input type="text" name="party_b_bank_account" class="form-control form-control-sm"

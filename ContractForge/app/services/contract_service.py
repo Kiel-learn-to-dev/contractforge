@@ -30,7 +30,7 @@ from app.models.customer import Customer
 from app.models.contract_template import ContractTemplate
 from app.models.product import Product
 from app.services import lifecycle, numbering, pricing
-from app.services.docx_renderer import render_docx, build_render_context
+from app.services.docx_renderer import render_docx, build_render_context, build_render_lists
 from app.utils.amount_to_words_vi import amount_to_words, amount_to_words_chan
 from app.utils.date_helpers import (
     parse_date_input, compute_end_date, months_between, format_date_vn
@@ -702,13 +702,14 @@ def generate_docx(db: Session, contract_id: int) -> Contract:
 
     # Build context
     ctx = build_render_context(contract, customer, template=template, db=db)
+    lists = build_render_lists(contract)
 
-    # Snapshot render_data vào contract
-    contract.render_data = ctx
+    # Snapshot render_data vào contract (kèm dữ liệu dòng lặp để tái tạo được)
+    contract.render_data = {**ctx, "_lists": lists}
 
     # Render
     try:
-        rendered_bytes = render_docx(template.file_path, ctx)
+        rendered_bytes = render_docx(template.file_path, ctx, lists=lists)
     except Exception as e:
         raise ValueError(f"Lỗi khi render .docx: {e}")
 
