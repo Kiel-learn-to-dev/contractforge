@@ -340,6 +340,7 @@ def _backfill_contract_items(db: Session) -> None:
     for c in pending:
         total = Decimal(str(c.total_amount or 0))
         vat_rate = Decimal(str(c.vat_rate or 0))
+        # legacy: suy ngược trước thuế từ số đã lưu để hiển thị; không tính lại tổng
         pre = (total / (1 + vat_rate / 100)).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
         months = Decimal(str(c.month_count or 1))
         units = Decimal(str(c.unit_count or 1))

@@ -390,7 +390,7 @@ def apply_lines(contract: Contract, lines: list, totals) -> None:
     contract.unit_count = int(main.quantity)
     contract.unit_price_pre_vat = main.unit_price_pre_vat
     contract.vat_rate = main.vat_rate
-    contract.unit_price_vat = pricing.round_money(main.unit_price_pre_vat * (1 + main.vat_rate / 100))
+    contract.unit_price_vat = pricing.unit_price_with_vat(main.unit_price_pre_vat, main.vat_rate)
     contract.quantity = main.quantity * main.period_count
     contract.total_amount = totals.total
     contract.total_pre_vat = totals.pre_vat
@@ -579,6 +579,7 @@ def create_draft(db: Session, form_data: dict) -> Contract:
 
     # Auto-compute unit_price_vat nếu thiếu
     if unit_price_pre_vat is not None and unit_price_vat is None:
+        # legacy: nhánh không có items_json giữ công thức cũ, số đã lưu không được tính lại
         unit_price_vat = unit_price_pre_vat * (1 + vat_rate / 100)
 
     # Quantity = unit_count × month_count
@@ -588,6 +589,7 @@ def create_draft(db: Session, form_data: dict) -> Contract:
 
     # Total amount auto-compute
     if total_amount is None and unit_price_vat and quantity:
+        # legacy: nhánh không có items_json
         total_amount = unit_price_vat * quantity
     elif total_amount is None and unit_price_pre_vat and quantity:
         total_amount = unit_price_pre_vat * quantity

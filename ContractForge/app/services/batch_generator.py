@@ -163,7 +163,7 @@ def run_batch(
         if cust_id in overrides:
             row_params.update(overrides[cust_id])
 
-        # Auto-sinh pricing_description nếu chưa có (tương đương JS recalcPrice ở form lẻ)
+        # Auto-sinh pricing_description nếu chưa có (công thức legacy cho lô không có dòng)
         if not (row_params.get("pricing_description") or "").strip():
             row_params["pricing_description"] = _auto_pricing_description(customer, row_params)
 
@@ -452,7 +452,7 @@ BATCH_EXCEL_COLUMNS: dict[str, str] = {
 
 def _auto_pricing_description(customer: Customer, params: dict, names=None) -> str:
     """
-    Tự sinh mô tả cách tính giá — tương đương với JS recalcPrice() ở form.html.
+    Tự sinh mô tả cách tính giá của lô không có dòng (legacy). Hợp đồng theo dòng dùng pricing.describe.
     Format: "Số tiền = Đơn giá có VAT (X VNĐ) × N cơ sở (TYT A; Điểm B; ...) × M tháng = TOTAL VNĐ"
 
     names: danh sách cơ sở được chọn cho HĐ (override). Nếu None → dùng toàn bộ
@@ -470,6 +470,7 @@ def _auto_pricing_description(customer: Customer, params: dict, names=None) -> s
     if not unit_price_vat or not month_count:
         return ""
 
+    # legacy: mô tả cho hợp đồng không có dòng
     total = unit_price_vat * Decimal(unit_count) * Decimal(month_count)
 
     unit_detail = f" ({'; '.join(names)})" if len(names) > 1 else ""
@@ -512,6 +513,7 @@ def _build_contract_from_params(
     total_amount = _safe_decimal(params.get("total_amount"))
 
     if unit_price_pre_vat and unit_price_vat is None:
+        # legacy: lô không có dòng giữ công thức cũ
         unit_price_vat = unit_price_pre_vat * (1 + vat_rate / 100)
 
     quantity = _safe_decimal(params.get("quantity"))
@@ -519,6 +521,7 @@ def _build_contract_from_params(
         quantity = Decimal(unit_count) * Decimal(month_count)
 
     if total_amount is None and unit_price_vat and quantity:
+        # legacy: lô không có dòng
         total_amount = unit_price_vat * quantity
 
     amount_text = (params.get("amount_text") or "").strip()

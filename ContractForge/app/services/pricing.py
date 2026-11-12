@@ -119,6 +119,14 @@ def price_line(*, description: str, unit_label: str = "", quantity, months,
                 amount_total=pre + vat_amount, product_id=product_id, note=note)
 
 
+def unit_price_with_vat(unit_price_pre_vat, vat_rate) -> Decimal:
+    """Đơn giá có VAT của gói chính, làm tròn tới đồng. Chỉ để hiển thị và ghi cột đơn giá.
+
+    Tổng hợp đồng không nhân từ giá này: tổng là tổng các dòng (xem module docstring).
+    """
+    return round_money(to_decimal(unit_price_pre_vat) * (_ONE + to_decimal(vat_rate) / _HUNDRED))
+
+
 def sum_lines(lines: Sequence[Line]) -> Totals:
     if not lines:
         raise PricingError("Hợp đồng phải có ít nhất một dòng.")

@@ -124,7 +124,7 @@ def _build_context_from_lines(customer, main_product, quote_date, month_count, l
     ctx["UNIT_PRICE_PRE_VAT"] = _fmt_currency(main.unit_price_pre_vat)
     ctx["VAT_RATE"] = f"{main.vat_rate.normalize()}%"
     ctx["UNIT_PRICE_VAT"] = _fmt_currency(
-        pricing.round_money(main.unit_price_pre_vat * (1 + main.vat_rate / 100)))
+        pricing.unit_price_with_vat(main.unit_price_pre_vat, main.vat_rate))
     ctx["QUANTITY"] = _fmt_number(main.quantity * main.period_count)
     ctx["TOTAL_PRE_VAT"] = _fmt_currency(totals.pre_vat)
     ctx["TOTAL_VAT"]     = _fmt_currency(totals.vat)
@@ -204,6 +204,7 @@ def _build_context(
     ctx["UNIT_PRICE_VAT"] = _fmt_currency(unit_price_vat)
 
     # Tổng tiền
+    # legacy: báo giá một gói không có dòng (đường cũ, product_price_with_vat)
     total = unit_price_vat * Decimal(unit_count) * Decimal(month_count)
     ctx["TOTAL_AMOUNT"] = _fmt_currency(total)
 
