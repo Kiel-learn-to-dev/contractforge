@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb" style="font-size:0.82rem;">
+    <li class="breadcrumb-item"><a href="/contracts">Hợp đồng</a></li>
+    <li class="breadcrumb-item"><a href="/contracts/{{ parent.id }}">{{ parent.number }}</a></li>
+    <li class="breadcrumb-item active">Phụ lục bổ sung</li>
+  </ol>
+</nav>
+
+{% if errors %}
+<div class="al al-d">
+  <i class="bi bi-x-circle-fill"></i>
+  <ul class="mb-0 ps-3">{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+  <button class="al-x">×</button>
+</div>
+{% endif %}
+
+<div class="card mb12">
+  <div class="card-h">
+    <h6 class="fw-semibold" style="font-size:.85rem;"><i class="bi bi-files text-info"></i>Hợp đồng gốc</h6>
+  </div>
+  <div class="card-b" style="font-size:.85rem;">
+    <div>Số hợp đồng: <strong>{{ parent.number }}</strong></div>
+    <div>Khách hàng: {{ parent.customer_name }}</div>
+    <div>Gói chính: {{ parent.product_name }}</div>
+    <div>Thời hạn gốc: {{ parent.start }} → {{ parent.end }}</div>
+  </div>
+</div>
+
+<form method="post" action="/contracts/{{ parent.id }}/addendum/new" novalidate>
+  <input type="hidden" name="kind" value="{{ kind }}">
+
+  <div class="card mb12">
+    <div class="card-h">
+      <h6 class="fw-semibold" style="font-size:.85rem;"><i class="bi bi-calendar3 text-primary"></i>Thời hạn phụ lục</h6>
+    </div>
+    <div class="card-b">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="lbl">Số phụ lục</label>
+          <input type="text" class="fc fc-sm bg-light" readonly
+                 value="{{ defaults.number if defaults else '' }}">
+          <div class="form-text">Gợi ý theo khuôn trong Cài đặt.</div>
+        </div>
+        <div class="col-md-4">
+          <label class="lbl">Ngày ký</label>
+          <input type="date" name="sign_date" class="fc fc-sm" value="{{ values.get('sign_date', '') }}">
+        </div>
+        <div class="col-md-4">
+          <label class="lbl">Ngày bắt đầu <span class="text-danger">*</span></label>
+          <input type="date" name="start_date" class="fc fc-sm" required
+                 value="{{ values.get('start_date', '') }}"
+                 min="{{ parent.start }}" max="{{ parent.end }}"
+                 onchange="window.location='/contracts/{{ parent.id }}/addendum/new?kind={{ kind }}&start=' + this.value">
+          <div class="form-text">Trong khoảng hiệu lực của hợp đồng gốc. Đổi ngày để tính lại số tháng.</div>
+        </div>
+        <div class="col-md-4">
+          <label class="lbl">Ngày hết hạn (theo hợp đồng gốc)</label>
+          <input type="text" class="fc fc-sm bg-light" readonly value="{{ defaults.end if defaults else '' }}">
+        </div>
+        <div class="col-md-4">
+          <label class="lbl">Số tháng (tính tự động)</label>
+          <input type="text" class="fc fc-sm bg-light" readonly value="{{ defaults.months if defaults else '' }}">
+        </div>
+        <div class="col-md-4">
+          <label class="lbl">Mẫu phụ lục</label>
+          <select name="template_id" class="fs fs-sm" size="1">
+            <option value="">— Không chọn —</option>
+            {% for t in template_options %}
+            <option value="{{ t.id }}" {% if values.get('template_id', '') == t.id|string %}selected{% endif %}>{{ t.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb12">
+    <div class="card-h">
+      <h6 class="fw-semibold" style="font-size:.85rem;"><i class="bi bi-box-seam text-success"></i>Gói bổ sung</h6>
+    </div>
+    <div class="card-b">
+      {% if candidates %}
+      <div class="small text-muted mb-2">Chỉ hiện gói bổ sung đang bán, cùng nhóm với gói chính của hợp đồng gốc. Số lượng mặc định lấy theo hợp đồng gốc.</div>
+      {% for p in candidates %}
+      <label class="d-flex align-items-center gap-2 mb-1" style="cursor:pointer;">
+        <input type="checkbox" name="addon_id" value="{{ p.id }}"
+               {% if p.id|string in values.get('addon_ids', []) %}checked{% endif %}>
+        <span>[{{ p.code }}] {{ p.name }}{% if p.unit_label %} ({{ p.unit_label }}){% endif %}</span>
+      </label>
+      {% endfor %}
+      {% else %}
+      <div class="text-muted">Không có gói bổ sung nào đang bán cùng nhóm với gói chính của hợp đồng gốc.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-primary btn-sm" {% if not defaults or not candidates %}disabled{% endif %}>
+      <i class="bi bi-check-lg me-1"></i>Lập phụ lục
+    </button>
+    <a href="/contracts/{{ parent.id }}" class="btn btn-outline-secondary btn-sm">Hủy</a>
+  </div>
+</form>
+{% endblock %}

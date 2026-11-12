@@ -522,7 +522,7 @@ def price_preview(db: Session, items, month_count) -> dict:
 
 # ─── Create draft ─────────────────────────────────────────────────────────────
 
-def create_draft(db: Session, form_data: dict) -> Contract:
+def create_draft(db: Session, form_data: dict, *, require_main: bool = True) -> Contract:
     """
     Tạo bản nháp hợp đồng từ form data.
     Validates + computes derived fields.
@@ -602,7 +602,7 @@ def create_draft(db: Session, form_data: dict) -> Contract:
     if raw_items:
         if not month_count:
             raise ValueError("Phải có số tháng để tính tiền.")
-        items_lines = _build_lines(db, raw_items, month_count)
+        items_lines = _build_lines(db, raw_items, month_count, require_main=require_main)
         items_totals = pricing.sum_lines(items_lines)
 
     # Số tiền bằng chữ
@@ -869,15 +869,28 @@ def delete_contract(db: Session, contract_id: int) -> bool:
     c = db.query(Contract).filter(Contract.id == contract_id).first()
     if not c:
         return False
+    _refuse_if_has_addenda([c])
     _delete_owned_files(c)
     db.delete(c)
     db.commit()
     return True
 
 
+def _refuse_if_has_addenda(contracts) -> None:
+    """Không xóa hợp đồng gốc khi còn phụ lục: nói rõ phải xóa phụ lục trước."""
+    for c in contracts:
+        n = len(c.addenda or [])
+        if n:
+            raise ValueError(
+                f"Không xóa được hợp đồng {c.contract_number}: còn {n} phụ lục. "
+                "Hãy xóa các phụ lục trước."
+            )
+
+
 def bulk_delete(db: Session, ids: list[int]) -> int:
     """Xóa nhiều hợp đồng kèm file của chúng. Trả về số bản ghi đã xóa."""
     contracts = db.query(Contract).filter(Contract.id.in_(ids)).all() if ids else []
+    _refuse_if_has_addenda(contracts)  # kiểm hết trước khi xóa cái nào
     for c in contracts:
         _delete_owned_files(c)
         db.delete(c)

@@ -13,7 +13,7 @@ GET  /contracts/{id}/signed-pdf  → xem PDF scan (inline)
 POST /contracts/{id}/delete-scan → xóa PDF scan
 """
 
-import io, math, os, re
+import io, json, math, os, re
 from datetime import date, datetime
 from fastapi import APIRouter, Request, Form, HTTPException, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, JSONResponse, StreamingResponse
@@ -36,7 +36,7 @@ from app.services.contract_service import (
     _build_contract_query,
 )
 from app.services.customer_service import CustomerFilters, list_customers
-from app.services import lifecycle
+from app.services import lifecycle, addendum_service
 
 router = APIRouter(prefix="/contracts", tags=["contracts"])
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
@@ -569,6 +569,8 @@ def delete_one(contract_id: int):
     db = SessionLocal()
     try:
         ok = delete_contract(db, contract_id)
+    except ValueError as e:
+        return _flash("/contracts", str(e), "danger")
     finally:
         db.close()
     if ok:
@@ -588,6 +590,9 @@ def contract_detail(request: Request, contract_id: int):
         product  = db.query(Product).filter(Product.id == c.product_id).first() if c.product_id else None
         events   = list(c.events)   # load while session open
         items    = list(c.items)    # dòng bảng giá trị, load while session open
+        addenda  = list(c.addenda or [])
+        parent_contract = c.parent
+        can_addendum = addendum_service.can_add_addendum(c)
         allowed_next = [s.value for s in VALID_TRANSITIONS.get(c.status, set())]
     finally:
         db.close()
@@ -596,6 +601,9 @@ def contract_detail(request: Request, contract_id: int):
         "request": request, "page_title": "Hợp đồng",
         "c": c, "customer": customer, "template": template, "product": product,
         "items": items,
+        "addenda": addenda,
+        "parent_contract": parent_contract,
+        "can_addendum": can_addendum,
         "events": events, "allowed_next": allowed_next,
         "status_labels": STATUS_LABELS,
         **_fv(request),
@@ -603,6 +611,104 @@ def contract_detail(request: Request, contract_id: int):
 
 
 # ─── GENERATE ─────────────────────────────────────────────────────────────────
+
+# ─── PHỤ LỤC ──────────────────────────────────────────────────────────────────
+
+def _clip_to_parent(d, parent):
+    return min(max(d, parent.start_date), parent.end_date)
+
+
+def _addendum_context(db, parent, kind, start, errors, values):
+    """Dữ liệu cho form phụ lục. Mọi giá trị đều đã đổi sang dict, không giữ ORM ngoài phiên."""
+    from app.models.contract_template import ContractTemplate
+    from app.services.addendum_service import addendum_defaults, AddendumError
+    from app.services import pricing as _pricing
+
+    defaults = None
+    errs = list(errors)
+    try:
+        defaults = addendum_defaults(db, parent.id, kind, start)
+    except (AddendumError, _pricing.PricingError) as exc:
+        errs.append(str(exc))
+    templates_list = (db.query(ContractTemplate)
+                      .filter(ContractTemplate.contract_type == "Phụ lục",
+                              ContractTemplate.is_active == True)  # noqa: E712
+                      .all())
+    return {
+        "request": None,
+        "page_title": "Phụ lục bổ sung",
+        "parent": {
+            "id": parent.id,
+            "number": parent.contract_number,
+            "product_name": parent.product.name if parent.product else "",
+            "customer_name": parent.customer.legal_name if parent.customer else "",
+            "start": parent.start_date.isoformat(),
+            "end": parent.end_date.isoformat(),
+        },
+        "kind": kind,
+        "defaults": None if defaults is None else {
+            "number": defaults["number"],
+            "start": defaults["start_date"].isoformat(),
+            "end": defaults["end_date"].isoformat(),
+            "months": defaults["month_count"],
+        },
+        "candidates": [] if defaults is None else [
+            {"id": p.id, "code": p.code, "name": p.name, "unit_label": p.unit_label or ""}
+            for p in defaults["candidates"]],
+        "template_options": [{"id": t.id, "name": t.name} for t in templates_list],
+        "errors": errs,
+        "values": values,
+    }
+
+
+@router.get("/{contract_id}/addendum/new", response_class=HTMLResponse)
+def addendum_form(request: Request, contract_id: int, kind: str = "addon", start: str = ""):
+    from app.services.contract_service import _safe_parse_date
+    db = SessionLocal()
+    try:
+        parent = db.get(Contract, contract_id)
+        if parent is None:
+            raise HTTPException(404, "Không tìm thấy hợp đồng")
+        start_d = _safe_parse_date(start) or _clip_to_parent(date.today(), parent)
+        ctx = _addendum_context(db, parent, kind, start_d, [],
+                                {"start_date": start_d.isoformat(), "addon_ids": []})
+    finally:
+        db.close()
+    ctx["request"] = request
+    return templates.TemplateResponse(request, "contracts/addendum_form.html", ctx)
+
+
+@router.post("/{contract_id}/addendum/new", response_class=HTMLResponse)
+async def addendum_submit(request: Request, contract_id: int):
+    from app.services.addendum_service import create_addendum
+    from app.services.contract_service import _safe_parse_date
+    form = await request.form()
+    data = dict(form)
+    kind = data.get("kind") or "addon"
+    ids = [x for x in form.getlist("addon_id") if str(x).strip().isdigit()]
+    data["items_json"] = json.dumps([{"product_id": int(x)} for x in ids])
+
+    db = SessionLocal()
+    try:
+        try:
+            child = create_addendum(db, contract_id, kind, data)
+            return _flash(f"/contracts/{child.id}", f"Đã lập phụ lục {child.contract_number}", "success")
+        except ValueError as exc:
+            parent = db.get(Contract, contract_id)
+            if parent is None:
+                raise HTTPException(404, "Không tìm thấy hợp đồng")
+            start_d = _safe_parse_date(data.get("start_date")) or _clip_to_parent(date.today(), parent)
+            ctx = _addendum_context(db, parent, kind, start_d, [str(exc)],
+                                    {"start_date": data.get("start_date", ""),
+                                     "sign_date": data.get("sign_date", ""),
+                                     "template_id": data.get("template_id", ""),
+                                     "addon_ids": ids})
+            ctx["request"] = request
+            return templates.TemplateResponse(request, "contracts/addendum_form.html", ctx,
+                                              status_code=422)
+    finally:
+        db.close()
+
 
 @router.post("/{contract_id}/generate")
 def do_generate(request: Request, contract_id: int):
