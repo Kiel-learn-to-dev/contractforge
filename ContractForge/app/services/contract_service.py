@@ -566,17 +566,14 @@ def create_draft(db: Session, form_data: dict, *, require_main: bool = True,
     if get_by_number(db, contract_number):
         raise ValueError(f"Số hợp đồng '{contract_number}' đã tồn tại.")
 
-    # Mẫu phải đúng vai trò và đúng nhóm sản phẩm. Kiểm ở đây, không chỉ ở form.
+    # Mẫu tồn tại và đang bật. Vai trò và nhóm được kiểm sau khi biết sản phẩm chính cuối cùng.
+    template = None
     if template_id is not None:
         template = db.get(ContractTemplate, template_id)
         if template is None:
             raise ValueError("Mẫu không tồn tại.")
         if not template.is_active:
             raise ValueError(f"Mẫu '{template.name}' đang tắt.")
-        if template_group is _UNSET:
-            sp = db.get(Product, product_id) if product_id else None
-            template_group = normalize_group(sp.group_code) if sp else None
-        check_template_for(template, template_group, template_role)
 
     # Parse dates
     sign_date        = _safe_parse_date(form_data.get("sign_date"))
@@ -671,6 +668,14 @@ def create_draft(db: Session, form_data: dict, *, require_main: bool = True,
         apply_lines(contract, items_lines, items_totals)
         contract.payment_mode = _payment_mode(form_data.get("payment_mode"))
         contract.payment_cycle_months = _safe_int(form_data.get("payment_cycle_months"))
+
+    # Sản phẩm chính cuối cùng là gói của dòng chính (nếu có dòng), không phải ô chọn trên form.
+    if template is not None:
+        group = template_group
+        if group is _UNSET:
+            final_product = db.get(Product, contract.product_id) if contract.product_id else None
+            group = normalize_group(final_product.group_code) if final_product else None
+        check_template_for(template, group, template_role)
 
     db.add(contract)
     db.flush()

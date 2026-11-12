@@ -271,3 +271,43 @@ def test_batch_row_with_another_group_fails_alone(db_session, make_customer, wor
 
     assert result.failed == 2 and result.succeeded == 0
     assert all("không dùng cho nhóm" in (row.error or "") for row in result.rows)
+
+
+# ─── Form tạo hợp đồng thật (route) ──────────────────────────────────────────
+
+def _post_new(client, w, template_id, items, product):
+    data = {
+        "contract_number": f"HD-EG-FORM-{template_id}-{product.id}",
+        "customer_id": str(w["customer"].id),
+        "product_id": str(product.id),
+        "template_id": str(template_id),
+        "sign_date": "2027-01-01",
+        "start_date": "2027-01-01",
+        "end_date": "2027-12-31",
+        "month_count": "12",
+        "unit_count": "1",
+        "items_json": json.dumps(items),
+    }
+    return client.post("/contracts/new", data=data, follow_redirects=False)
+
+
+def test_form_post_with_own_group_template_is_accepted(client, world, data_root):
+    w = world
+    items = [{"product_id": w["a_main"].id, "quantity": 1}]
+    resp = _post_new(client, w, w["t"]["a_contract"].id, items, w["a_main"])
+    assert resp.status_code == 303
+
+
+def test_form_post_with_other_group_template_is_refused(client, world, data_root):
+    w = world
+    items = [{"product_id": w["a_main"].id, "quantity": 1}]
+    resp = _post_new(client, w, w["t"]["b_contract"].id, items, w["a_main"])
+    assert resp.status_code == 422
+
+
+def test_group_comes_from_the_main_line_when_it_differs_from_the_picker(client, world, data_root):
+    """Ô chọn sản phẩm là A nhưng dòng chính trong items_json là B: nhóm theo dòng chính."""
+    w = world
+    items = [{"product_id": w["b_main"].id, "quantity": 1}]
+    assert _post_new(client, w, w["t"]["b_contract"].id, items, w["a_main"]).status_code == 303
+    assert _post_new(client, w, w["t"]["a_contract"].id, items, w["a_main"]).status_code == 422
