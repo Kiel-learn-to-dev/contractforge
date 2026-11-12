@@ -618,3 +618,128 @@ def test_row_without_record_count_fails_alone(db_session, make_customer, make_pr
     assert result.succeeded == 1 and result.failed == 1
     failed = [r for r in result.rows if not r.success]
     assert "thiếu số hồ sơ" in failed[0].error
+
+
+# ─── Bổ sung: đường Excel và vòng đi về qua trang xem trước ──────────────────
+
+def _excel_bytes(rows):
+    import io
+
+    import openpyxl
+
+    wb = openpyxl.Workbook()
+    try:
+        ws = wb.active
+        ws.append(["Mã khách hàng", "Số hợp đồng", "Ngày bắt đầu", "Số tháng",
+                   "Số đơn vị", "Mã gói chính", "Mã gói bổ sung"])
+        for r in rows:
+            ws.append(r)
+        buf = io.BytesIO()
+        wb.save(buf)
+        return buf.getvalue()
+    finally:
+        wb.close()
+
+
+def test_excel_rows_with_package_codes_price_items_and_a_bad_code_fails_alone(
+        db_session, make_customer, make_product, make_template, tmp_path):
+    from app.services.batch_generator import import_excel_mapping, run_batch
+    from app.models.contract import Contract
+
+    c1 = make_customer(code="EXL-C1")
+    c2 = make_customer(code="EXL-C2")
+    main = make_product(code="EXL-MAIN", name="Gói chính Excel", kind="main", group_code="EXL-G",
+                        default_price=500_000, default_vat_rate=10)
+    make_product(code="EXL-ADD1", name="Kèm 1 Excel", kind="addon", group_code="EXL-G",
+                 default_price=150_000, default_vat_rate=10)
+    make_product(code="EXL-ADD2", name="Kèm 2 Excel", kind="addon", group_code="EXL-G",
+                 default_price=150_000, default_vat_rate=10)
+    template = make_template(file_path=str(_batch_template(tmp_path / "excel_items.docx")),
+                             contract_type="Hợp đồng")
+
+    content = _excel_bytes([
+        ["EXL-C1", "EXL-001", "01/01/2026", 12, 1, "EXL-MAIN", "EXL-ADD1; EXL-ADD2"],
+        ["EXL-C2", "EXL-002", "01/01/2026", 12, 1, "EXL-NOPE", ""],
+    ])
+    parsed = import_excel_mapping(content, {"EXL-C1": c1.id, "EXL-C2": c2.id})
+    assert parsed.errors == []
+    overrides = {row["customer_id"]: {k: v for k, v in row.items() if k != "customer_id"}
+                 for row in parsed.rows}
+
+    result = run_batch(db=db_session, template_id=template.id,
+                       customer_ids=[row["customer_id"] for row in parsed.rows],
+                       shared_params={}, per_customer_overrides=overrides)
+
+    assert result.succeeded == 1 and result.failed == 1
+    db_session.expire_all()
+    good = db_session.query(Contract).filter(Contract.contract_number == "EXL-001").one()
+    assert good.pricing_model == "items"
+    assert len(good.items) == 3              # gói chính + hai gói bổ sung
+    assert good.product_id == main.id
+    # 500.000 + 150.000 + 150.000, mỗi gói × 1 cơ sở × 12 tháng, cộng 10% thuế.
+    assert good.total_amount == Decimal("10560000")
+    bad = [r for r in result.rows if not r.success]
+    assert len(bad) == 1 and "EXL-NOPE" in bad[0].error
+
+
+def _named_inputs(page: str) -> dict:
+    """Mọi ô <input> có thuộc tính name, kèm giá trị đã giải mã (ô ẩn và ô hiển thị)."""
+    import html
+    import re
+
+    out = {}
+    for tag in re.findall(r"<input[^>]*>", page):
+        name = re.search(r'name="([^"]+)"', tag)
+        if name is None:
+            continue
+        value = re.search(r'value="([^"]*)"', tag)
+        out[name.group(1)] = html.unescape(value.group(1)) if value else ""
+    return out
+
+
+def test_batch_preview_round_trip_keeps_the_lines(client, db_session, make_customer,
+                                                  make_product, make_template, tmp_path):
+    import html
+    import re
+
+    from app.models.contract import Contract
+
+    main = make_product(code="RT5-MAIN", name="Gói chính vòng đi", kind="main", group_code="RT5-G",
+                        default_price=500_000, default_vat_rate=10)
+    addon = make_product(code="RT5-ADD", name="Gói kèm vòng đi", kind="addon", group_code="RT5-G",
+                         default_price=150_000, default_vat_rate=10)
+    template = make_template(file_path=str(_batch_template(tmp_path / "round_trip.docx")),
+                             contract_type="Hợp đồng")
+    # Tên pháp nhân khác nhau: cùng tên thì số hợp đồng trùng nhau, đúng như nghiệp vụ.
+    c1 = make_customer(legal_name="Công ty xem trước A")
+    c2 = make_customer(legal_name="Công ty xem trước B")
+    items = json.dumps([{"product_id": main.id}, {"product_id": addon.id}])
+
+    preview = client.post("/batch/preview", data={
+        "template_id": str(template.id),
+        "customer_ids": [str(c1.id), str(c2.id)],
+        "sign_date": "",
+        "start_date": "01/01/2026",
+        "month_count": "12",
+        "product_id": str(main.id),
+        "items_json": items,
+    })
+    assert preview.status_code == 200
+    assert "unit_price_vat" not in preview.text
+
+    posted = _named_inputs(preview.text)
+    assert posted["items_json"] == items
+    assert posted["row_contract_number_0"] and posted["row_contract_number_1"]
+    posted["selected_rows"] = "0,1"
+
+    run = client.post("/batch", data=posted, follow_redirects=False)
+
+    assert run.status_code == 303
+    assert "s=2&f=0" in run.headers["location"]
+    db_session.expire_all()
+    made = db_session.query(Contract).filter(Contract.is_batch == True).all()  # noqa: E712
+    assert len(made) == 2
+    for contract in made:
+        assert contract.pricing_model == "items"
+        assert len(contract.items) == 2
+        assert contract.total_amount == Decimal("8580000")
