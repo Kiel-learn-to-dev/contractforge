@@ -593,6 +593,12 @@ def contract_detail(request: Request, contract_id: int):
         addenda  = list(c.addenda or [])
         parent_contract = c.parent
         can_addendum = addendum_service.can_add_addendum(c)
+        from app.services.attachment_service import ATTACHMENT_TYPES
+        attachment_templates = [
+            {"id": t.id, "name": t.name, "type": t.contract_type}
+            for t in db.query(ContractTemplate).filter(
+                ContractTemplate.is_active == True,  # noqa: E712
+                ContractTemplate.contract_type.in_(ATTACHMENT_TYPES)).order_by(ContractTemplate.name).all()]
         allowed_next = [s.value for s in VALID_TRANSITIONS.get(c.status, set())]
     finally:
         db.close()
@@ -604,6 +610,7 @@ def contract_detail(request: Request, contract_id: int):
         "addenda": addenda,
         "parent_contract": parent_contract,
         "can_addendum": can_addendum,
+        "attachment_templates": attachment_templates,
         "events": events, "allowed_next": allowed_next,
         "status_labels": STATUS_LABELS,
         **_fv(request),
@@ -801,6 +808,28 @@ async def renewal_submit(request: Request, contract_id: int):
                                               status_code=422)
     finally:
         db.close()
+
+
+# ─── VĂN BẢN KÈM THEO ──────────────────────────────────────────────────────────
+
+@router.get("/{contract_id}/attachment")
+def download_attachment(contract_id: int, template_id: int):
+    """Sinh và tải một văn bản kèm theo (nghiệm thu, bàn giao, thanh lý, khác). Không đổi trạng thái."""
+    from app.services.attachment_service import render_attachment, AttachmentError
+    db = SessionLocal()
+    try:
+        data, fname = render_attachment(db, contract_id, template_id)
+    except AttachmentError as e:
+        raise HTTPException(400, str(e))
+    except (LookupError, FileNotFoundError, ValueError) as e:
+        return _flash(f"/contracts/{contract_id}", f"Không sinh được văn bản: {e}", "danger")
+    finally:
+        db.close()
+    return StreamingResponse(
+        io.BytesIO(data),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="{fname}"'},
+    )
 
 
 @router.post("/{contract_id}/generate")

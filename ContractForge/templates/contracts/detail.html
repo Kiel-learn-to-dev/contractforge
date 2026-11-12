@@ -235,6 +235,27 @@
       </div>
     </div>
 
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-white border-bottom py-2 px-3">
+        <h6 class="mb-0 fw-semibold" style="font-size:.85rem;"><i class="bi bi-file-earmark-text me-2 text-secondary"></i>Văn bản kèm theo</h6>
+      </div>
+      <div class="card-body px-3 py-2">
+        {% if attachment_templates %}
+        <form method="get" action="/contracts/{{ c.id }}/attachment" class="d-flex gap-2 align-items-center">
+          <select name="template_id" class="form-select form-select-sm" size="1">
+            {% for t in attachment_templates %}
+            <option value="{{ t.id }}">[{{ t.type }}] {{ t.name }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="btn btn-sm btn-outline-secondary text-nowrap">Sinh văn bản</button>
+        </form>
+        <div class="form-text">Văn bản không đổi trạng thái hay file của hợp đồng.</div>
+        {% else %}
+        <div class="text-muted small">Chưa có mẫu nghiệm thu, bàn giao, thanh lý hoặc khác đang bật.</div>
+        {% endif %}
+      </div>
+    </div>
+
   </div><!-- /col-lg-8 -->
 
   <!-- Sidebar -->
