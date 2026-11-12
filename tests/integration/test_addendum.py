@@ -182,3 +182,24 @@ def test_detail_page_links_the_parent_and_the_addendum(client, parent_setup):
 def _session_of(p):
     from sqlalchemy.orm import object_session
     return object_session(p["parent"])
+
+
+def test_render_context_gives_the_appendix_sequence_and_empty_for_the_parent(
+        db_session, parent_setup):
+    from app.services.addendum_service import create_addendum
+    from app.services.docx_renderer import build_render_context
+
+    p = parent_setup
+    first = create_addendum(db_session, p["parent"].id, "addon", {
+        "start_date": "2026-10-01", "items_json": json.dumps([{"product_id": p["addon"].id}])})
+    second = create_addendum(db_session, p["parent"].id, "addon", {
+        "start_date": "2026-11-01", "items_json": json.dumps([{"product_id": p["addon"].id}])})
+    db_session.expire_all()
+
+    parent_ctx = build_render_context(p["parent"], p["customer"], p["main"], None, db=db_session)
+    first_ctx = build_render_context(first, p["customer"], p["addon"], None, db=db_session)
+    second_ctx = build_render_context(second, p["customer"], p["addon"], None, db=db_session)
+
+    assert parent_ctx["ADDENDUM_SEQ"] == ""
+    assert first_ctx["ADDENDUM_SEQ"] == "01"
+    assert second_ctx["ADDENDUM_SEQ"] == "02"

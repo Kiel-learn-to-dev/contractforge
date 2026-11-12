@@ -11,7 +11,6 @@ hết hạn của gốc. Số lượng mặc định lấy theo nguồn số lư
 from __future__ import annotations
 
 import json
-import re
 from datetime import date, timedelta
 from decimal import Decimal
 from typing import Optional
@@ -75,15 +74,12 @@ def _format(db: Session) -> str:
 
 def _used_seqs(db: Session, parent: Contract, fmt: str) -> set[int]:
     """Các số thứ tự phụ lục đã dùng của một hợp đồng gốc, đọc ngược từ khuôn."""
-    pattern = (re.escape(fmt)
-               .replace(re.escape("{seq}"), r"(\d+)")
-               .replace(re.escape("{parent}"), ".*"))
     used: set[int] = set()
     children = db.query(Contract).filter(Contract.parent_contract_id == parent.id).all()
     for child in children:
-        m = re.fullmatch(pattern, child.contract_number or "")
-        if m:
-            used.add(int(m.group(1)))
+        seq = numbering.parse_addendum_seq(child.contract_number or "", fmt)
+        if seq is not None:
+            used.add(seq)
     return used
 
 

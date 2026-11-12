@@ -106,6 +106,21 @@ def build_addendum_number(parent_number: str, seq: str,
     return f.format(seq=seq, parent=parent_number)
 
 
+def addendum_seq_pattern(fmt: str) -> str:
+    """Regex của khuôn phụ lục: chỗ {seq} thành nhóm chữ số, chỗ {parent} thành .* (dùng chung để đọc ngược)."""
+    return (re.escape(fmt)
+            .replace(re.escape("{seq}"), r"(\d+)")
+            .replace(re.escape("{parent}"), ".*"))
+
+
+def parse_addendum_seq(number: str, fmt: Optional[str] = None) -> Optional[int]:
+    """Đọc ngược số thứ tự phụ lục từ số đã dựng theo khuôn. Không khớp khuôn → None."""
+    m = re.fullmatch(addendum_seq_pattern(fmt or DEFAULT_ADDENDUM_FORMAT), number or "")
+    if not m or not m.groups():
+        return None
+    return int(m.group(1))
+
+
 def next_addendum_seq(used: set[int]) -> str:
     """Số thứ tự phụ lục: cùng quy tắc lấp khoảng trống với hợp đồng."""
     return next_seq(used)

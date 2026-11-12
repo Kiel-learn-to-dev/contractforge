@@ -32,6 +32,8 @@ from typing import Optional, Union
 import docx
 from docx.oxml.ns import qn
 
+from app.services import numbering
+from app.services.settings_service import get_setting
 from app.utils.amount_to_words_vi import amount_to_words, amount_to_words_chan
 from app.utils.date_helpers import format_date_vn, split_date_parts, parse_date_input
 
@@ -392,11 +394,12 @@ def build_render_context(
 
     # Đại diện ký & ủy quyền (ưu tiên từ contract object, fallback AppSetting)
     ctx["PARTY_B_REPRESENTATIVE"]       = contract.party_b_representative or _pbs["representative"]
-    ctx["PARTY_B_AUTHORIZATION_NUMBER"] = contract.party_b_authorization_number or ""
-    ctx["PARTY_B_AUTHORIZATION_DATE"]   = contract.party_b_authorization_date or ""
+    ctx["PARTY_B_AUTHORIZATION_NUMBER"] = contract.party_b_authorization_number or _pbs["authorization_number"]
+    ctx["PARTY_B_AUTHORIZATION_DATE"]   = contract.party_b_authorization_date or _pbs["authorization_date"]
 
     # ── Số hợp đồng ─────────────────────────────────────────────────────────
     ctx["CONTRACT_NUMBER"] = contract.contract_number or ""
+    ctx["ADDENDUM_SEQ"] = _addendum_seq_text(contract, db)
 
     # ── Task 3.2: liên hệ, tổng theo dòng, thanh toán, sản phẩm, phụ lục ──
     ctx["PARTY_A_PHONE"]                  = customer.phone or ""
@@ -490,6 +493,17 @@ def build_render_context(
 
 
 # ─── Internal helpers ────────────────────────────────────────────────────────
+
+def _addendum_seq_text(contract, db=None) -> str:
+    """Số thứ tự phụ lục hai chữ số ("01"). Rỗng nếu không phải phụ lục hoặc không đọc được số."""
+    if (contract.doc_kind or "contract") not in ("addendum_addon", "addendum_renewal"):
+        return ""
+    if contract.parent is None:
+        return ""
+    fmt = get_setting(db, "addendum_number_format", "") if db is not None else ""
+    seq = numbering.parse_addendum_seq(contract.contract_number or "", fmt or None)
+    return f"{seq:02d}" if seq is not None else ""
+
 
 def _fmt_currency(value) -> str:
     """Format số tiền VNĐ: 24000000 → "24.000.000" (dấu chấm nghìn)."""

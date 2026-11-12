@@ -110,6 +110,13 @@ CANONICAL_MAP: dict[str, str] = {
     "PAYMENT_CYCLE_MONTHS":          "contract.payment_cycle_months",
     "PARENT_CONTRACT_NUMBER":        "parent.number",
     "PARENT_SIGN_DATE":              "parent.sign_date",
+
+    # Ánh xạ bổ sung: các khóa renderer đã sinh nhưng chưa có trong bảng (trang mẫu báo "chưa ánh xạ")
+    "ADDENDUM_SEQ":                  "contract.addendum_seq",
+    "SIGN_DATE":                     "contract.sign_date",
+    "SIGN_LOCATION":                 "contract.sign_location",
+    "LIQUIDATION_DATE":              "contract.liquidation_date",
+    "PARTY_A_REPRESENTATIVE_FULL":   "party_a.representative_full",
 }
 
 #: Placeholder của dòng lặp → "<nhóm>.<tên>". Nhóm khớp với khóa của build_render_lists.
