@@ -202,7 +202,30 @@ def run_migrations(db: Session) -> None:
                 conn.execute(text(sql))
                 conn.commit()
 
+        # ── contracts — chế độ tính tiền, tổng, thanh toán, phụ lục (v51) ─────
+        cols_ct2 = [row[1] for row in conn.execute(text("PRAGMA table_info(contracts)")).fetchall()]
+        _contract_item_migrations = [
+            ("pricing_model",        "ALTER TABLE contracts ADD COLUMN pricing_model VARCHAR(10) NOT NULL DEFAULT 'legacy'"),
+            ("total_pre_vat",        "ALTER TABLE contracts ADD COLUMN total_pre_vat NUMERIC(18, 0)"),
+            ("total_vat",            "ALTER TABLE contracts ADD COLUMN total_vat NUMERIC(18, 0)"),
+            ("payment_mode",         "ALTER TABLE contracts ADD COLUMN payment_mode VARCHAR(10)"),
+            ("payment_cycle_months", "ALTER TABLE contracts ADD COLUMN payment_cycle_months INTEGER"),
+            ("parent_contract_id",   "ALTER TABLE contracts ADD COLUMN parent_contract_id INTEGER REFERENCES contracts(id)"),
+            ("doc_kind",             "ALTER TABLE contracts ADD COLUMN doc_kind VARCHAR(20) NOT NULL DEFAULT 'contract'"),
+        ]
+        for col_name, sql in _contract_item_migrations:
+            if col_name not in cols_ct2:
+                conn.execute(text(sql))
+                conn.commit()
+
+        # ── customers — số hồ sơ phục vụ (v51) ────────────────────────────────
+        cols_cu = [row[1] for row in conn.execute(text("PRAGMA table_info(customers)")).fetchall()]
+        if "record_count" not in cols_cu:
+            conn.execute(text("ALTER TABLE customers ADD COLUMN record_count INTEGER"))
+            conn.commit()
+
     _backfill_contract_number_formats(db)
+    _backfill_contract_items(db)
 
 
 def _backfill_contract_number_formats(db: Session) -> None:
@@ -252,6 +275,87 @@ def _backfill_contract_number_formats(db: Session) -> None:
     if filled:
         db.commit()
         safe_print(f"  [migration] Đã suy ra khuôn số hợp đồng cho {filled} sản phẩm.")
+
+
+def _backup_database_once(db: Session, tag: str):
+    """Sao DB đang được migrate sang thư mục backup bằng sqlite backup API.
+
+    Lấy file DB từ chính engine của session, không từ app.paths.DB_PATH: trong
+    test, CONTRACTFORGE_DATA_ROOT ghi đè đường dẫn nên DB_PATH không theo engine.
+    Thư mục backup nằm cạnh DB, tức `<data root>/backups` như paths.BACKUPS_DIR.
+    Không cần tắt app: backup API đọc nhất quán ngay cả khi app đang mở kết nối.
+    Trả về đường dẫn file backup, hoặc None nếu không phải DB file.
+    """
+    import sqlite3
+    from datetime import datetime
+    from pathlib import Path
+
+    db_file = db.get_bind().url.database
+    if not db_file:
+        return None
+    src_path = Path(db_file)
+    if not src_path.exists():
+        return None
+
+    backups = src_path.parent / "backups"
+    backups.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    dst_path = backups / f"contract_manager-{tag}-{stamp}.db"
+    n = 1
+    while dst_path.exists():
+        n += 1
+        dst_path = backups / f"contract_manager-{tag}-{stamp}-{n}.db"
+
+    src = sqlite3.connect(str(src_path))
+    dst = sqlite3.connect(str(dst_path))
+    try:
+        src.backup(dst)
+    finally:
+        dst.close()
+        src.close()
+    safe_print(f"  [backup] Đã sao lưu cơ sở dữ liệu: {dst_path.name}")
+    return dst_path
+
+
+def _backfill_contract_items(db: Session) -> None:
+    """Mỗi hợp đồng chưa có dòng nhận đúng một dòng chép từ số đã lưu.
+
+    KHÔNG tính lại tổng tiền. amount_total của dòng = total_amount của hợp đồng.
+    Phần trước thuế / thuế được suy ngược để hiển thị, và luôn cộng lại đúng tổng.
+    """
+    from decimal import Decimal, ROUND_HALF_UP
+    from app.models.contract import Contract
+    from app.models.contract_item import ContractItem
+
+    pending = (
+        db.query(Contract)
+        .outerjoin(ContractItem, ContractItem.contract_id == Contract.id)
+        .filter(ContractItem.id.is_(None))
+        .all()
+    )
+    if not pending:
+        return
+    _backup_database_once(db, "before-contract-items")
+
+    for c in pending:
+        total = Decimal(str(c.total_amount or 0))
+        vat_rate = Decimal(str(c.vat_rate or 0))
+        pre = (total / (1 + vat_rate / 100)).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+        months = Decimal(str(c.month_count or 1))
+        units = Decimal(str(c.unit_count or 1))
+        db.add(ContractItem(
+            contract_id=c.id, product_id=c.product_id, sort_order=0,
+            description=(c.product.name if c.product else "Dịch vụ"),
+            unit_label=(c.product.unit_label if c.product else None),
+            quantity=units, period_count=months,
+            unit_price_pre_vat=c.unit_price_pre_vat, vat_rate=vat_rate,
+            amount_pre_vat=pre, vat_amount=total - pre, amount_total=total,
+            note="Chép từ số đã lưu của hợp đồng",
+        ))
+        c.total_pre_vat = pre
+        c.total_vat = total - pre
+    db.commit()
+    safe_print(f"  [migration] Đã tạo dòng cho {len(pending)} hợp đồng cũ.")
 
 
 def run_all_seeds(db: Session):

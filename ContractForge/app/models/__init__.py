@@ -5,9 +5,10 @@ from .product import Product
 from .contract_template import ContractTemplate
 from .contract import Contract, ContractStatus
 from .contract_event import ContractEvent
+from .contract_item import ContractItem
 
 __all__ = [
     "Customer", "CustomerUnit", "UNIT_TYPES", "CustomerDocument",
     "Product", "ContractTemplate",
-    "Contract", "ContractStatus", "ContractEvent",
+    "Contract", "ContractStatus", "ContractEvent", "ContractItem",
 ]

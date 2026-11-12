@@ -140,6 +140,23 @@ class Contract(Base):
                       comment="True nếu được tạo từ job sinh hàng loạt")
     batch_job_id = Column(String(100), nullable=True, index=True)
 
+    # --- Chế độ tính tiền và điều khoản thanh toán (Task 2.1) ---
+    # legacy = giữ nguyên số đã lưu, không tính lại; items = tính theo dòng.
+    # Mặc định "legacy" có chủ ý: mọi đường tạo hợp đồng chưa chuyển vẫn đúng nhãn.
+    pricing_model = Column(String(10), nullable=False, default="legacy",
+                           comment="legacy = giữ số đã lưu | items = tính theo dòng")
+    total_pre_vat = Column(Numeric(18, 0), nullable=True,
+                           comment="Tổng trước thuế (chỉ hợp đồng items và đã migrate)")
+    total_vat = Column(Numeric(18, 0), nullable=True,
+                       comment="Tổng tiền thuế (tổng sau thuế vẫn là total_amount)")
+    payment_mode = Column(String(10), nullable=True, comment="prepaid | postpaid")
+    payment_cycle_months = Column(Integer, nullable=True,
+                                  comment="Chu kỳ thanh toán, tính bằng tháng")
+    parent_contract_id = Column(Integer, ForeignKey("contracts.id"), nullable=True, index=True,
+                                comment="Hợp đồng gốc, nếu đây là phụ lục")
+    doc_kind = Column(String(20), nullable=False, default="contract",
+                      comment="contract | addendum_addon | addendum_renewal")
+
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow,
                         onupdate=datetime.utcnow, nullable=False)
@@ -148,6 +165,14 @@ class Contract(Base):
     events = relationship("ContractEvent", back_populates="contract",
                           order_by="ContractEvent.occurred_at",
                           cascade="all, delete-orphan")
+
+    # Dòng bảng giá trị (Task 2.1). Xóa hợp đồng thì xóa luôn các dòng.
+    items = relationship("ContractItem", back_populates="contract",
+                         order_by="ContractItem.sort_order",
+                         cascade="all, delete-orphan")
+
+    # Phụ lục (Task 2.1). Quan hệ cha–con dùng chung bảng contracts.
+    parent = relationship("Contract", remote_side=[id], backref="addenda")
 
     # --- Helpers ---
     @property

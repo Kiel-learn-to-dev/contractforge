@@ -62,6 +62,8 @@ class Customer(Base):
 
     # --- Thanh toán ---
     bill_main_station   = Column(Boolean, default=True, nullable=False)
+    record_count        = Column(Integer, nullable=True,
+                                 comment="Số hồ sơ / dân số phục vụ, làm số lượng mặc định của gói tính theo hồ sơ")
     budget_relation_code = Column(String(50), nullable=True)
     kcb_code            = Column(String(30),  nullable=True,
                                   comment="Mã cơ sở khám chữa bệnh BHYT")
