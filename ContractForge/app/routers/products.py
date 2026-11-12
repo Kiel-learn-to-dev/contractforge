@@ -29,15 +29,37 @@ def _fv(request):
             "flash_type": request.query_params.get("msg_type", "success")}
 
 
+def _contract_templates_for_form(db, group: str):
+    """Mẫu hợp đồng cho ô "mẫu mặc định". Có nhóm: mẫu của nhóm và mẫu dùng chung.
+    Chưa có nhóm: mọi mẫu hợp đồng, mẫu của nhóm nào thì ghi kèm tên nhóm."""
+    from app.services.template_service import ROLE_CONTRACT, has_role, list_templates, templates_for
+    if (group or "").strip():
+        return templates_for(db, group.strip(), ROLE_CONTRACT)
+    return [t for t in list_templates(db, active_only=True)
+            if has_role(t.contract_type or "", ROLE_CONTRACT)]
+
+
+def _group_summary(db, groups) -> dict:
+    """Với mỗi nhóm: số mẫu riêng của từng vai trò, hoặc "thiếu" nếu chưa có."""
+    from app.services.template_service import (
+        ROLE_ADDON, ROLE_ATTACHMENT, ROLE_CONTRACT, ROLE_RENEWAL, templates_for,
+    )
+    roles = [("Hợp đồng", ROLE_CONTRACT), ("Phụ lục bổ sung", ROLE_ADDON),
+             ("Phụ lục gia hạn", ROLE_RENEWAL), ("Kèm theo", ROLE_ATTACHMENT)]
+    out = {}
+    for g in groups:
+        parts = []
+        for label, role in roles:
+            own = [t for t in templates_for(db, g, role, active_only=True) if t.product_group == g]
+            parts.append((label, f"{len(own)} mẫu riêng" if own else "thiếu"))
+        out[g] = parts
+    return out
+
+
 def _form_context(db, *, title: str, action: str, values: dict,
                   errors=None, product_id=None):
     """Dữ liệu chung cho form thêm và form sửa."""
-    templates_active = (
-        db.query(ContractTemplate)
-        .filter(ContractTemplate.is_active == True)  # noqa: E712
-        .order_by(ContractTemplate.name)
-        .all()
-    )
+    templates_active = _contract_templates_for_form(db, values.get("group_code") or "")
     other_products = [p for p in product_service.list_products(db) if p.id != product_id]
     return {
         "page_title": title,
@@ -74,9 +96,17 @@ def product_list(request: Request, show: str = "active"):
     elif show == "inactive":
         products = [p for p in products if not p.is_active]
 
+    groups = sorted({p.group_code for p in products if p.group_code})
+    with_db = SessionLocal()
+    try:
+        group_summary = _group_summary(with_db, groups)
+    finally:
+        with_db.close()
+
     return templates.TemplateResponse(request, "products/list.html", {
         "page_title": "Sản phẩm",
         "products": products,
+        "group_summary": group_summary,
         "counts": counts,
         "show": show,
         "kind_labels": product_service.KIND_LABELS,

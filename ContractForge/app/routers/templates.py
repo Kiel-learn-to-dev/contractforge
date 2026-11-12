@@ -14,18 +14,24 @@ Routes:
   GET  /templates/{id}/download     → tải file .docx về
 """
 
+import hashlib
 import os
+from urllib.parse import quote
+
 from fastapi import APIRouter, Request, Form, UploadFile, File, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 
 from app.database import SessionLocal
+from app.models.product import Product
 from app.paths import TEMPLATES_DIR
+from app.services.template_analyzer import analyze
 from app.services.template_service import (
     list_templates, get_template, get_by_code,
     create_template, update_metadata, update_mapping,
     reanalyze, toggle_active, generate_next_code,
     CONTRACT_TYPES, ALL_CANONICAL_FIELDS,
+    _document_heading, _existing_template_with_bytes, _template_kind,
 )
 
 router = APIRouter(prefix="/templates", tags=["templates"])
@@ -46,6 +52,26 @@ def _extract_flash(request: Request) -> dict:
     }
 
 
+#: Nhãn nhóm của mẫu dùng chung (không thuộc sản phẩm nào). Luôn xếp cuối.
+SHARED_GROUP_LABEL = "Dùng chung"
+
+
+def _group_choices(db) -> list[str]:
+    """Các nhóm sản phẩm đang có (mọi trạng thái sản phẩm), đã sắp xếp."""
+    rows = (db.query(Product.group_code)
+            .filter(Product.group_code.isnot(None), Product.group_code != "")
+            .distinct().order_by(Product.group_code).all())
+    return [r[0] for r in rows]
+
+
+def _check_group(raw, choices) -> str:
+    """Nhóm gửi lên phải là một nhóm đang có. Rỗng nghĩa là dùng chung."""
+    value = (raw or "").strip()
+    if value and value not in choices:
+        raise ValueError("Nhóm sản phẩm không tồn tại.")
+    return value
+
+
 # ─── LIST ────────────────────────────────────────────────────────────────────
 
 @router.get("", response_class=HTMLResponse)
@@ -53,16 +79,23 @@ def template_list(request: Request, active_only: int = 0):
     db = SessionLocal()
     try:
         tpls = list_templates(db, active_only=bool(active_only))
-        # Group by contract_type
-        grouped: dict[str, list] = {}
+        # Nhóm sản phẩm trước, rồi loại. Mẫu dùng chung nằm dưới khóa riêng và đứng cuối.
+        flat: dict[str, dict[str, list]] = {}
         for t in tpls:
-            grouped.setdefault(t.contract_type, []).append(t)
+            label = t.product_group or SHARED_GROUP_LABEL
+            flat.setdefault(label, {}).setdefault(t.contract_type, []).append(t)
+        grouped: dict[str, dict[str, list]] = {
+            k: flat[k] for k in sorted(k for k in flat if k != SHARED_GROUP_LABEL)}
+        if SHARED_GROUP_LABEL in flat:
+            grouped[SHARED_GROUP_LABEL] = flat[SHARED_GROUP_LABEL]
+        group_choices = _group_choices(db)
     finally:
         db.close()
 
     return templates_env.TemplateResponse(request, "contract_templates/list.html", {
         "page_title": "Mẫu hợp đồng",
         "grouped": grouped,
+        "group_choices": group_choices,
         "total": len(tpls),
         "active_only": bool(active_only),
         **_extract_flash(request),
@@ -76,6 +109,7 @@ def new_form(request: Request):
     db = SessionLocal()
     try:
         next_code = generate_next_code(db)
+        group_choices = _group_choices(db)
     finally:
         db.close()
 
@@ -86,6 +120,7 @@ def new_form(request: Request):
         "tpl": None,
         "next_code": next_code,
         "contract_types": CONTRACT_TYPES,
+        "group_choices": group_choices,
         "errors": [],
     })
 
@@ -98,20 +133,23 @@ async def new_submit(
     name: str = Form(...),
     contract_type: str = Form(...),
     description: str = Form(""),
+    product_group: str = Form(""),
 ):
     file_bytes = await file.read()
 
     db = SessionLocal()
     try:
+        group = _check_group(product_group, _group_choices(db))
         tpl, analysis = create_template(
             db, code=code, name=name, contract_type=contract_type,
             file_bytes=file_bytes, original_filename=file.filename,
-            description=description,
+            description=description, product_group=group,
         )
     except ValueError as e:
         db.close()
         db2 = SessionLocal()
         nxt = generate_next_code(db2)
+        choices = _group_choices(db2)
         db2.close()
         return templates_env.TemplateResponse(request, "contract_templates/form.html", {
             "page_title": "Mẫu hợp đồng",
@@ -120,9 +158,11 @@ async def new_submit(
             "tpl": None,
             "next_code": nxt,
             "contract_types": CONTRACT_TYPES,
+            "group_choices": choices,
             "errors": [str(e)],
             "prefill": {"code": code, "name": name,
-                        "contract_type": contract_type, "description": description},
+                        "contract_type": contract_type, "description": description,
+                        "product_group": product_group},
         }, status_code=422)
     finally:
         db.close()
@@ -134,6 +174,49 @@ async def new_submit(
         msg += f" ({warn_count} split-run warning)"
 
     return _flash_redirect(f"/templates/{tpl.id}", msg, "success")
+
+
+# ─── BULK UPLOAD (nhiều file, một nhóm) ──────────────────────────────────────
+
+@router.post("/bulk-upload")
+async def bulk_upload(files: list[UploadFile] = File(...), product_group: str = Form("")):
+    """Tải nhiều mẫu một lượt cho cùng một nhóm. Loại nhận ra từ nội dung; trùng nội dung
+    thì bỏ qua. Một file lỗi không chặn các file khác."""
+    db = SessionLocal()
+    try:
+        try:
+            group = _check_group(product_group, _group_choices(db))
+        except ValueError as exc:
+            return _flash_redirect("/templates", str(exc), "danger")
+
+        lines: list[str] = []
+        created = 0
+        for upload in files:
+            fname = upload.filename or ""
+            data = await upload.read()
+            name = os.path.splitext(os.path.basename(fname))[0].replace("_", " ").strip() or fname
+            try:
+                analysis = analyze(data)
+                if not analysis.ok:
+                    raise ValueError(analysis.error or "không đọc được file")
+                kind = _template_kind(analysis.placeholders, _document_heading(data))
+                existing = _existing_template_with_bytes(db, hashlib.sha256(data).hexdigest())
+                if existing is not None:
+                    lines.append(f"{fname}: bỏ qua, trùng với '{existing.name}'")
+                    continue
+                create_template(db, code="", name=name, contract_type=kind, file_bytes=data,
+                                original_filename=fname, product_group=group)
+                created += 1
+                lines.append(f"{fname}: {kind}")
+            except Exception as exc:
+                db.rollback()
+                lines.append(f"{fname}: lỗi — {exc}")
+    finally:
+        db.close()
+
+    summary = f"Đã tải {created}/{len(files)} mẫu. " + "; ".join(lines)
+    return _flash_redirect("/templates", quote(summary[:400], safe=""),
+                           "success" if created == len(files) else "warning")
 
 
 # ─── DETAIL ──────────────────────────────────────────────────────────────────
@@ -182,6 +265,7 @@ def edit_form(request: Request, template_id: int):
         tpl = get_template(db, template_id)
         if not tpl:
             raise HTTPException(status_code=404, detail="Không tìm thấy mẫu hợp đồng")
+        group_choices = _group_choices(db)
     finally:
         db.close()
 
@@ -192,6 +276,7 @@ def edit_form(request: Request, template_id: int):
         "tpl": tpl,
         "next_code": tpl.code,
         "contract_types": _type_choices(tpl.contract_type),
+        "group_choices": group_choices,
         "errors": [],
     })
 
@@ -210,17 +295,17 @@ async def edit_submit(
     name: str = Form(...),
     contract_type: str = Form(...),
     description: str = Form(""),
+    product_group: str = Form(""),
 ):
     db = SessionLocal()
     try:
-        # Nhóm sản phẩm được giữ nguyên cho tới khi form có ô chọn nhóm.
-        current = get_template(db, template_id)
-        keep_group = current.product_group if current else ""
+        group = _check_group(product_group, _group_choices(db))
         tpl = update_metadata(db, template_id, name=name, contract_type=contract_type,
-                              description=description, product_group=keep_group or "")
+                              description=description, product_group=group)
     except (ValueError, LookupError) as e:
         db2 = SessionLocal()
         orig = get_template(db2, template_id)
+        choices = _group_choices(db2)
         db2.close()
         db.close()
         return templates_env.TemplateResponse(request, "contract_templates/form.html", {
@@ -230,6 +315,7 @@ async def edit_submit(
             "tpl": orig,
             "next_code": orig.code if orig else "",
             "contract_types": _type_choices(orig.contract_type if orig else None),
+            "group_choices": choices,
             "errors": [str(e)],
         }, status_code=422)
     finally:

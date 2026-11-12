@@ -48,7 +48,7 @@ def test_new_form_renders_every_field(client):
 def test_post_new_product_saves_every_field(client, db_session, make_template):
     from app.models.product import Product
 
-    template = make_template()
+    template = make_template(contract_type="Hợp đồng")
     resp = client.post("/products/new", data=_form(
         code="sw-new",
         group_code="NHOM-A",

@@ -33,6 +33,9 @@
               {% else %}#6c757d;color:#fff{% endif %};">
             {{ tpl.contract_type }}
           </span>
+          <span class="badge bg-light text-dark border" style="font-size:0.7rem;">
+            Nhóm: {{ tpl.product_group or 'Dùng chung' }}
+          </span>
           <span class="badge {% if tpl.mode == 'placeholder' %}bg-success-subtle text-success{% else %}bg-warning-subtle text-warning{% endif %}"
             style="font-size:0.7rem;">{{ tpl.mode }}</span>
           {% if not tpl.is_active %}

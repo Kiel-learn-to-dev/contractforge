@@ -50,6 +50,17 @@
                 {% endfor %}
               </select>
             </div>
+            <div class="col-md-4">
+              <label class="form-label form-label-sm">Thuộc nhóm sản phẩm</label>
+              {% set cur_group = prefill.product_group if prefill else (tpl.product_group if tpl and tpl.product_group else '') %}
+              <select name="product_group" class="form-select form-select-sm">
+                <option value="" {% if not cur_group %}selected{% endif %}>Dùng chung cho mọi sản phẩm</option>
+                {% for g in group_choices or [] %}
+                <option value="{{ g }}" {% if cur_group == g %}selected{% endif %}>{{ g }}</option>
+                {% endfor %}
+              </select>
+              <div class="form-text">Mẫu riêng của nhóm chỉ hiện ở sản phẩm cùng nhóm.</div>
+            </div>
             <div class="col-md-8">
               <label class="form-label form-label-sm">Mô tả</label>
               <input type="text" name="description" class="form-control form-control-sm"

@@ -137,7 +137,7 @@
           <select name="default_template_id" class="fs fs-sm" size="1">
             <option value="">— Không chọn —</option>
             {% for t in templates %}
-            <option value="{{ t.id }}" {% if v.get('default_template_id', '') == t.id|string %}selected{% endif %}>{{ t.name }}</option>
+            <option value="{{ t.id }}" {% if v.get('default_template_id', '') == t.id|string %}selected{% endif %}>{{ t.name }}{% if t.product_group %} [{{ t.product_group }}]{% endif %}</option>
             {% endfor %}
           </select>
         </div>

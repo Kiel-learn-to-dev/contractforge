@@ -207,8 +207,15 @@ def clean_form(db, data: dict, product_id: Optional[int] = None) -> dict:
     out["default_duration_months"] = duration
 
     template_id = _optional_int(data, "default_template_id", errors, "Mẫu hợp đồng")
-    if template_id is not None and db.get(ContractTemplate, template_id) is None:
+    template_row = db.get(ContractTemplate, template_id) if template_id is not None else None
+    if template_id is not None and template_row is None:
         errors.append("Mẫu hợp đồng mặc định không tồn tại.")
+    if template_row is not None and kind == "main":
+        from app.services.template_service import ROLE_CONTRACT, TemplateMismatch, check_template_for
+        try:
+            check_template_for(template_row, group_code, ROLE_CONTRACT)
+        except TemplateMismatch as exc:
+            errors.append(str(exc))
     out["default_template_id"] = template_id
 
     fmt = _text(data, "contract_number_format")

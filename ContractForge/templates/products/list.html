@@ -40,6 +40,13 @@
           <tr class="group-row">
             <td colspan="12" class="px-3 fw-semibold small text-uppercase text-muted">
               {{ p.group_code or 'Chưa thuộc nhóm nào' }}
+              {% if p.group_code and group_summary.get(p.group_code) %}
+              <span class="fw-normal text-lowercase ms-2" style="font-size:0.78rem;">
+                {% for label, text in group_summary[p.group_code] %}
+                <span class="me-3 {% if text == 'thiếu' %}text-danger{% endif %}">{{ label }}: {{ text }}</span>
+                {% endfor %}
+              </span>
+              {% endif %}
             </td>
           </tr>
           {% set ns.prev = p.group_code %}
