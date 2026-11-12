@@ -378,6 +378,43 @@ def _payment_mode(raw) -> Optional[str]:
     return value if value in ("prepaid", "postpaid") else None
 
 
+def apply_lines(contract: Contract, lines: list, totals) -> None:
+    """Đặt các trường tiền của hợp đồng theo dòng đã tính.
+
+    Dùng chung cho nhập tay (create_draft) và sinh hàng loạt. Không ghi đè số chữ
+    hay mô tả đã có sẵn.
+    """
+    main = lines[0]
+    contract.pricing_model = "items"
+    contract.product_id = main.product_id
+    contract.unit_count = int(main.quantity)
+    contract.unit_price_pre_vat = main.unit_price_pre_vat
+    contract.vat_rate = main.vat_rate
+    contract.unit_price_vat = pricing.round_money(main.unit_price_pre_vat * (1 + main.vat_rate / 100))
+    contract.quantity = main.quantity * main.period_count
+    contract.total_amount = totals.total
+    contract.total_pre_vat = totals.pre_vat
+    contract.total_vat = totals.vat
+    if not (contract.amount_text or "").strip():
+        contract.amount_text = totals.amount_text or None
+    if not (contract.pricing_description or "").strip():
+        contract.pricing_description = pricing.describe(lines, totals)
+
+
+def add_line_rows(db: Session, contract: Contract, lines: list) -> None:
+    """Ghi các dòng bảng giá trị. Gọi sau khi hợp đồng đã có id (sau flush)."""
+    for order, line in enumerate(lines):
+        db.add(ContractItem(
+            contract_id=contract.id, product_id=line.product_id, sort_order=order,
+            description=line.description, unit_label=line.unit_label or None,
+            quantity=line.quantity, period_count=line.period_count,
+            unit_price_pre_vat=line.unit_price_pre_vat, vat_rate=line.vat_rate,
+            amount_pre_vat=line.amount_pre_vat, vat_amount=line.vat_amount,
+            amount_total=line.amount_total, note=line.note or None,
+        ))
+    db.flush()
+
+
 def _dec_str(value) -> str:
     """Số → chuỗi máy, không kèm số 0 thừa: Decimal('500000.00') → '500000'."""
     if value is None:
@@ -565,14 +602,6 @@ def create_draft(db: Session, form_data: dict) -> Contract:
             raise ValueError("Phải có số tháng để tính tiền.")
         items_lines = _build_lines(db, raw_items, month_count)
         items_totals = pricing.sum_lines(items_lines)
-        main = items_lines[0]
-        product_id = main.product_id
-        unit_count = int(main.quantity)
-        unit_price_pre_vat = main.unit_price_pre_vat
-        vat_rate = main.vat_rate
-        unit_price_vat = pricing.round_money(main.unit_price_pre_vat * (1 + main.vat_rate / 100))
-        quantity = main.quantity * main.period_count
-        total_amount = items_totals.total
 
     # Số tiền bằng chữ
     amount_text = (form_data.get("amount_text") or "").strip()
@@ -615,28 +644,15 @@ def create_draft(db: Session, form_data: dict) -> Contract:
         contract.selected_unit_names = selected_names
 
     if items_lines is not None:
-        contract.pricing_model = "items"
-        contract.total_pre_vat = items_totals.pre_vat
-        contract.total_vat = items_totals.vat
+        apply_lines(contract, items_lines, items_totals)
         contract.payment_mode = _payment_mode(form_data.get("payment_mode"))
         contract.payment_cycle_months = _safe_int(form_data.get("payment_cycle_months"))
-        if not (contract.pricing_description or "").strip():
-            contract.pricing_description = pricing.describe(items_lines, items_totals)
 
     db.add(contract)
     db.flush()
 
     if items_lines is not None:
-        for order, line in enumerate(items_lines):
-            db.add(ContractItem(
-                contract_id=contract.id, product_id=line.product_id, sort_order=order,
-                description=line.description, unit_label=line.unit_label or None,
-                quantity=line.quantity, period_count=line.period_count,
-                unit_price_pre_vat=line.unit_price_pre_vat, vat_rate=line.vat_rate,
-                amount_pre_vat=line.amount_pre_vat, vat_amount=line.vat_amount,
-                amount_total=line.amount_total, note=line.note or None,
-            ))
-        db.flush()
+        add_line_rows(db, contract, items_lines)
 
     # Ghi event
     _add_event(db, contract.id, "created", "Tạo bản nháp hợp đồng", "system")

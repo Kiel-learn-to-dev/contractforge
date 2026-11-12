@@ -544,3 +544,77 @@ def test_detail_sheet_has_one_row_per_line_with_the_money_columns(client, db_ses
     assert lines[0][4] == 2 and lines[0][5] == 12
     assert lines[0][7] == "12.000.000"
     assert lines[1][9] == "1.980.000"
+
+
+# ─── Task 5.1: sinh hàng loạt theo dòng ──────────────────────────────────────
+
+def _batch_template(path):
+    import docx
+
+    doc = docx.Document()
+    doc.add_paragraph("Hợp đồng {{CONTRACT_NUMBER}} cho {{PARTY_A_NAME}}")
+    t = doc.add_table(rows=3, cols=3)
+    for i, h in enumerate(["TT", "Dịch vụ", "Thành tiền"]):
+        t.rows[0].cells[i].text = h
+    for i, v in enumerate(["{{ITEM_NO}}", "{{ITEM_NAME}}", "{{ITEM_AMOUNT_TOTAL}}"]):
+        t.rows[1].cells[i].text = v
+    t.rows[2].cells[0].text = "Tổng"
+    t.rows[2].cells[2].text = "{{TOTAL_AMOUNT}}"
+    doc.save(str(path))
+    return path
+
+
+def test_batch_prices_each_customer_by_its_own_units(db_session, make_customer, make_product,
+                                                     make_template, tmp_path):
+    from app.models.contract import Contract
+    from app.services.batch_generator import run_batch
+
+    main = make_product(code="BT-MAIN", name="Gói chính lô", kind="main", group_code="BT-G",
+                        unit_label="cơ sở", default_price=500_000, default_vat_rate=10)
+    addon = make_product(code="BT-ADD", name="Gói kèm lô", kind="addon", group_code="BT-G",
+                         unit_label="cơ sở", default_price=150_000, default_vat_rate=10)
+    template = make_template(file_path=str(_batch_template(tmp_path / "batch_items.docx")),
+                             contract_type="Hợp đồng")
+    customers = [make_customer() for _ in range(3)]
+    shared = {"product_id": str(main.id), "month_count": "12", "start_date": "01/01/2026",
+              "items_json": json.dumps([{"product_id": main.id}, {"product_id": addon.id}])}
+    overrides = {c.id: {"unit_count": str(n), "contract_number": f"BATCH-U-{n}"}
+                 for n, c in zip((1, 2, 3), customers)}
+
+    result = run_batch(db=db_session, template_id=template.id,
+                       customer_ids=[c.id for c in customers],
+                       shared_params=shared, per_customer_overrides=overrides)
+
+    assert result.succeeded == 3 and result.failed == 0
+    db_session.expire_all()
+    by_number = {c.contract_number: c for c in db_session.query(Contract).all()}
+    # Mỗi KH: (500.000 + 150.000) × số cơ sở × 12 tháng, cộng 10% thuế.
+    assert by_number["BATCH-U-1"].total_amount == Decimal("8580000")
+    assert by_number["BATCH-U-2"].total_amount == Decimal("17160000")
+    assert by_number["BATCH-U-3"].total_amount == Decimal("25740000")
+    assert by_number["BATCH-U-2"].pricing_model == "items"
+    assert len(by_number["BATCH-U-2"].items) == 2
+
+
+def test_row_without_record_count_fails_alone(db_session, make_customer, make_product,
+                                              make_template, tmp_path):
+    from app.services.batch_generator import run_batch
+
+    rec = make_product(code="BT-REC", name="Gói theo hồ sơ", kind="main", group_code="BT-R",
+                       quantity_source="records", default_price=1000, default_vat_rate=0)
+    template = make_template(file_path=str(_batch_template(tmp_path / "batch_records.docx")),
+                             contract_type="Hợp đồng")
+    with_count = make_customer(record_count=1200)
+    without = make_customer(record_count=None)
+    shared = {"product_id": str(rec.id), "month_count": "12", "start_date": "01/01/2026",
+              "items_json": json.dumps([{"product_id": rec.id}])}
+    overrides = {with_count.id: {"contract_number": "BATCH-R-1"},
+                 without.id: {"contract_number": "BATCH-R-2"}}
+
+    result = run_batch(db=db_session, template_id=template.id,
+                       customer_ids=[with_count.id, without.id],
+                       shared_params=shared, per_customer_overrides=overrides)
+
+    assert result.succeeded == 1 and result.failed == 1
+    failed = [r for r in result.rows if not r.success]
+    assert "thiếu số hồ sơ" in failed[0].error

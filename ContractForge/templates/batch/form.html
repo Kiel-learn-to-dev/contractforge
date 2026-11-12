@@ -90,10 +90,12 @@
             <input type="number" name="month_count" id="inp-months" class="fc fc-sm"
                    value="{{ prefill.month_count if prefill else '' }}" min="1" placeholder="VD: 12">
           </div>
-          <div class="col-md-4">
-            <label class="lbl">Đơn giá có VAT (VNĐ)</label>
-            <input type="text" name="unit_price_vat" class="fc fc-sm"
-                   value="{{ prefill.unit_price_vat if prefill else '' }}" placeholder="Ví dụ: 500000">
+          <div class="col-md-8">
+            <label class="lbl">Gói bổ sung cùng nhóm (áp chung cho cả lô)</label>
+            <div id="batch-addons" class="d-flex flex-wrap gap-3 pt-1"></div>
+            <div class="form-text">Tiền của từng khách do máy chủ tính theo số cơ sở hoặc số hồ sơ của khách.</div>
+            <input type="hidden" name="items_json" id="inp-items-json"
+                   value="{{ prefill.items_json if prefill else '' }}">
           </div>
           <div class="col-md-4">
             <label class="lbl">Đại diện Bên B</label>
@@ -284,19 +286,45 @@
     if (startEl && !startEl.value) startEl.value = this.value;
   });
 
-  // 8. Auto-fill price from product — lấy từ danh mục qua data-price/data-vat,
-  //    không phải bảng giá viết cứng theo mã sản phẩm như bản trước.
+  // 8. Gói bổ sung cùng nhóm với gói chính: lấy từ máy chủ, không tính tiền ở trình duyệt.
   var prodEl = document.getElementById('sel-prod');
-  if (prodEl) prodEl.addEventListener('change', function() {
-    var opt = this.options[this.selectedIndex];
-    var pre = parseFloat(opt ? (opt.dataset.price || '') : '') || 0;
-    var vat = parseFloat(opt ? (opt.dataset.vat || '0') : '0') || 0;
-    var price = pre ? Math.round(pre * (1 + vat / 100)) : 0;
-    if (price) {
-      var priceEl = document.querySelector('input[name="unit_price_vat"]');
-      if (priceEl && !priceEl.value) priceEl.value = price;
-    }
+  var addonBox = document.getElementById('batch-addons');
+  var itemsHidden = document.getElementById('inp-items-json');
+  function loadBatchAddons() {
+    if (!prodEl || !addonBox) return;
+    addonBox.innerHTML = '';
+    if (!prodEl.value) return;
+    fetch('/contracts/product-options?product_id=' + encodeURIComponent(prodEl.value)
+          + '&customer_id=0&unit_count=1')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        addonBox.innerHTML = '';
+        (d.addons || []).forEach(function(a) {
+          var label = document.createElement('label');
+          label.className = 'small d-flex align-items-center gap-1';
+          label.style.cursor = 'pointer';
+          var cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.dataset.pid = a.id;
+          var span = document.createElement('span');
+          span.textContent = a.name;
+          label.appendChild(cb);
+          label.appendChild(span);
+          addonBox.appendChild(label);
+        });
+      });
+  }
+  if (prodEl) prodEl.addEventListener('change', loadBatchAddons);
+  var batchForm = document.getElementById('batch-form');
+  if (batchForm) batchForm.addEventListener('submit', function() {
+    if (!prodEl || !prodEl.value) { itemsHidden.value = ''; return; }
+    var items = [{ product_id: Number(prodEl.value) }];
+    if (addonBox) addonBox.querySelectorAll('input[type=checkbox]:checked').forEach(function(cb) {
+      items.push({ product_id: Number(cb.dataset.pid) });
+    });
+    itemsHidden.value = JSON.stringify(items);
   });
+  if (prodEl && prodEl.value) loadBatchAddons();
 })();
 </script>
 {% endblock %}

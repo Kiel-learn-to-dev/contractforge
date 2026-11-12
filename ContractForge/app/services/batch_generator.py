@@ -35,7 +35,9 @@ from app.models.contract import Contract, ContractStatus
 from app.models.contract_event import ContractEvent
 from app.models.customer import Customer
 from app.models.contract_template import ContractTemplate
-from app.services.docx_renderer import render_docx, build_render_context
+from app.models.product import Product
+from app.services import pricing
+from app.services.docx_renderer import render_docx, build_render_context, lists_from_lines
 from app.utils.amount_to_words_vi import amount_to_words
 from app.utils.date_helpers import (
     parse_date_input, compute_end_date, months_between
@@ -187,6 +189,7 @@ def run_batch(
             success=False,
         )
 
+        fpath = None
         try:
             # Kiểm tra trùng số hợp đồng
             existing = db.query(Contract).filter(
@@ -195,19 +198,28 @@ def run_batch(
             if existing:
                 raise ValueError(f"Số HĐ '{contract_number}' đã tồn tại")
 
+            # Dòng theo gói: có thì hợp đồng tính theo dòng, không thì đi đường cũ
+            line_info = _lines_for_row(db, customer, row_params)
+
             # Build contract object (không persist vào DB ngay)
             contract = _build_contract_from_params(
                 row_params, customer, template, contract_number
             )
+            if line_info is not None:
+                from app.services.contract_service import add_line_rows, apply_lines
+                apply_lines(contract, *line_info)
             db.add(contract)
             db.flush()   # flush để có ID
+            if line_info is not None:
+                add_line_rows(db, contract, line_info[0])
 
             # Build render context
             ctx = build_render_context(contract, customer, template=template, db=db)
             contract.render_data = ctx
 
-            # Render docx
-            rendered = render_docx(template.file_path, ctx)
+            # Render docx (có dòng lặp khi hợp đồng theo dòng)
+            lists = _lists_for_lines(db, line_info[0]) if line_info is not None else None
+            rendered = render_docx(template.file_path, ctx, lists=lists)
 
             # Save file
             fname = make_output_filename(
@@ -385,6 +397,7 @@ def make_batch_template_xlsx() -> bytes:
         "Ngày bắt đầu", "Số tháng", "Số đơn vị",
         "Đơn giá có VAT", "Tổng giá trị", "Mô tả giá",
         "Đại diện Bên B", "Số uỷ quyền", "Ngày uỷ quyền",
+        "Mã gói chính", "Mã gói bổ sung",
     ]
     ws.append(headers)
 
@@ -427,6 +440,8 @@ BATCH_EXCEL_COLUMNS: dict[str, str] = {
     "đơn giá có vat":      "unit_price_vat",
     "tổng giá trị":        "total_amount",
     "mô tả giá":           "pricing_description",
+    "mã gói chính":        "main_code",
+    "mã gói bổ sung":      "addon_codes",
     "đại diện bên b":      "party_b_representative",
     "số uỷ quyền":         "party_b_authorization_number",
     "ngày uỷ quyền":       "party_b_authorization_date",
@@ -537,6 +552,65 @@ def _build_contract_from_params(
         party_b_authorization_date=(params.get("party_b_authorization_date") or "").strip() or None,
         notes=(params.get("notes") or "").strip() or None,
     )
+
+
+def _lines_for_row(db: Session, customer: Customer, params: dict):
+    """Dòng tính tiền của một khách trong lô, hoặc None nếu lô không có dòng.
+
+    Nguồn: mã gói chính và mã gói bổ sung từ Excel (ghi đè theo khách), hoặc items_json
+    chung cho cả lô. Dòng không có số lượng thì lấy theo nguồn số lượng của gói.
+    """
+    from app.services.contract_service import (
+        _build_lines, _default_quantity, _parse_items_json, _safe_int, _safe_parse_date,
+    )
+
+    main_code = (params.get("main_code") or "").strip()
+    if main_code:
+        codes = [main_code] + [c.strip() for c in re.split(r"[;,]", params.get("addon_codes") or "")
+                               if c.strip()]
+        raw_items = []
+        for code in codes:
+            product = db.query(Product).filter(Product.code == code.upper()).first()
+            if product is None:
+                raise ValueError(f"Không tìm thấy gói có mã {code}.")
+            raw_items.append({"product_id": product.id})
+    else:
+        raw_items = _parse_items_json(params.get("items_json"))
+    if not raw_items:
+        return None
+
+    month_count = _safe_int(params.get("month_count"))
+    if month_count is None:
+        start = _safe_parse_date(params.get("start_date"))
+        end = _safe_parse_date(params.get("end_date"))
+        if start and end:
+            month_count = months_between(start, end)
+    if not month_count:
+        raise ValueError("Phải có số tháng để tính tiền.")
+
+    unit_count = _safe_int(params.get("unit_count")) or (customer.total_units or 1)
+    filled = []
+    for item in raw_items:
+        item = dict(item)
+        if item.get("quantity") in (None, ""):
+            product = db.get(Product, int(item["product_id"]))
+            qty = _default_quantity(product, customer, unit_count) if product else ""
+            if not qty:
+                code = product.code if product else item.get("product_id")
+                raise ValueError(f"Gói {code}: thiếu số hồ sơ của khách hàng.")
+            item["quantity"] = qty
+        filled.append(item)
+
+    lines = _build_lines(db, filled, month_count)
+    return lines, pricing.sum_lines(lines)
+
+
+def _lists_for_lines(db: Session, lines) -> dict:
+    feature_lists = []
+    for line in lines:
+        product = db.get(Product, line.product_id) if line.product_id else None
+        feature_lists.append(product.feature_list if product else [])
+    return lists_from_lines(lines, feature_lists)
 
 
 def _build_zip(file_paths: list[str], zip_path: str) -> None:
