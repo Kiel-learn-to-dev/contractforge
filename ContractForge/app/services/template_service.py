@@ -38,7 +38,7 @@ QUOTATION_TYPE = "Báo giá"
 
 # Nhóm mẫu hợp đồng gợi ý trong form. Đây là nhãn phân loại tự do — người dùng
 # gõ giá trị khác cũng được; danh sách này chỉ để bấm cho nhanh.
-CONTRACT_TYPES = ["Hợp đồng", "Phụ lục", "Nghiệm thu", "Thanh lý", QUOTATION_TYPE, "Khác"]
+CONTRACT_TYPES = ["Hợp đồng", "Phụ lục", "Nghiệm thu", "Thanh lý", "Bàn giao", QUOTATION_TYPE, "Khác"]
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -288,6 +288,8 @@ def _template_kind(placeholders: list[str]) -> str:
         return "Nghiệm thu"
     if any(field.startswith("LIQUIDATION_DATE") for field in fields):
         return "Thanh lý"
+    if "PARENT_CONTRACT_NUMBER" in fields:
+        return "Phụ lục"
     return "Hợp đồng"
 
 

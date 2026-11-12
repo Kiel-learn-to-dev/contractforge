@@ -155,6 +155,8 @@ def template_detail(request: Request, template_id: int):
             for ph in tpl.detected_placeholders
         ]
         mapped_count = sum(1 for r in ph_rows if r["mapped"])
+        from app.services.template_analyzer import analyze
+        analysis = analyze(tpl.file_path) if tpl.file_path else None
     finally:
         db.close()
 
@@ -165,6 +167,8 @@ def template_detail(request: Request, template_id: int):
         "mapped_count": mapped_count,
         "total_ph": len(ph_rows),
         "canonical_fields": ALL_CANONICAL_FIELDS,
+        "repeat_groups": analysis.repeat_groups if analysis and analysis.ok else [],
+        "row_warnings": analysis.row_warnings if analysis and analysis.ok else [],
         **_extract_flash(request),
     })
 

@@ -24,6 +24,8 @@ from dataclasses import dataclass, field
 from typing import Union
 import docx
 
+from app.services.docx_renderer import REPEAT_GROUPS
+
 
 # ─── Canonical field registry (khớp với blueprint §field canonical) ──────────
 
@@ -93,6 +95,29 @@ CANONICAL_MAP: dict[str, str] = {
     "PARTY_B_BENEFICIARY":           "party_b.beneficiary",
     "PARTY_B_TAX_CODE":              "party_b.tax_code",
     "PARTY_B_TITLE":                 "party_b.title",
+
+    # Task 3.2 — liên hệ, tổng theo dòng, thanh toán, sản phẩm, phụ lục
+    "PARTY_A_PHONE":                 "party_a.phone",
+    "PARTY_A_EMAIL":                 "party_a.email",
+    "PARTY_A_CONTACT_NAME":          "party_a.contact_name",
+    "PARTY_A_ESTABLISHMENT_DECISION": "party_a.establishment_decision",
+    "PARTY_A_ESTABLISHMENT_DATE":    "party_a.establishment_date",
+    "PARTY_B_PHONE":                 "party_b.phone",
+    "PARTY_B_CONTACT_NAME":          "party_b.contact_name",
+    "PARTY_B_CONTACT_EMAIL":         "party_b.contact_email",
+    "TOTAL_PRE_VAT":                 "contract.total_pre_vat",
+    "TOTAL_VAT":                     "contract.total_vat",
+    "PAYMENT_CYCLE_MONTHS":          "contract.payment_cycle_months",
+    "PARENT_CONTRACT_NUMBER":        "parent.number",
+    "PARENT_SIGN_DATE":              "parent.sign_date",
+}
+
+#: Placeholder của dòng lặp → "<nhóm>.<tên>". Nhóm khớp với khóa của build_render_lists.
+ROW_PLACEHOLDERS: dict[str, str] = {
+    **{f"ITEM_{n}": f"items.ITEM_{n}" for n in (
+        "NO", "NAME", "UNIT", "QTY", "PRICE", "AMOUNT_PRE_VAT",
+        "VAT_RATE", "VAT_AMOUNT", "AMOUNT_TOTAL")},
+    **{f"FEATURE_{n}": f"features.FEATURE_{n}" for n in ("NO", "NAME", "DESC")},
 }
 
 # Toàn bộ canonical fields cho UI dropdown
@@ -121,6 +146,12 @@ class AnalysisResult:
     error: str = ""
     """Nếu không trống → quá trình phân tích thất bại."""
 
+    repeat_groups: list[str] = field(default_factory=list)
+    """Các nhóm dòng lặp tìm thấy trong bảng, ví dụ ["features", "items"]."""
+
+    row_warnings: list[str] = field(default_factory=list)
+    """Cảnh báo: placeholder dòng lặp nằm ngoài bảng."""
+
     @property
     def ok(self) -> bool:
         return not self.error
@@ -141,7 +172,15 @@ def analyze(source: Union[str, bytes]) -> AnalysisResult:
         return result
 
     seen: set[str] = set()
+    groups: set[str] = set()
     counts = {"para": 0, "table": 0, "header": 0, "footer": 0}
+
+    def _warn_outside_table(ph: str) -> None:
+        if _row_group(ph) is None:
+            return
+        msg = "`{{" + ph + "}}` phải nằm trong một dòng bảng"
+        if msg not in result.row_warnings:
+            result.row_warnings.append(msg)
 
     # 1. Body paragraphs
     for para in doc.paragraphs:
@@ -149,6 +188,7 @@ def analyze(source: Union[str, bytes]) -> AnalysisResult:
         for ph in ph_list:
             if ph not in seen:
                 seen.add(ph)
+            _warn_outside_table(ph)
             counts["para"] += 1
 
     # 2. Tables (tất cả cells, tất cả paragraphs trong cell)
@@ -160,6 +200,9 @@ def analyze(source: Union[str, bytes]) -> AnalysisResult:
                     for ph in ph_list:
                         if ph not in seen:
                             seen.add(ph)
+                        group = _row_group(ph)
+                        if group is not None:
+                            groups.add(group)
                         counts["table"] += 1
 
     # 3. Headers & Footers (mỗi section)
@@ -173,8 +216,10 @@ def analyze(source: Union[str, bytes]) -> AnalysisResult:
                 for ph in ph_list:
                     if ph not in seen:
                         seen.add(ph)
+                    _warn_outside_table(ph)
                     counts[counter_key] += 1
 
+    result.repeat_groups = sorted(groups)
     result.placeholders = sorted(seen)
     result.mapping = build_default_mapping(result.placeholders)
     result.source_counts = counts
@@ -192,10 +237,18 @@ def build_default_mapping(placeholders: list[str]) -> dict[str, str]:
     Những placeholder không có trong registry vẫn được giữ lại với
     canonical = "" (người dùng cần tự điền).
     """
-    return {ph: CANONICAL_MAP.get(ph, "") for ph in placeholders}
+    return {ph: CANONICAL_MAP.get(ph) or ROW_PLACEHOLDERS.get(ph, "") for ph in placeholders}
 
 
 # ─── Internals ───────────────────────────────────────────────────────────────
+
+def _row_group(ph: str):
+    """Nhóm dòng lặp của một placeholder (items/features), hoặc None."""
+    for prefix, key in REPEAT_GROUPS.items():
+        if ph.startswith(prefix):
+            return key
+    return None
+
 
 def _open_doc(source: Union[str, bytes]) -> docx.Document:
     if isinstance(source, bytes):

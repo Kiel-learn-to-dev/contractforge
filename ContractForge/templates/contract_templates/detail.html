@@ -91,6 +91,13 @@
       </div>
 
       {% if ph_rows %}
+      {% if repeat_groups or row_warnings %}
+      <div class="mb-3">
+        {% if 'items' in repeat_groups %}<span class="badge bg-info-subtle text-info me-1">Có bảng giá trị</span>{% endif %}
+        {% if 'features' in repeat_groups %}<span class="badge bg-info-subtle text-info me-1">Có bảng chức năng</span>{% endif %}
+        {% for w in row_warnings %}<div class="alert alert-warning py-1 px-2 small mt-2 mb-0">{{ w }}</div>{% endfor %}
+      </div>
+      {% endif %}
       <form method="post" action="/templates/{{ tpl.id }}/mapping">
         <div class="table-responsive">
           <table class="table table-sm align-middle mb-0" style="font-size:0.83rem;">
