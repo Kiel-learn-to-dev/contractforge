@@ -25,10 +25,11 @@ from sqlalchemy import or_
 
 from app.models.contract import Contract, ContractStatus
 from app.models.contract_event import ContractEvent
+from app.models.contract_item import ContractItem
 from app.models.customer import Customer
 from app.models.contract_template import ContractTemplate
 from app.models.product import Product
-from app.services import lifecycle, numbering
+from app.services import lifecycle, numbering, pricing
 from app.services.docx_renderer import render_docx, build_render_context
 from app.utils.amount_to_words_vi import amount_to_words, amount_to_words_chan
 from app.utils.date_helpers import (
@@ -297,6 +298,86 @@ def get_stats(db: Session) -> dict:
     return stats
 
 
+# ─── Dòng hợp đồng (items_json) ──────────────────────────────────────────────
+
+def _parse_items_json(raw) -> list[dict]:
+    """Trả [] khi rỗng. Ném ValueError khi không phải danh sách các đối tượng."""
+    if raw is None or str(raw).strip() == "":
+        return []
+    try:
+        data = json.loads(str(raw))
+    except (TypeError, ValueError):
+        raise ValueError("Dữ liệu dòng hợp đồng không đọc được.")
+    if not isinstance(data, list) or not all(isinstance(x, dict) for x in data):
+        raise ValueError("Dữ liệu dòng hợp đồng phải là danh sách các dòng.")
+    return data
+
+
+def _item_decimal(item: dict, key: str, fallback, label: str) -> Decimal:
+    """Đọc số máy trong một dòng; nếu thiếu thì lấy giá trị mặc định của gói."""
+    raw = item.get(key)
+    if raw in (None, ""):
+        if fallback is None:
+            raise pricing.PricingError(f"Thiếu {label}.")
+        raw = fallback
+    return pricing.to_decimal(raw, label)
+
+
+def _build_lines(db: Session, raw_items: list[dict], month_count: int,
+                 require_main: bool = True) -> list[pricing.Line]:
+    """Đổi dữ liệu items_json thành các dòng đã tính tiền.
+
+    Mọi lỗi dữ liệu đều thành ValueError có số dòng để đọc được trên form.
+    `require_main=False` dùng cho phụ lục bổ sung: mọi dòng phải là gói bổ sung.
+    """
+    lines: list[pricing.Line] = []
+    main_group = None
+    for idx, item in enumerate(raw_items, start=1):
+        raw_pid = item.get("product_id")
+        try:
+            product = db.get(Product, int(raw_pid)) if raw_pid not in (None, "") else None
+        except (TypeError, ValueError):
+            product = None
+        if product is None:
+            raise ValueError(f"Dòng {idx}: gói {raw_pid} không tồn tại.")
+
+        if require_main and idx == 1:
+            if product.kind != "main":
+                raise ValueError("Dòng 1 phải là gói chính.")
+            main_group = product.group_code
+        else:
+            if product.kind == "main":
+                raise ValueError(f"Dòng {idx}: chỉ dòng đầu tiên được là gói chính.")
+            if require_main and (product.group_code is None or product.group_code != main_group):
+                raise ValueError(f"Dòng {idx}: gói bổ sung phải cùng nhóm với gói chính.")
+
+        try:
+            line = pricing.price_line(
+                description=str(item.get("description") or "").strip() or product.name,
+                unit_label=product.unit_label or "",
+                quantity=pricing.normalize_quantity(
+                    item.get("quantity"), product.min_quantity, product.quantity_step),
+                months=month_count,
+                unit_price_pre_vat=_item_decimal(item, "unit_price_pre_vat",
+                                                 product.default_price, "đơn giá"),
+                vat_rate=_item_decimal(item, "vat_rate", product.default_vat_rate or 0,
+                                       "thuế suất"),
+                price_period_months=product.price_period_months or 1,
+                amount_pre_vat_override=item.get("amount_pre_vat_override") or None,
+                product_id=product.id,
+                note=str(item.get("note") or "").strip(),
+            )
+        except pricing.PricingError as exc:
+            raise ValueError(f"Dòng {idx}: {exc}") from exc
+        lines.append(line)
+    return lines
+
+
+def _payment_mode(raw) -> Optional[str]:
+    value = str(raw or "").strip().lower()
+    return value if value in ("prepaid", "postpaid") else None
+
+
 # ─── Create draft ─────────────────────────────────────────────────────────────
 
 def create_draft(db: Session, form_data: dict) -> Contract:
@@ -369,6 +450,25 @@ def create_draft(db: Session, form_data: dict) -> Contract:
     elif total_amount is None and unit_price_pre_vat and quantity:
         total_amount = unit_price_pre_vat * quantity
 
+    # Dòng theo gói (items_json). Không có items_json thì bỏ qua khối này hoàn toàn,
+    # và hợp đồng đi đúng đường cũ ở trên.
+    raw_items = _parse_items_json(form_data.get("items_json"))
+    items_lines = None
+    items_totals = None
+    if raw_items:
+        if not month_count:
+            raise ValueError("Phải có số tháng để tính tiền.")
+        items_lines = _build_lines(db, raw_items, month_count)
+        items_totals = pricing.sum_lines(items_lines)
+        main = items_lines[0]
+        product_id = main.product_id
+        unit_count = int(main.quantity)
+        unit_price_pre_vat = main.unit_price_pre_vat
+        vat_rate = main.vat_rate
+        unit_price_vat = pricing.round_money(main.unit_price_pre_vat * (1 + main.vat_rate / 100))
+        quantity = main.quantity * main.period_count
+        total_amount = items_totals.total
+
     # Số tiền bằng chữ
     amount_text = (form_data.get("amount_text") or "").strip()
     if not amount_text and total_amount:
@@ -409,8 +509,29 @@ def create_draft(db: Session, form_data: dict) -> Contract:
     if selected_names:
         contract.selected_unit_names = selected_names
 
+    if items_lines is not None:
+        contract.pricing_model = "items"
+        contract.total_pre_vat = items_totals.pre_vat
+        contract.total_vat = items_totals.vat
+        contract.payment_mode = _payment_mode(form_data.get("payment_mode"))
+        contract.payment_cycle_months = _safe_int(form_data.get("payment_cycle_months"))
+        if not (contract.pricing_description or "").strip():
+            contract.pricing_description = pricing.describe(items_lines, items_totals)
+
     db.add(contract)
     db.flush()
+
+    if items_lines is not None:
+        for order, line in enumerate(items_lines):
+            db.add(ContractItem(
+                contract_id=contract.id, product_id=line.product_id, sort_order=order,
+                description=line.description, unit_label=line.unit_label or None,
+                quantity=line.quantity, period_count=line.period_count,
+                unit_price_pre_vat=line.unit_price_pre_vat, vat_rate=line.vat_rate,
+                amount_pre_vat=line.amount_pre_vat, vat_amount=line.vat_amount,
+                amount_total=line.amount_total, note=line.note or None,
+            ))
+        db.flush()
 
     # Ghi event
     _add_event(db, contract.id, "created", "Tạo bản nháp hợp đồng", "system")
@@ -463,7 +584,7 @@ def generate_docx(db: Session, contract_id: int) -> Contract:
     # Auto-sinh pricing_description nếu form để trống (tương đương batch_generator)
     # Không commit sớm để tránh expire các object trong session
     auto_pricing_desc = None
-    if not (contract.pricing_description or "").strip():
+    if contract.pricing_model == "legacy" and not (contract.pricing_description or "").strip():
         from app.services.batch_generator import _auto_pricing_description
         params = {
             "unit_price_vat": str(contract.unit_price_vat or ""),
