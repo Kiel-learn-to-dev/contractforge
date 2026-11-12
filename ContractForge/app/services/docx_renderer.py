@@ -27,7 +27,7 @@ import io
 import os
 import re
 from decimal import Decimal
-from typing import Union
+from typing import Optional, Union
 
 import docx
 from docx.oxml.ns import qn
@@ -36,6 +36,47 @@ from app.utils.amount_to_words_vi import amount_to_words, amount_to_words_chan
 from app.utils.date_helpers import format_date_vn, split_date_parts, parse_date_input
 
 _PH_RE = re.compile(r'\{\{([A-Z][A-Z0-9_]*)\}\}')
+
+#: Tiền tố placeholder của dòng lặp → tên danh sách dữ liệu.
+REPEAT_GROUPS = {"ITEM_": "items", "FEATURE_": "features"}
+
+
+def _row_placeholders(tr) -> set[str]:
+    text = "".join(t.text or "" for t in tr.iter(qn("w:t")))
+    return set(_PH_RE.findall(text))
+
+
+def _repeat_group_of(tr):
+    names = _row_placeholders(tr)
+    for prefix, key in REPEAT_GROUPS.items():
+        if any(n.startswith(prefix) for n in names):
+            return key
+    return None
+
+
+def _expand_repeat_rows(doc, lists: dict) -> None:
+    """Nhân bản dòng mẫu theo từng phần tử; danh sách rỗng thì xóa dòng mẫu.
+
+    Chỉ các placeholder có trong dòng dữ liệu mới được thay ở bước này. Placeholder
+    khác (ví dụ {{TOTAL_AMOUNT}}) được giữ nguyên để bước thay chung xử lý sau.
+    """
+    from docx.table import _Row
+
+    for table in doc.tables:
+        for tr in list(table._tbl.findall(qn("w:tr"))):
+            key = _repeat_group_of(tr)
+            if key is None:
+                continue
+            anchor = tr
+            for row_ctx in lists.get(key) or []:
+                new_tr = copy.deepcopy(tr)
+                anchor.addnext(new_tr)
+                anchor = new_tr
+                ctx = {k: ("" if v is None else str(v)) for k, v in row_ctx.items()}
+                for cell in _Row(new_tr, table).cells:
+                    for para in cell.paragraphs:
+                        _render_paragraph(para, ctx)
+            tr.getparent().remove(tr)
 
 
 # ─── Dynamic Party A row insertion ──────────────────────────────────────────
@@ -175,6 +216,7 @@ def apply_template_mapping(context: dict[str, str], template=None) -> dict[str, 
 def render_docx(
     template_source: Union[str, bytes],
     context: dict[str, str],
+    lists: Optional[dict] = None,
 ) -> bytes:
     """
     Thay thế tất cả {{PLACEHOLDER}} trong file .docx bằng giá trị trong context.
@@ -201,6 +243,11 @@ def render_docx(
 
     # Chuẩn hóa context: tất cả value là str, None → ""
     ctx = {k: ("" if v is None else str(v)) for k, v in context.items()}
+
+    # Nhân dòng lặp (bảng giá trị, bảng chức năng) trước khi thay placeholder chung.
+    # lists=None (báo giá, biểu 08a) thì không đụng bảng nào.
+    if lists is not None:
+        _expand_repeat_rows(doc, lists)
 
     # Chèn dòng tùy chọn vào bảng Bên A trước khi thay placeholder
     _insert_party_a_optional_rows(doc, ctx)
