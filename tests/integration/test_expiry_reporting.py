@@ -234,3 +234,87 @@ def test_contract_list_expiring_filter_matches_the_dashboard(db_engine, db_sessi
 
     assert filtered == 3
     assert len(data["expiring_30"]) + len(data["expiring_31_60"]) == 3
+
+
+# ─── Task 4.4: báo cáo hết hạn hiểu hợp đồng đã được gia hạn ────────────────
+
+def _expiring_numbers(db_session):
+    from app.services.dashboard_service import get_expiring_contracts
+
+    return {row["contract_number"] for row in get_expiring_contracts(db_session, days=30)}
+
+
+def test_contract_with_a_signed_renewal_appendix_leaves_the_expiring_list(
+        db_session, make_contract):
+    from datetime import date, timedelta
+
+    from app.models.contract import ContractStatus
+
+    soon = date.today() + timedelta(days=10)
+    parent = make_contract(contract_number="HD-EXP-RENEWED", status=ContractStatus.Signed,
+                           end_date=soon)
+    assert "HD-EXP-RENEWED" in _expiring_numbers(db_session)
+
+    make_contract(contract_number="PL-EXP-RENEWED", status=ContractStatus.Signed,
+                  parent_contract_id=parent.id, doc_kind="addendum_renewal",
+                  end_date=soon + timedelta(days=365))
+    assert "HD-EXP-RENEWED" not in _expiring_numbers(db_session)
+
+
+def test_contract_whose_renewal_is_still_a_draft_stays_in_the_list(db_session, make_contract):
+    from datetime import date, timedelta
+
+    from app.models.contract import ContractStatus
+
+    soon = date.today() + timedelta(days=10)
+    parent = make_contract(contract_number="HD-EXP-DRAFT", status=ContractStatus.Signed,
+                           end_date=soon)
+    make_contract(contract_number="PL-EXP-DRAFT", status=ContractStatus.Draft,
+                  parent_contract_id=parent.id, doc_kind="addendum_renewal",
+                  end_date=soon + timedelta(days=365))
+    assert "HD-EXP-DRAFT" in _expiring_numbers(db_session)
+
+
+def test_new_contract_that_renews_it_counts_as_renewed(db_session, make_contract):
+    from datetime import date, timedelta
+
+    from app.models.contract import ContractStatus
+
+    soon = date.today() + timedelta(days=10)
+    old = make_contract(contract_number="HD-EXP-OLD", status=ContractStatus.Signed, end_date=soon)
+    make_contract(contract_number="HD-EXP-NEW", status=ContractStatus.Signed,
+                  renewed_from_id=old.id, end_date=soon + timedelta(days=365))
+    assert "HD-EXP-OLD" not in _expiring_numbers(db_session)
+
+
+def test_addon_appendix_is_not_listed_as_its_own_expiry(db_session, make_contract):
+    from datetime import date, timedelta
+
+    from app.models.contract import ContractStatus
+
+    soon = date.today() + timedelta(days=10)
+    parent = make_contract(contract_number="HD-EXP-PARENT", status=ContractStatus.Signed,
+                           end_date=soon)
+    make_contract(contract_number="PL-EXP-ADDON", status=ContractStatus.Signed,
+                  parent_contract_id=parent.id, doc_kind="addendum_addon", end_date=soon)
+    numbers = _expiring_numbers(db_session)
+    assert "HD-EXP-PARENT" in numbers
+    assert "PL-EXP-ADDON" not in numbers
+
+
+def test_total_value_counts_the_parent_and_the_appendix_once_each(db_session, make_contract):
+    from datetime import date, timedelta
+    from decimal import Decimal
+
+    from app.models.contract import ContractStatus
+    from app.services.dashboard_service import get_dashboard_data
+
+    far = date.today() + timedelta(days=400)
+    parent = make_contract(contract_number="HD-TOT-GOC", status=ContractStatus.Signed,
+                           end_date=far, total_amount=Decimal("10000000"))
+    make_contract(contract_number="PL-TOT-BS", status=ContractStatus.Signed,
+                  parent_contract_id=parent.id, doc_kind="addendum_addon", end_date=far,
+                  total_amount=Decimal("2000000"))
+
+    data = get_dashboard_data(db_session)
+    assert Decimal(str(data["summary"]["total_value_active"])) == Decimal("12000000")

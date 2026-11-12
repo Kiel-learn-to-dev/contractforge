@@ -250,6 +250,35 @@ def get_expiring_contracts(db: Session, days: int = 30) -> list[dict]:
 
 # ─── Internal helpers ─────────────────────────────────────────────────────────
 
+def _not_renewed_filter():
+    """Hợp đồng chưa được gia hạn: không có phụ lục gia hạn, cũng không có hợp đồng mới
+    gia hạn từ nó, ở trạng thái được tính (lifecycle.RENEWAL_COUNTS_STATUSES).
+
+    Điều kiện này viết một lần ở đây và dùng lại cho mọi truy vấn sắp hết hạn.
+    """
+    from sqlalchemy import and_, exists
+    from sqlalchemy.orm import aliased
+
+    appendix = aliased(Contract)
+    renewed_by_appendix = exists().where(and_(
+        appendix.parent_contract_id == Contract.id,
+        appendix.doc_kind == "addendum_renewal",
+        appendix.status.in_(lifecycle.RENEWAL_COUNTS_STATUSES),
+    ))
+    successor = aliased(Contract)
+    renewed_by_contract = exists().where(and_(
+        successor.renewed_from_id == Contract.id,
+        successor.status.in_(lifecycle.RENEWAL_COUNTS_STATUSES),
+    ))
+    return ~(renewed_by_appendix | renewed_by_contract)
+
+
+def _not_addon_appendix_filter():
+    """Phụ lục bổ sung có cùng ngày hết hạn với hợp đồng gốc: không liệt kê riêng
+    trong danh sách sắp hết hạn, hạn đó thuộc về hợp đồng gốc."""
+    return Contract.doc_kind != "addendum_addon"
+
+
 def _get_expiring_list(db: Session, today: date, days: int) -> list[dict]:
     """
     Lấy danh sách hợp đồng có end_date trong khoảng (today, today+days].
@@ -267,6 +296,8 @@ def _get_expiring_list(db: Session, today: date, days: int) -> list[dict]:
             Contract.end_date.isnot(None),
             Contract.end_date > today,
             Contract.end_date <= cutoff,
+            _not_renewed_filter(),
+            _not_addon_appendix_filter(),
         )
         .order_by(Contract.end_date.asc())
         .all()
@@ -464,6 +495,8 @@ def get_monthly_expiry_forecast(db: Session, months: int = 12) -> list[dict]:
             Contract.end_date.isnot(None),
             Contract.end_date > today,
             Contract.end_date <= cutoff,
+            _not_renewed_filter(),
+            _not_addon_appendix_filter(),
         )
         .group_by(func.strftime('%Y-%m', Contract.end_date))
         .order_by(func.strftime('%Y-%m', Contract.end_date))
@@ -504,6 +537,8 @@ def get_action_items(db: Session) -> list[dict]:
             Contract.end_date.isnot(None),
             Contract.end_date > today,
             Contract.end_date <= today + timedelta(days=lifecycle.EXPIRY_CRITICAL_DAYS),
+            _not_renewed_filter(),
+            _not_addon_appendix_filter(),
         )
         .scalar() or 0
     )

@@ -50,6 +50,10 @@ ACTIVE_LIFECYCLE_STATUSES: tuple[ContractStatus, ...] = (
     ContractStatus.ExpiringSoon,  # legacy — không còn được ghi mới
 )
 
+#: Bản gia hạn ở các trạng thái này được coi là "đã xử lý": hợp đồng cũ không còn
+#: nằm trong danh sách sắp hết hạn chưa xử lý. Dựng từ tập đang có, không liệt kê tay.
+RENEWAL_COUNTS_STATUSES: tuple[ContractStatus, ...] = ACTIVE_LIFECYCLE_STATUSES
+
 #: Đang thực sự cung cấp dịch vụ — hẹp hơn tập trên vì loại `Signed`
 #: (đã ký nhưng chưa xuất hoá đơn, chưa tính là đang chạy).
 IN_SERVICE_STATUSES: tuple[ContractStatus, ...] = (
