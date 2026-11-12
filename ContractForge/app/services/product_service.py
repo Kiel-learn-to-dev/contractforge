@@ -11,8 +11,12 @@ from __future__ import annotations
 from decimal import Decimal, InvalidOperation
 from typing import Optional
 
+from sqlalchemy import func
+
+from app.models.contract import Contract
 from app.models.contract_template import ContractTemplate
 from app.models.product import PRODUCT_KINDS, QUANTITY_SOURCES, Product
+from app.services import lifecycle
 from app.services.contract_service import _safe_decimal
 from app.services.numbering import InvalidNumberFormat, validate_format
 
@@ -207,6 +211,42 @@ def update_product(db, product_id: int, data: dict) -> Product:
     cleaned = clean_form(db, data, product_id=product_id)
     for field, value in cleaned.items():
         setattr(product, field, value)
+    db.commit()
+    db.refresh(product)
+    return product
+
+
+def in_service_counts(db) -> dict[int, int]:
+    """product_id → số hợp đồng đang trong thời gian phục vụ (một truy vấn)."""
+    rows = (
+        db.query(Contract.product_id, func.count(Contract.id))
+        .filter(Contract.status.in_(lifecycle.IN_SERVICE_STATUSES))
+        .group_by(Contract.product_id)
+        .all()
+    )
+    return {pid: n for pid, n in rows if pid is not None}
+
+
+def count_in_service(db, product_id: int) -> int:
+    """Số hợp đồng đang phục vụ của sản phẩm này.
+
+    Tập trạng thái lấy từ lifecycle.IN_SERVICE_STATUSES. Hợp đồng `Signed` chưa
+    được tính là đang phục vụ (chưa xuất hóa đơn), theo định nghĩa ở lifecycle.
+    """
+    return (
+        db.query(Contract)
+        .filter(Contract.product_id == product_id,
+                Contract.status.in_(lifecycle.IN_SERVICE_STATUSES))
+        .count()
+    )
+
+
+def toggle_active(db, product_id: int) -> Product:
+    """Ngừng bán hoặc bán lại. Không xóa, không đụng hợp đồng đã có."""
+    product = get_product(db, product_id)
+    if product is None:
+        raise ProductError(["Không tìm thấy sản phẩm."])
+    product.is_active = not bool(product.is_active)
     db.commit()
     db.refresh(product)
     return product

@@ -1,3 +1,5 @@
+from urllib.parse import quote
+
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -15,7 +17,9 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 def _flash(url, msg, t="success"):
     sep = "&" if "?" in url else "?"
-    return RedirectResponse(f"{url}{sep}msg={msg}&msg_type={t}", status_code=303)
+    # Mã hóa: tên sản phẩm có thể chứa "&" hoặc "#", làm gãy query string.
+    return RedirectResponse(
+        f"{url}{sep}msg={quote(msg, safe='')}&msg_type={t}", status_code=303)
 
 
 def _fv(request):
@@ -46,20 +50,56 @@ def _form_context(db, *, title: str, action: str, values: dict,
     }
 
 
+SHOW_CHOICES = ("active", "inactive", "all")
+
+
+def _normalize_show(raw: str) -> str:
+    return raw if raw in SHOW_CHOICES else "active"
+
+
 @router.get("", response_class=HTMLResponse)
-def product_list(request: Request):
+def product_list(request: Request, show: str = "active"):
+    show = _normalize_show(show)
     db = SessionLocal()
     try:
         products = product_service.list_products(db)
+        counts = product_service.in_service_counts(db)
     finally:
         db.close()
+
+    if show == "active":
+        products = [p for p in products if p.is_active]
+    elif show == "inactive":
+        products = [p for p in products if not p.is_active]
 
     return templates.TemplateResponse(request, "products/list.html", {
         "page_title": "Sản phẩm",
         "products": products,
+        "counts": counts,
+        "show": show,
         "kind_labels": product_service.KIND_LABELS,
         **_fv(request),
     })
+
+
+@router.post("/{product_id}/toggle-active")
+async def product_toggle_active(request: Request, product_id: int):
+    form = await request.form()
+    show = _normalize_show(str(form.get("show", "active")))
+
+    db = SessionLocal()
+    try:
+        try:
+            product = product_service.toggle_active(db, product_id)
+        except ProductError:
+            return HTMLResponse("Không tìm thấy sản phẩm.", status_code=404)
+        name = product.name
+        now_active = bool(product.is_active)
+    finally:
+        db.close()
+
+    msg = f"Đã bán lại {name}" if now_active else f"Đã ngừng bán {name}"
+    return _flash(f"/products?show={show}", msg)
 
 
 # /new khai báo TRƯỚC các route có {product_id}.

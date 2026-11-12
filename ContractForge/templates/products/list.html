@@ -15,6 +15,11 @@
     <a href="/products/new" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg me-1"></i>Thêm sản phẩm</a>
   </div>
   <div class="card-body p-0">
+    <ul class="nav nav-pills small px-3 pt-3 gap-1">
+      <li class="nav-item"><a class="nav-link {% if show == 'active' %}active{% endif %}" href="/products?show=active">Đang bán</a></li>
+      <li class="nav-item"><a class="nav-link {% if show == 'inactive' %}active{% endif %}" href="/products?show=inactive">Đã ngừng bán</a></li>
+      <li class="nav-item"><a class="nav-link {% if show == 'all' %}active{% endif %}" href="/products?show=all">Tất cả</a></li>
+    </ul>
     {% if products %}
     <div class="table-responsive">
       <table class="table table-sm align-middle mb-0 products-table">
@@ -22,7 +27,7 @@
           <tr>
             <th class="px-3">Mã</th><th>Tên</th><th>Nhóm</th><th>Kiểu</th><th>Loại</th><th>ĐVT</th>
             <th class="text-end">Đơn giá mặc định</th><th class="text-center">VAT</th><th class="text-center">Thời hạn</th>
-            <th class="text-center">Trạng thái</th><th class="text-center"></th>
+            <th class="text-center">Trạng thái</th><th class="text-center">HĐ đang phục vụ</th><th class="text-center"></th>
           </tr>
         </thead>
         <tbody>
@@ -30,14 +35,14 @@
           {% for p in products %}
           {% if not ns.started or p.group_code != ns.prev %}
           <tr class="group-row">
-            <td colspan="11" class="px-3 fw-semibold small text-uppercase text-muted">
+            <td colspan="12" class="px-3 fw-semibold small text-uppercase text-muted">
               {{ p.group_code or 'Chưa thuộc nhóm nào' }}
             </td>
           </tr>
           {% set ns.prev = p.group_code %}
           {% set ns.started = True %}
           {% endif %}
-          <tr>
+          <tr {% if not p.is_active %}style="opacity:.55"{% endif %}>
             <td class="px-3 fw-semibold theme-heading">{{ p.code }}</td>
             <td class="theme-heading">{{ p.name }}</td>
             <td class="theme-heading">{{ p.group_code or '—' }}</td>
@@ -47,15 +52,30 @@
             <td class="text-end theme-heading">{{ '{:,.0f}'.format(p.default_price).replace(',', '.') if p.default_price else '—' }}</td>
             <td class="text-center theme-heading">{{ p.default_vat_rate }}%</td>
             <td class="text-center theme-heading">{{ p.default_duration_months or '—' }} tháng</td>
-            <td class="text-center">{% if p.is_active %}<span class="badge bg-success">Đang dùng</span>{% else %}<span class="badge bg-secondary">Ẩn</span>{% endif %}</td>
-            <td class="text-center"><a href="/products/{{ p.id }}/edit" class="btn btn-sm btn-outline-primary">Sửa</a></td>
+            <td class="text-center">{% if p.is_active %}<span class="badge bg-success">Đang bán</span>{% else %}<span class="badge bg-secondary">Ngừng bán</span>{% endif %}</td>
+            <td class="text-center theme-heading">{{ counts.get(p.id, 0) }}</td>
+            <td class="text-center text-nowrap">
+              <a href="/products/{{ p.id }}/edit" class="btn btn-sm btn-outline-primary">Sửa</a>
+              <form method="post" action="/products/{{ p.id }}/toggle-active" class="d-inline">
+                <input type="hidden" name="show" value="{{ show }}">
+                {% if p.is_active %}
+                <button type="submit" class="btn btn-sm btn-outline-secondary">Ngừng bán</button>
+                {% else %}
+                <button type="submit" class="btn btn-sm btn-outline-success">Bán lại</button>
+                {% endif %}
+              </form>
+            </td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
     {% else %}
-    <div class="p-4 text-center text-muted">Chưa có sản phẩm nào. <a href="/products/new">Thêm sản phẩm</a>.</div>
+    <div class="p-4 text-center text-muted">
+      {% if show == 'inactive' %}Không có sản phẩm nào đã ngừng bán.
+      {% elif show == 'active' %}Chưa có sản phẩm nào đang bán. <a href="/products/new">Thêm sản phẩm</a>.
+      {% else %}Chưa có sản phẩm nào. <a href="/products/new">Thêm sản phẩm</a>.{% endif %}
+    </div>
     {% endif %}
   </div>
 </div>

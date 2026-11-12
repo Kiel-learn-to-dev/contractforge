@@ -189,3 +189,105 @@ def test_list_orders_main_before_addon_and_ungrouped_last(db_session, make_produ
 
     codes = [p.code for p in list_products(db_session)]
     assert codes == ["C-MAIN", "B-ADDON", "A-UNGROUPED"]
+
+
+# ─── Task 1.4: ngừng bán và bật lại ──────────────────────────────────────────
+
+def test_stopped_product_disappears_from_contract_and_quotation_forms(client, make_product):
+    product = make_product(code="SW-OFF-HK", name="Gói ngừng hư cấu")
+
+    assert "SW-OFF-HK" in client.get("/contracts/new").text  # đối chứng: đang hiện
+
+    resp = client.post(f"/products/{product.id}/toggle-active",
+                       data={"show": "active"}, follow_redirects=False)
+    assert resp.status_code == 303
+
+    assert "SW-OFF-HK" not in client.get("/contracts/new").text
+    assert "SW-OFF-HK" not in client.get("/quotation").text
+
+
+def test_stopped_product_keeps_existing_contract_readable_and_numbered(client, make_product,
+                                                                      make_contract):
+    from datetime import date
+
+    product = make_product(code="SW-OLD-HK", name="Gói cũ hư cấu",
+                           contract_number_format="{seq}/{slug}/{year}")
+    contract = make_contract(product=product)
+
+    client.post(f"/products/{product.id}/toggle-active", data={"show": "active"},
+                follow_redirects=False)
+
+    detail = client.get(f"/contracts/{contract.id}")
+    assert detail.status_code == 200
+    assert contract.contract_number in detail.text
+    # Ghi chú: trang chi tiết hiện chưa in tên sản phẩm (biến `product` được
+    # truyền vào template nhưng không dùng). Việc đó nằm ngoài Task 1.4.
+
+    suggest = client.get(
+        f"/contracts/suggest-number?customer_id={contract.customer_id}&product_id={product.id}")
+    assert suggest.status_code == 200
+    number = suggest.json()["number"]
+    assert number.endswith(f"/{date.today().year}")
+    assert "{" not in number
+
+
+def test_count_in_service_counts_only_in_service_statuses(db_session, make_product,
+                                                          make_contract):
+    from app.models.contract import ContractStatus
+    from app.services.product_service import count_in_service
+
+    product = make_product(code="SW-CNT")
+    # Theo lifecycle.IN_SERVICE_STATUSES, Signed chưa được tính là đang phục vụ.
+    make_contract(product=product, status=ContractStatus.Signed)
+    make_contract(product=product, status=ContractStatus.Signed)
+    make_contract(product=product, status=ContractStatus.Draft)
+    assert count_in_service(db_session, product.id) == 0
+
+    make_contract(product=product, status=ContractStatus.Invoiced)
+    assert count_in_service(db_session, product.id) == 1
+
+
+def test_toggle_flashes_message_and_restores_active(client, db_session, make_product):
+    from urllib.parse import unquote
+
+    from app.models.product import Product
+
+    product = make_product(code="SW-TOG", name="Gói bật tắt")
+
+    stop = client.post(f"/products/{product.id}/toggle-active", data={"show": "active"},
+                       follow_redirects=False)
+    assert stop.status_code == 303
+    assert "Đã ngừng bán Gói bật tắt" in unquote(stop.headers["location"])
+    db_session.expire_all()
+    assert db_session.get(Product, product.id).is_active is False
+
+    resume = client.post(f"/products/{product.id}/toggle-active", data={"show": "inactive"},
+                         follow_redirects=False)
+    assert resume.status_code == 303
+    assert resume.headers["location"].startswith("/products?show=inactive")
+    assert "Đã bán lại Gói bật tắt" in unquote(resume.headers["location"])
+    db_session.expire_all()
+    assert db_session.get(Product, product.id).is_active is True
+
+
+def test_toggle_on_missing_product_returns_404(client):
+    resp = client.post("/products/999999/toggle-active", data={"show": "active"},
+                       follow_redirects=False)
+    assert resp.status_code == 404
+
+
+def test_list_hides_stopped_products_by_default_and_filters_by_show(client, make_product):
+    make_product(code="SW-SHOW-ON", name="Đang bán hư cấu")
+    make_product(code="SW-SHOW-OFF", name="Đã ngừng hư cấu", is_active=False)
+
+    default = client.get("/products").text
+    assert "SW-SHOW-ON" in default
+    assert "SW-SHOW-OFF" not in default
+
+    inactive = client.get("/products?show=inactive").text
+    assert "SW-SHOW-OFF" in inactive
+    assert "SW-SHOW-ON" not in inactive
+
+    everything = client.get("/products?show=all").text
+    assert "SW-SHOW-ON" in everything
+    assert "SW-SHOW-OFF" in everything
