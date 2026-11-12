@@ -205,7 +205,7 @@ def export_contracts(
     from openpyxl.utils import get_column_letter
     from datetime import datetime as _dt
     from fastapi.responses import StreamingResponse
-    from sqlalchemy.orm import joinedload
+    from sqlalchemy.orm import joinedload, selectinload
 
     db = SessionLocal()
     try:
@@ -224,7 +224,8 @@ def export_contracts(
         col = _SORT_MAP.get(sort_by, Contract.sign_date)
         order = col.desc() if sort_dir == "desc" else col.asc()
         rows = (
-            query.options(joinedload(Contract.customer), joinedload(Contract.product))
+            query.options(joinedload(Contract.customer), joinedload(Contract.product),
+                          joinedload(Contract.parent), selectinload(Contract.items))
             .order_by(order)
             .all()
         )
@@ -240,8 +241,9 @@ def export_contracts(
     CENTER = Alignment(horizontal="center", vertical="center")
 
     headers = ["STT", "Số hợp đồng", "Khách hàng", "Sản phẩm",
-               "Ngày ký", "Ngày hết hạn", "Giá trị (VNĐ)", "Trạng thái", "Ghi chú"]
-    col_widths = [5, 30, 35, 15, 12, 12, 18, 15, 30]
+               "Ngày ký", "Ngày hết hạn", "Giá trị (VNĐ)", "Trạng thái", "Ghi chú",
+               "Trước thuế", "Thuế", "Loại văn bản", "Hợp đồng gốc"]
+    col_widths = [5, 30, 35, 15, 12, 12, 18, 15, 30, 18, 14, 20, 30]
 
     for ci, (h, w) in enumerate(zip(headers, col_widths), 1):
         cell = ws.cell(row=1, column=ci, value=h)
@@ -264,6 +266,14 @@ def export_contracts(
             return str(v)
 
     STATUS_VI = {s: STATUS_LABELS.get(s, ("", s))[1] for s in STATUS_LABELS}
+    DOC_KIND_VI = {"contract": "Hợp đồng", "addendum_addon": "Phụ lục bổ sung",
+                   "addendum_renewal": "Phụ lục gia hạn"}
+
+    def _num(v):
+        if v is None:
+            return ""
+        f = float(v)
+        return int(f) if f.is_integer() else f
 
     for i, c in enumerate(rows, 1):
         cust = c.customer
@@ -278,7 +288,31 @@ def export_contracts(
             _fmt_money(c.total_amount),
             STATUS_VI.get(c.status.value, c.status.value),
             c.notes or "",
+            _fmt_money(c.total_pre_vat),
+            _fmt_money(c.total_vat),
+            DOC_KIND_VI.get(c.doc_kind or "contract", c.doc_kind or ""),
+            c.parent.contract_number if c.parent else "",
         ])
+
+    # Sheet chi tiết: mỗi dòng bảng giá trị một hàng
+    ws2 = wb.create_sheet("Chi tiết dòng")
+    detail_headers = ["Số hợp đồng", "TT", "Dịch vụ", "ĐVT", "Số lượng", "Số kỳ",
+                      "Đơn giá", "Trước thuế", "Thuế", "Sau thuế"]
+    ws2.append(detail_headers)
+    for cell in ws2[1]:
+        cell.font = HEADER_FONT
+        cell.fill = HEADER_FILL
+        cell.alignment = CENTER
+    for ci, w in enumerate([30, 6, 40, 12, 12, 10, 16, 18, 16, 18], 1):
+        ws2.column_dimensions[get_column_letter(ci)].width = w
+    for c in rows:
+        for n, line in enumerate(sorted(c.items, key=lambda i: i.sort_order or 0), 1):
+            ws2.append([
+                c.contract_number or "", n, line.description or "", line.unit_label or "",
+                _num(line.quantity), _num(line.period_count),
+                _fmt_money(line.unit_price_pre_vat), _fmt_money(line.amount_pre_vat),
+                _fmt_money(line.vat_amount), _fmt_money(line.amount_total),
+            ])
 
     buf = io.BytesIO()
     wb.save(buf)

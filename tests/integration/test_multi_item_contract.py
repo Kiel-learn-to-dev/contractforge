@@ -469,3 +469,78 @@ def test_posting_bad_items_json_returns_422_and_keeps_the_rows(client, make_cust
     assert match is not None
     kept = json.loads(html.unescape(match.group(1)))
     assert [row["product_id"] for row in kept] == [addon.id, main.id]
+
+
+# ─── Task 5.3: xuất Excel có chi tiết dòng ───────────────────────────────────
+
+def _read_export(content):
+    import io
+
+    import openpyxl
+
+    wb = openpyxl.load_workbook(io.BytesIO(content), read_only=True, data_only=True)
+    try:
+        return {ws.title: [list(r) for r in ws.iter_rows(values_only=True)] for ws in wb.worksheets}
+    finally:
+        wb.close()
+
+
+def test_export_keeps_old_columns_and_adds_the_new_ones_at_the_end(client, db_session,
+                                                                   make_customer, make_product,
+                                                                   make_contract):
+    from app.services.contract_service import create_draft
+
+    customer = make_customer()
+    main = make_product(code="EX5-MAIN", name="Gói chính xuất", kind="main", group_code="EX5-G",
+                        default_price=500_000, default_vat_rate=10)
+    addon = make_product(code="EX5-ADD", name="Gói kèm xuất", kind="addon", group_code="EX5-G",
+                         default_price=150_000, default_vat_rate=10)
+    create_draft(db_session, _items_form(customer, main, [
+        _product_row(main.id, 2), _product_row(addon.id, 1)], contract_number="HD-EX5-001"))
+    parent = make_contract(customer=customer, contract_number="HD-EX5-GOC")
+    make_contract(customer=customer, contract_number="HD-EX5-PL", parent_contract_id=parent.id,
+                  doc_kind="addendum_addon")
+
+    resp = client.get("/contracts/export")
+    assert resp.status_code == 200
+    sheets = _read_export(resp.content)
+
+    assert list(sheets) == ["Danh sách hợp đồng", "Chi tiết dòng"]
+    header = sheets["Danh sách hợp đồng"][0]
+    assert header[:9] == ["STT", "Số hợp đồng", "Khách hàng", "Sản phẩm", "Ngày ký",
+                          "Ngày hết hạn", "Giá trị (VNĐ)", "Trạng thái", "Ghi chú"]
+    assert header[9:] == ["Trước thuế", "Thuế", "Loại văn bản", "Hợp đồng gốc"]
+
+    by_number = {row[1]: row for row in sheets["Danh sách hợp đồng"][1:]}
+    # Trước thuế 12.000.000 + 1.800.000; thuế 10% = 1.380.000.
+    assert by_number["HD-EX5-001"][9:] == ["13.800.000", "1.380.000", "Hợp đồng", None]
+    assert by_number["HD-EX5-PL"][11] == "Phụ lục bổ sung"
+    assert by_number["HD-EX5-PL"][12] == "HD-EX5-GOC"
+
+
+def test_detail_sheet_has_one_row_per_line_with_the_money_columns(client, db_session,
+                                                                  make_customer, make_product):
+    from app.services.contract_service import create_draft
+
+    customer = make_customer()
+    main = make_product(code="DS5-MAIN", name="Gói chính chi tiết xuất", kind="main",
+                        group_code="DS5-G", unit_label="cơ sở",
+                        default_price=500_000, default_vat_rate=10)
+    addon = make_product(code="DS5-ADD", name="Gói kèm chi tiết xuất", kind="addon",
+                         group_code="DS5-G", unit_label="cơ sở",
+                         default_price=150_000, default_vat_rate=10)
+    create_draft(db_session, _items_form(customer, main, [
+        _product_row(main.id, 2), _product_row(addon.id, 1)], contract_number="HD-DS5-001"))
+
+    sheets = _read_export(client.get("/contracts/export").content)
+    detail = sheets["Chi tiết dòng"]
+
+    assert detail[0] == ["Số hợp đồng", "TT", "Dịch vụ", "ĐVT", "Số lượng", "Số kỳ",
+                         "Đơn giá", "Trước thuế", "Thuế", "Sau thuế"]
+    lines = [r for r in detail[1:] if r[0] == "HD-DS5-001"]
+    assert len(lines) == 2
+    assert [r[1] for r in lines] == [1, 2]
+    assert lines[0][2] == "Gói chính chi tiết xuất"
+    assert lines[0][4] == 2 and lines[0][5] == 12
+    assert lines[0][7] == "12.000.000"
+    assert lines[1][9] == "1.980.000"
