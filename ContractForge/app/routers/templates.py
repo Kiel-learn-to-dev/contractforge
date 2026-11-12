@@ -281,7 +281,12 @@ def do_reanalyze(request: Request, template_id: int):
 # ─── TOGGLE ──────────────────────────────────────────────────────────────────
 
 @router.post("/{template_id}/toggle")
-def toggle(request: Request, template_id: int):
+async def toggle(request: Request, template_id: int):
+    form = await request.form()
+    # Ô bật/tắt trong danh sách gửi next="/templates" để ở lại danh sách.
+    # Chỉ nhận đường dẫn nội bộ thuộc /templates.
+    next_url = str(form.get("next", "")).strip()
+    back = next_url if next_url.startswith("/templates") and "//" not in next_url else f"/templates/{template_id}"
     db = SessionLocal()
     try:
         tpl = toggle_active(db, template_id)
@@ -292,7 +297,7 @@ def toggle(request: Request, template_id: int):
 
     status_text = "kích hoạt" if tpl.is_active else "tạm ngưng"
     return _flash_redirect(
-        f"/templates/{template_id}",
+        back,
         f"Đã {status_text} template {tpl.code}",
         "success" if tpl.is_active else "warning",
     )
