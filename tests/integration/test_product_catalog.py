@@ -4,6 +4,8 @@ Dữ liệu hoàn toàn hư cấu. Các test POST đi qua fixture `client` (Test
 vào DB tạm).
 """
 
+import os
+
 from decimal import Decimal
 
 
@@ -220,8 +222,7 @@ def test_stopped_product_keeps_existing_contract_readable_and_numbered(client, m
     detail = client.get(f"/contracts/{contract.id}")
     assert detail.status_code == 200
     assert contract.contract_number in detail.text
-    # Ghi chú: trang chi tiết hiện chưa in tên sản phẩm (biến `product` được
-    # truyền vào template nhưng không dùng). Việc đó nằm ngoài Task 1.4.
+    assert "Gói cũ hư cấu" in detail.text  # tên sản phẩm hiện trên trang chi tiết
 
     suggest = client.get(
         f"/contracts/suggest-number?customer_id={contract.customer_id}&product_id={product.id}")
@@ -528,3 +529,26 @@ def test_export_lists_every_product_with_header(client, make_product):
     rows = _read_xlsx(client.get("/products/export.xlsx").content)
     assert rows[0] == _columns()
     assert sorted(r[0] for r in rows[1:]) == ["EXP-1", "EXP-2"]
+
+
+def test_stopped_product_contract_still_regenerates_its_file(db_session, make_product,
+                                                            make_contract, make_template,
+                                                            tmp_path):
+    import docx
+
+    from app.services.contract_service import generate_docx
+
+    product = make_product(code="SW-REGEN-HK", name="Gói ngừng sinh lại", is_active=False)
+    doc = docx.Document()
+    doc.add_paragraph("Hợp đồng {{CONTRACT_NUMBER}}")
+    template_path = tmp_path / "regen_template.docx"
+    doc.save(str(template_path))
+    template = make_template(file_path=str(template_path), contract_type="Hợp đồng")
+    contract = make_contract(product=product, template_id=template.id,
+                             contract_number="HD-REGEN-STOP-1")
+
+    result = generate_docx(db_session, contract.id)
+
+    assert result.status.value == "Generated"
+    assert result.output_file_path and os.path.exists(result.output_file_path)
+    assert product.is_active is False
