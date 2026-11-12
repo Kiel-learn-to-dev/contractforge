@@ -237,3 +237,113 @@ def test_items_json_that_is_not_a_list_is_refused(make_customer, make_product, d
 
     with pytest.raises(ValueError):
         create_draft(db_session, form)
+
+
+# ─── Task 2.3: API xem trước giá và danh sách gói bổ sung ────────────────────
+
+def test_product_options_lists_main_and_only_active_addons_of_the_same_group(
+        client, make_product, make_customer):
+    main = make_product(code="PO-MAIN", name="Gói chính PO", kind="main", group_code="PO-G",
+                        default_price=500_000, default_vat_rate=10, unit_label="cơ sở")
+    make_product(code="PO-ADD-B", name="Kèm B", kind="addon", group_code="PO-G", sort_order=2)
+    make_product(code="PO-ADD-A", name="Kèm A", kind="addon", group_code="PO-G", sort_order=1)
+    make_product(code="PO-OFF", name="Kèm đã ngừng", kind="addon", group_code="PO-G",
+                 is_active=False)
+    make_product(code="PO-OTHER", name="Kèm nhóm khác", kind="addon", group_code="PO-X")
+
+    resp = client.get(f"/contracts/product-options?product_id={main.id}&unit_count=3")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["main"]["code"] == "PO-MAIN"
+    assert body["main"]["price"] == "500000"
+    assert body["main"]["vat"] == "10"
+    assert body["main"]["default_quantity"] == "3"
+    assert [a["code"] for a in body["addons"]] == ["PO-ADD-A", "PO-ADD-B"]
+
+
+def test_product_options_default_quantity_follows_the_quantity_source(
+        client, make_product, make_customer):
+    customer = make_customer(record_count=1200)
+    records = make_product(code="PO-REC", name="Theo hồ sơ", kind="main", group_code="PO-R",
+                           quantity_source="records", min_quantity=2000, quantity_step=500)
+    manual = make_product(code="PO-MAN", name="Nhập tay", kind="main", group_code="PO-M",
+                          quantity_source="manual")
+
+    rec = client.get(f"/contracts/product-options?product_id={records.id}"
+                     f"&customer_id={customer.id}").json()["main"]
+    man = client.get(f"/contracts/product-options?product_id={manual.id}").json()["main"]
+    no_count = make_customer(record_count=None)
+    empty = client.get(f"/contracts/product-options?product_id={records.id}"
+                       f"&customer_id={no_count.id}").json()["main"]
+
+    assert rec["default_quantity"] == "2000"
+    assert man["default_quantity"] == "1"
+    assert empty["default_quantity"] == ""
+
+
+def test_product_options_for_a_missing_product_returns_no_main(client):
+    assert client.get("/contracts/product-options?product_id=999999").json() == {
+        "main": None, "addons": []}
+
+
+def test_price_preview_returns_lines_totals_and_description_as_strings(client, make_product):
+    main = make_product(code="PP-MAIN", name="Gói chính PP", kind="main", group_code="PP-G",
+                        default_price=500_000, default_vat_rate=10, unit_label="cơ sở")
+    addon = make_product(code="PP-ADD", name="Gói kèm PP", kind="addon", group_code="PP-G",
+                         default_price=150_000, default_vat_rate=10)
+
+    resp = client.post("/contracts/price-preview", json={"month_count": 12, "items": [
+        {"product_id": main.id, "quantity": "2"},
+        {"product_id": addon.id, "quantity": "1"},
+    ]})
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert [l["amount_total"] for l in body["lines"]] == ["13200000", "1980000"]
+    assert body["totals"] == {"pre_vat": "13800000", "vat": "1380000", "total": "15180000",
+                              "amount_text": body["totals"]["amount_text"]}
+    assert body["totals"]["amount_text"]
+    assert "Tổng cộng: 15.180.000 VNĐ" in body["description"]
+    for line in body["lines"]:
+        for key, value in line.items():
+            assert isinstance(value, str) or key == "description", key
+
+
+def test_price_preview_with_no_lines_is_422(client):
+    resp = client.post("/contracts/price-preview", json={"month_count": 12, "items": []})
+    assert resp.status_code == 422
+    assert "error" in resp.json()
+
+
+def test_price_preview_without_months_or_with_bad_json_is_422(client, make_product):
+    main = make_product(code="PP-BAD", name="Gói", kind="main", group_code="PP-B")
+    no_months = client.post("/contracts/price-preview",
+                            json={"items": [{"product_id": main.id, "quantity": "1"}]})
+    assert no_months.status_code == 422
+
+    bad_json = client.post("/contracts/price-preview", content=b"{not json",
+                           headers={"Content-Type": "application/json"})
+    assert bad_json.status_code == 422
+
+
+def test_preview_matches_the_numbers_create_draft_saves(client, db_session, make_customer,
+                                                        make_product):
+    from app.services.contract_service import create_draft
+
+    customer = make_customer()
+    main = make_product(code="PM-MAIN", name="Gói chính PM", kind="main", group_code="PM-G",
+                        default_price=440_909, default_vat_rate=8, unit_label="cơ sở")
+    addon = make_product(code="PM-ADD", name="Gói kèm PM", kind="addon", group_code="PM-G",
+                         default_price=75, default_vat_rate=10)
+    items = [{"product_id": main.id, "quantity": "3"},
+             {"product_id": addon.id, "quantity": "2000"}]
+
+    preview = client.post("/contracts/price-preview",
+                          json={"month_count": 12, "items": items}).json()
+    contract = create_draft(db_session, _items_form(customer, main, items,
+                                                    contract_number="HD-PM-001"))
+
+    assert preview["totals"]["total"] == str(int(contract.total_amount))
+    assert preview["totals"]["pre_vat"] == str(int(contract.total_pre_vat))
+    assert preview["totals"]["vat"] == str(int(contract.total_vat))

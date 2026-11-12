@@ -461,6 +461,40 @@ def suggest_contract_number(customer_id: int = 0, product_id: int = 0):
 
 # ─── BULK ACTIONS ─────────────────────────────────────────────────────────────
 
+@router.get("/product-options", response_class=JSONResponse)
+def get_product_options(product_id: int = 0, customer_id: int = 0, unit_count: int = 1):
+    """Gói chính đã chọn + các gói bổ sung cùng nhóm. Form dựa vào đây, không tự tính."""
+    from app.services import contract_service
+    db = SessionLocal()
+    try:
+        return JSONResponse(contract_service.product_options(
+            db, product_id, customer_id, unit_count))
+    finally:
+        db.close()
+
+
+@router.post("/price-preview", response_class=JSONResponse)
+async def post_price_preview(request: Request):
+    """Xem trước tiền của một danh sách dòng. Không ghi DB. Lỗi trả 422 kèm `error`."""
+    from app.services import contract_service
+    try:
+        body = await request.json()
+    except ValueError:
+        return JSONResponse({"error": "Dữ liệu gửi lên không đọc được."}, status_code=422)
+    if not isinstance(body, dict):
+        return JSONResponse({"error": "Dữ liệu gửi lên phải là một đối tượng."}, status_code=422)
+
+    db = SessionLocal()
+    try:
+        try:
+            result = contract_service.price_preview(db, body.get("items"), body.get("month_count"))
+        except ValueError as exc:
+            return JSONResponse({"error": str(exc)}, status_code=422)
+        return JSONResponse(result)
+    finally:
+        db.close()
+
+
 @router.post("/bulk-action", response_class=HTMLResponse)
 async def bulk_action(request: Request):
     """Xử lý chọn nhiều: xóa hoặc cập nhật trạng thái cho nhiều hợp đồng."""

@@ -378,6 +378,111 @@ def _payment_mode(raw) -> Optional[str]:
     return value if value in ("prepaid", "postpaid") else None
 
 
+def _dec_str(value) -> str:
+    """Số → chuỗi máy, không kèm số 0 thừa: Decimal('500000.00') → '500000'."""
+    if value is None:
+        return ""
+    d = pricing.to_decimal(value)
+    return format(d.normalize(), "f")
+
+
+def _default_quantity(product: Product, customer: Optional[Customer], unit_count: int) -> str:
+    """Số lượng mặc định theo nguồn số lượng của gói. Rỗng nếu chưa biết."""
+    source = product.quantity_source or "units"
+    if source == "units":
+        return _dec_str(max(int(unit_count or 1), 1))
+    if source == "records":
+        if customer is None or not customer.record_count:
+            return ""
+        qty = pricing.normalize_quantity(customer.record_count,
+                                         product.min_quantity, product.quantity_step)
+        return _dec_str(qty)
+    return "1"
+
+
+def _product_brief(product: Product, customer: Optional[Customer], unit_count: int) -> dict:
+    return {
+        "id": product.id,
+        "code": product.code,
+        "name": product.name,
+        "unit_label": product.unit_label or "",
+        "price": _dec_str(product.default_price),
+        "vat": _dec_str(product.default_vat_rate or 0),
+        "price_period_months": product.price_period_months or 1,
+        "quantity_source": product.quantity_source or "units",
+        "default_quantity": _default_quantity(product, customer, unit_count),
+        "template_id": product.default_template_id,
+    }
+
+
+def product_options(db: Session, product_id: int, customer_id: int, unit_count: int) -> dict:
+    """Gói chính đã chọn và các gói bổ sung cùng nhóm đang bán.
+
+    Không tìm thấy gói chính thì trả main = None và danh sách rỗng.
+    """
+    product = db.get(Product, product_id) if product_id else None
+    customer = db.get(Customer, customer_id) if customer_id else None
+    if product is None:
+        return {"main": None, "addons": []}
+
+    addons: list[dict] = []
+    if product.group_code:
+        rows = (
+            db.query(Product)
+            .filter(Product.group_code == product.group_code,
+                    Product.id != product.id,
+                    Product.kind != "main",
+                    Product.is_active == True)  # noqa: E712
+            .order_by(Product.sort_order, Product.name)
+            .all()
+        )
+        addons = [_product_brief(p, customer, unit_count) for p in rows]
+
+    return {"main": _product_brief(product, customer, unit_count), "addons": addons}
+
+
+def price_preview(db: Session, items, month_count) -> dict:
+    """Tính các dòng và tổng như create_draft sẽ tính, nhưng không ghi gì.
+
+    Dùng chung _build_lines và pricing.sum_lines với create_draft, nên xem trước
+    và lưu thật luôn ra cùng một số. Lỗi dữ liệu là ValueError.
+    """
+    if not isinstance(items, list):
+        raise ValueError("Danh sách dòng phải là một mảng.")
+    try:
+        months = int(month_count)
+    except (TypeError, ValueError):
+        raise ValueError("Số tháng không hợp lệ.")
+    if months < 1:
+        raise ValueError("Phải có số tháng để tính tiền.")
+
+    lines = _build_lines(db, items, months)
+    totals = pricing.sum_lines(lines)
+    return {
+        "lines": [
+            {
+                "description": line.description,
+                "unit_label": line.unit_label,
+                "quantity": _dec_str(line.quantity),
+                "period_count": _dec_str(line.period_count),
+                "unit_price_pre_vat": _dec_str(line.unit_price_pre_vat),
+                "vat_rate": _dec_str(line.vat_rate),
+                "amount_pre_vat": _dec_str(line.amount_pre_vat),
+                "vat_amount": _dec_str(line.vat_amount),
+                "amount_total": _dec_str(line.amount_total),
+            }
+            for line in lines
+        ],
+        "totals": {
+            "pre_vat": _dec_str(totals.pre_vat),
+            "vat": _dec_str(totals.vat),
+            "total": _dec_str(totals.total),
+            "amount_text": totals.amount_text,
+        },
+        "description": pricing.describe(lines, totals),
+    }
+
+
 # ─── Create draft ─────────────────────────────────────────────────────────────
 
 def create_draft(db: Session, form_data: dict) -> Contract:
