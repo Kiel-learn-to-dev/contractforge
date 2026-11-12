@@ -5,8 +5,9 @@ Các hàm chính:
   format_date_vn(d)          → "15/01/2025"
   split_date_parts(d)        → {"day":"15","month":"01","year":"2025"}
   parse_date_input(s)        → date object từ nhiều format khác nhau
-  compute_end_date(start, months) → date
-  months_between(start, end) → int
+  add_months(start, months) → date           (start + months tháng, kẹp cuối tháng)
+  compute_end_date(start, months) → date     (ngày CUỐI CÙNG của kỳ = add_months − 1 ngày)
+  months_between(start, end) → int           (end là ngày cuối kỳ, bao gồm)
 """
 
 from datetime import date, timedelta
@@ -70,22 +71,23 @@ def parse_date_input(s: Union[str, date, None]) -> Optional[date]:
     raise ValueError(f"Không nhận dạng được định dạng ngày: {s!r}")
 
 
-def compute_end_date(start: date, months: int) -> date:
-    """
-    Tính ngày kết thúc = start + months tháng.
-    Ví dụ: 2025-01-15 + 12 tháng = 2026-01-15
-    Xử lý edge case cuối tháng: 2025-01-31 + 1 = 2025-02-28.
-    """
-    month = start.month - 1 + months
-    year  = start.year + month // 12
-    month = month % 12 + 1
-    # Clamp day to valid range for the target month
+def add_months(start: date, months: int) -> date:
+    """start + months tháng, kẹp ngày cuối tháng. 31/01 + 1 = 28/02."""
     import calendar
+    month = start.month - 1 + months
+    year = start.year + month // 12
+    month = month % 12 + 1
     max_day = calendar.monthrange(year, month)[1]
-    day = min(start.day, max_day)
-    return date(year, month, day)
+    return date(year, month, min(start.day, max_day))
+
+
+def compute_end_date(start: date, months: int) -> date:
+    """Ngày cuối cùng của kỳ: 01/01/2027 + 12 tháng → 31/12/2027. 15/01/2027 + 1 tháng → 14/02/2027."""
+    return add_months(start, months) - timedelta(days=1)
 
 
 def months_between(start: date, end: date) -> int:
-    """Số tháng nguyên giữa 2 ngày (làm tròn xuống)."""
-    return (end.year - start.year) * 12 + (end.month - start.month)
+    """Số tháng nguyên của kỳ [start, end]; end là ngày cuối kỳ (bao gồm).
+    01/01/2027 → 31/12/2027 = 12. Dữ liệu cũ kiểu end = start + n tháng vẫn ra n."""
+    e = end + timedelta(days=1)
+    return (e.year - start.year) * 12 + (e.month - start.month)

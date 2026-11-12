@@ -20,7 +20,7 @@ from decimal import Decimal, InvalidOperation, ROUND_CEILING, ROUND_HALF_UP
 from typing import Optional, Sequence
 
 from app.utils.amount_to_words_vi import amount_to_words
-from app.utils.date_helpers import compute_end_date
+from app.utils.date_helpers import add_months
 
 _ONE = Decimal("1")
 _HUNDRED = Decimal("100")
@@ -142,7 +142,7 @@ def addon_months(start: date, main_end: date) -> int:
     if start > main_end:
         raise PricingError("Ngày bắt đầu gói bổ sung sau ngày hết hạn gói chính.")
     months = 1
-    while compute_end_date(start, months) <= main_end:
+    while add_months(start, months) <= main_end:
         months += 1
         if months > 600:
             raise PricingError("Khoảng thời gian không hợp lệ.")

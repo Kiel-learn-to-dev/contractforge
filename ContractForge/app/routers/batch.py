@@ -14,7 +14,6 @@ GET  /batch/download/{job_zip} → tải ZIP đã sinh
 import io, os, json
 import unicodedata
 from datetime import date as _date, timedelta
-from calendar import monthrange
 from fastapi import APIRouter, Request, Form, UploadFile, File, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
@@ -26,6 +25,7 @@ from app.models.customer import Customer
 from app.models.contract_template import ContractTemplate
 from app.models.product import Product
 from app.services.customer_service import CustomerFilters, list_customers
+from app.utils.date_helpers import compute_end_date
 from app.services.batch_generator import (
     run_batch, build_zip_bytes, import_excel_mapping,
     make_batch_template_xlsx, OUTPUT_DIR, BatchResult,
@@ -232,13 +232,6 @@ async def batch_preview(request: Request):
     month_count = int(data.get("month_count") or 12)
     year        = int(data.get("year") or _date.today().year)
 
-    def add_months(d, months):
-        m = d.month - 1 + months
-        yr = d.year + m // 12
-        mo = m % 12 + 1
-        day = min(d.day, monthrange(yr, mo)[1])
-        return _date(yr, mo, day)
-
     def calc_dates(start_str):
         if not start_str:
             return "", "", ""
@@ -246,7 +239,7 @@ async def batch_preview(request: Request):
             s = _date.fromisoformat(start_str)
         except ValueError:
             return "", "", ""
-        end = add_months(s, month_count) - timedelta(days=1)
+        end = compute_end_date(s, month_count)
         acc = s + timedelta(days=2)
         return str(end), str(acc), str(end)  # end, acceptance, liquidation
 

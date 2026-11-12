@@ -204,3 +204,30 @@ def test_renewal_form_offers_appendix_templates_and_passes_the_pick(
     db_session.expire_all()
     child = db_session.query(Contract).filter(Contract.doc_kind == "addendum_renewal").one()
     assert child.template_id == tpl.id
+
+
+def test_full_year_contract_ends_on_31_december_and_renews_from_1_january(
+        db_session, make_customer, make_product, make_contract):
+    """Q6: hợp đồng 01/01/2027 đủ 12 tháng hết hạn 31/12/2027; gia hạn từ 01/01/2028."""
+    from app.models.contract import ContractStatus
+    from app.models.seed import run_migrations
+    from app.services.addendum_service import create_renewal_appendix, renewal_defaults
+
+    customer = make_customer()
+    prod = make_product(code="RN-Y27", name="Gói cả năm 2027", kind="main", group_code="RN-Y",
+                        default_price=500_000, default_vat_rate=10, default_duration_months=12)
+    parent = make_contract(customer=customer, product=prod, status=ContractStatus.Invoiced,
+                           contract_number="HD-RN-2027", start_date=date(2027, 1, 1),
+                           end_date=date(2027, 12, 31), month_count=12, unit_count=1,
+                           total_amount=Decimal("6600000"), vat_rate=10)
+    run_migrations(db_session)
+    db_session.expire_all()
+
+    d = renewal_defaults(db_session, parent.id)
+    assert d["start_date"] == date(2028, 1, 1)
+
+    child = create_renewal_appendix(db_session, parent.id, {
+        "start_date": "2028-01-01", "month_count": "12",
+        "items_json": json.dumps([{"product_id": prod.id}])})
+    db_session.expire_all()
+    assert child.end_date == date(2028, 12, 31)
