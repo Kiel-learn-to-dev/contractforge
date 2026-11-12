@@ -182,6 +182,26 @@ def run_migrations(db: Session) -> None:
             ))
             conn.commit()
 
+        # ── Danh mục gói cước: kind, nhóm, ĐVT, kỳ giá (v51) ─────────────────
+        cols_p = [row[1] for row in conn.execute(text("PRAGMA table_info(products)")).fetchall()]
+        _product_migrations = [
+            ("group_code",          "ALTER TABLE products ADD COLUMN group_code VARCHAR(50)"),
+            ("kind",                "ALTER TABLE products ADD COLUMN kind VARCHAR(20) NOT NULL DEFAULT 'main'"),
+            ("unit_label",          "ALTER TABLE products ADD COLUMN unit_label VARCHAR(50)"),
+            ("price_period_months", "ALTER TABLE products ADD COLUMN price_period_months INTEGER NOT NULL DEFAULT 1"),
+            ("quantity_source",     "ALTER TABLE products ADD COLUMN quantity_source VARCHAR(20) NOT NULL DEFAULT 'units'"),
+            ("min_quantity",        "ALTER TABLE products ADD COLUMN min_quantity INTEGER"),
+            ("quantity_step",       "ALTER TABLE products ADD COLUMN quantity_step INTEGER"),
+            ("account_limit",       "ALTER TABLE products ADD COLUMN account_limit INTEGER"),
+            ("feature_list",        "ALTER TABLE products ADD COLUMN feature_list TEXT"),
+            ("replaced_by_id",      "ALTER TABLE products ADD COLUMN replaced_by_id INTEGER REFERENCES products(id)"),
+            ("sort_order",          "ALTER TABLE products ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0"),
+        ]
+        for col_name, sql in _product_migrations:
+            if col_name not in cols_p:
+                conn.execute(text(sql))
+                conn.commit()
+
     _backfill_contract_number_formats(db)
 
 
