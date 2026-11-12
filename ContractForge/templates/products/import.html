@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block content %}
+{% if flash_msg %}
+<div class="alert alert-{{ flash_type }} alert-dismissible fade show mb-3">
+  <i class="bi bi-{% if flash_type == 'success' %}check-circle{% else %}exclamation-triangle{% endif %}-fill me-2"></i>
+  {{ flash_msg }}
+  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
+</div>
+{% endif %}
+
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb" style="font-size:0.82rem;">
+    <li class="breadcrumb-item"><a href="/products">Sản phẩm</a></li>
+    <li class="breadcrumb-item active">Nhập danh mục</li>
+  </ol>
+</nav>
+
+{% if errors %}
+<div class="al al-d">
+  <i class="bi bi-x-circle-fill"></i>
+  <ul class="mb-0 ps-3">{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+  <button class="al-x">×</button>
+</div>
+{% endif %}
+
+<div class="card mb12">
+  <div class="card-h">
+    <h6 class="fw-semibold" style="font-size:.85rem;"><i class="bi bi-file-earmark-spreadsheet text-success"></i>Bước 1: chọn file Excel</h6>
+  </div>
+  <div class="card-b">
+    <p class="small text-muted mb-2">
+      Dòng 1 là tiêu đề. Mã đã có trong danh mục thì dòng đó sẽ cập nhật; mã chưa có thì tạo mới.
+      Nhập không đổi mẫu hợp đồng mặc định, gói thay thế, hay chức năng của gói.
+      Nếu một dòng lỗi, không dòng nào được ghi.
+    </p>
+    <div class="d-flex flex-wrap gap-2 mb-3">
+      <a href="/products/template.xlsx" class="btn btn-sm btn-outline-secondary"><i class="bi bi-download me-1"></i>Tải file mẫu</a>
+      <a href="/products/export.xlsx" class="btn btn-sm btn-outline-secondary"><i class="bi bi-download me-1"></i>Xuất danh mục hiện có</a>
+    </div>
+    <form method="post" action="/products/import" enctype="multipart/form-data" class="d-flex flex-wrap gap-2 align-items-center">
+      <input type="file" name="file" accept=".xlsx" required class="form-control form-control-sm" style="max-width:360px;">
+      <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-eye me-1"></i>Xem trước</button>
+    </form>
+  </div>
+</div>
+
+{% if rows is not none %}
+<div class="card mb12">
+  <div class="card-h d-flex justify-content-between align-items-center">
+    <h6 class="fw-semibold mb-0" style="font-size:.85rem;"><i class="bi bi-list-check text-primary"></i>Bước 2: xem trước</h6>
+    <span class="small">
+      <span class="badge bg-success">Tạo mới: {{ summary['create'] }}</span>
+      <span class="badge bg-info text-dark">Cập nhật: {{ summary['update'] }}</span>
+      <span class="badge bg-danger">Lỗi: {{ summary['error'] }}</span>
+    </span>
+  </div>
+  <div class="card-b p-0">
+    {% if rows %}
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-0">
+        <thead class="table-head-soft">
+          <tr><th class="px-3">Dòng Excel</th><th>Hành động</th><th>Mã</th><th>Tên</th><th>Lỗi</th></tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+          <tr {% if r.action == 'error' %}class="table-danger"{% endif %}>
+            <td class="px-3">{{ r.row }}</td>
+            <td>
+              {% if r.action == 'create' %}<span class="badge bg-success">Tạo mới</span>
+              {% elif r.action == 'update' %}<span class="badge bg-info text-dark">Cập nhật</span>
+              {% else %}<span class="badge bg-danger">Lỗi</span>{% endif %}
+            </td>
+            <td class="fw-semibold">{{ r.code }}</td>
+            <td>{{ r.name }}</td>
+            <td class="small text-danger">{{ r.error }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="p-4 text-center text-muted">File không có dòng dữ liệu nào.</div>
+    {% endif %}
+  </div>
+  <div class="card-b">
+    {% if summary['error'] == 0 and rows %}
+    <form method="post" action="/products/import/apply">
+      <input type="hidden" name="rows_json" value="{{ rows_json }}">
+      <button type="submit" class="btn btn-sm btn-success"><i class="bi bi-check-lg me-1"></i>Ghi {{ rows|length }} dòng vào danh mục</button>
+      <a href="/products/import" class="btn btn-sm btn-outline-secondary">Hủy</a>
+    </form>
+    {% elif summary['error'] > 0 %}
+    <div class="small text-danger">Sửa các dòng lỗi trong file rồi tải lên lại. Chưa có dòng nào được ghi.</div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

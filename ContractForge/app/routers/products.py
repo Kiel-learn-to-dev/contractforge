@@ -1,7 +1,9 @@
+import json
+from decimal import Decimal
 from urllib.parse import quote
 
-from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import APIRouter, File, Request, UploadFile
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
 from app.database import SessionLocal
@@ -140,6 +142,112 @@ async def product_new_submit(request: Request):
         db.close()
 
     return _flash("/products", f"Đã thêm sản phẩm {name}")
+
+
+# ─── Excel: tải mẫu, xuất, nhập (khai báo trước các route /{product_id}) ─────
+
+XLSX_MEDIA = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+
+def _xlsx_response(content: bytes, filename: str) -> Response:
+    return Response(content=content, media_type=XLSX_MEDIA,
+                    headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+
+
+def _revive_rows(rows: list) -> list[dict]:
+    """Đọc lại dòng xem trước từ JSON. Giá và thuế phải về Decimal."""
+    out = []
+    for r in rows:
+        if not isinstance(r, dict):
+            raise ValueError("dòng không phải đối tượng")
+        data = r.get("data")
+        if isinstance(data, dict):
+            data = dict(data)
+            for key in ("default_price", "default_vat_rate"):
+                if data.get(key) not in (None, ""):
+                    data[key] = Decimal(str(data[key]))
+        out.append({**r, "data": data})
+    return out
+
+
+@router.get("/template.xlsx")
+def product_template_xlsx():
+    return _xlsx_response(product_service.make_catalog_xlsx(None, with_data=False),
+                          "product_template.xlsx")
+
+
+@router.get("/export.xlsx")
+def product_export_xlsx():
+    db = SessionLocal()
+    try:
+        content = product_service.make_catalog_xlsx(db, with_data=True)
+    finally:
+        db.close()
+    return _xlsx_response(content, "product_catalog.xlsx")
+
+
+@router.get("/import", response_class=HTMLResponse)
+def product_import_form(request: Request):
+    return templates.TemplateResponse(request, "products/import.html", {
+        "page_title": "Nhập danh mục",
+        "rows": None,
+        "errors": [],
+        "columns": product_service.IMPORT_COLUMNS,
+        **_fv(request),
+    })
+
+
+@router.post("/import", response_class=HTMLResponse)
+async def product_import_preview(request: Request, file: UploadFile = File(...)):
+    content = await file.read()
+    db = SessionLocal()
+    try:
+        try:
+            rows = product_service.parse_catalog_xlsx(db, content)
+        except ProductError as exc:
+            return templates.TemplateResponse(request, "products/import.html", {
+                "page_title": "Nhập danh mục", "rows": None,
+                "errors": exc.errors, "columns": product_service.IMPORT_COLUMNS,
+            }, status_code=422)
+    finally:
+        db.close()
+
+    summary = {
+        "create": sum(1 for r in rows if r["action"] == "create"),
+        "update": sum(1 for r in rows if r["action"] == "update"),
+        "error": sum(1 for r in rows if r["action"] == "error"),
+    }
+    return templates.TemplateResponse(request, "products/import.html", {
+        "page_title": "Nhập danh mục",
+        "rows": rows,
+        "summary": summary,
+        "errors": [],
+        "rows_json": json.dumps(rows, ensure_ascii=False, default=str),
+        "columns": product_service.IMPORT_COLUMNS,
+    })
+
+
+@router.post("/import/apply")
+async def product_import_apply(request: Request):
+    form = await request.form()
+    raw = str(form.get("rows_json", ""))
+
+    try:
+        rows = _revive_rows(json.loads(raw))
+    except (ValueError, TypeError, ArithmeticError):
+        return _flash("/products/import", "Dữ liệu xem trước không đọc được. Hãy tải file lên lại.", "danger")
+
+    db = SessionLocal()
+    try:
+        try:
+            created, updated = product_service.apply_catalog_rows(db, rows)
+        except ProductError as exc:
+            return _flash("/products/import",
+                          "Chưa ghi file nào. " + "; ".join(exc.errors)[:500], "danger")
+    finally:
+        db.close()
+
+    return _flash("/products", f"Đã tạo {created} sản phẩm, cập nhật {updated} sản phẩm.")
 
 
 @router.get("/{product_id}/edit", response_class=HTMLResponse)

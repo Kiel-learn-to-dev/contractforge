@@ -291,3 +291,240 @@ def test_list_hides_stopped_products_by_default_and_filters_by_show(client, make
     everything = client.get("/products?show=all").text
     assert "SW-SHOW-ON" in everything
     assert "SW-SHOW-OFF" in everything
+
+
+# ─── Task 1.5: nhập và xuất danh mục bằng Excel ──────────────────────────────
+
+XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+
+def _columns():
+    from app.services.product_service import IMPORT_COLUMNS
+    return IMPORT_COLUMNS
+
+
+def _xlsx(rows, header=None):
+    from openpyxl import Workbook
+
+    wb = Workbook()
+    try:
+        ws = wb.active
+        ws.append(header or _columns())
+        for r in rows:
+            ws.append(r)
+        import io
+        buf = io.BytesIO()
+        wb.save(buf)
+        return buf.getvalue()
+    finally:
+        wb.close()
+
+
+def _read_xlsx(content):
+    import io
+
+    from openpyxl import load_workbook
+
+    wb = load_workbook(io.BytesIO(content), read_only=True, data_only=True)
+    try:
+        return [list(r) for r in wb.active.iter_rows(values_only=True)]
+    finally:
+        wb.close()
+
+
+def _row(**overrides):
+    base = {col: None for col in _columns()}
+    base.update(code="IM-NEW", name="Gói nhập", product_type="Dịch vụ", kind="main",
+                default_price=500000, default_vat_rate=10, price_period_months=1,
+                quantity_source="units", default_duration_months=12, is_active=1,
+                sort_order=0)
+    base.update(overrides)
+    return [base[c] for c in _columns()]
+
+
+def test_template_download_has_header_and_two_fictional_examples(client):
+    resp = client.get("/products/template.xlsx")
+    assert resp.status_code == 200
+    rows = _read_xlsx(resp.content)
+    assert rows[0] == _columns()
+    assert [r[0] for r in rows[1:]] == ["EX-MAIN", "EX-ADDON"]
+
+
+def test_preview_reports_create_update_and_error_by_row(client, db_session, make_product):
+    from app.models.product import Product
+
+    make_product(code="IM-OLD", name="Tên cũ")
+    content = _xlsx([
+        _row(code="IM-NEW"),
+        _row(code="IM-OLD", name="Tên mới"),
+        _row(code="IM-BAD", default_price="abc"),
+    ])
+    resp = client.post("/products/import",
+                       files={"file": ("cat.xlsx", content, XLSX_MIME)})
+
+    assert resp.status_code == 200
+    assert "Tạo mới" in resp.text
+    assert "Cập nhật" in resp.text
+    assert "Đơn giá không phải là số" in resp.text
+    assert "Ghi 3 dòng" not in resp.text  # có lỗi thì không cho ghi
+    db_session.expire_all()
+    assert db_session.query(Product).filter_by(code="IM-NEW").count() == 0
+
+
+def test_price_cell_is_a_machine_number_not_vietnamese_thousands(db_session):
+    from decimal import Decimal
+
+    from app.services.product_service import parse_catalog_xlsx
+
+    rows = parse_catalog_xlsx(db_session, _xlsx([_row(code="IM-DEC", default_price=82.5)]))
+    assert rows[0]["action"] == "create"
+    assert rows[0]["data"]["default_price"] == Decimal("82.5")
+
+
+def test_apply_refuses_the_whole_file_when_one_row_is_wrong(db_session):
+    from app.models.product import Product
+    from app.services.product_service import (ProductError, apply_catalog_rows,
+                                              parse_catalog_xlsx)
+    import pytest
+
+    rows = parse_catalog_xlsx(db_session, _xlsx([
+        _row(code="IM-A"),
+        _row(code="IM-B", default_price="abc"),
+    ]))
+    with pytest.raises(ProductError):
+        apply_catalog_rows(db_session, rows)
+    db_session.expire_all()
+    assert db_session.query(Product).filter_by(code="IM-A").count() == 0
+
+
+def test_apply_counts_created_and_updated_rows(db_session, make_product):
+    from decimal import Decimal
+
+    from app.models.product import Product
+    from app.services.product_service import apply_catalog_rows, parse_catalog_xlsx
+
+    make_product(code="IM-OLD", name="Tên cũ")
+    rows = parse_catalog_xlsx(db_session, _xlsx([
+        _row(code="IM-NEW"),
+        _row(code="IM-OLD", name="Tên mới"),
+    ]))
+    assert apply_catalog_rows(db_session, rows) == (1, 1)
+
+    db_session.expire_all()
+    assert db_session.query(Product).filter_by(code="IM-OLD").one().name == "Tên mới"
+    created = db_session.query(Product).filter_by(code="IM-NEW").one()
+    assert created.default_price == Decimal("500000")
+    assert created.is_active is True
+
+
+def test_import_never_changes_default_template_or_replacement(db_session, make_product,
+                                                              make_template):
+    from app.models.product import Product
+    from app.services.product_service import apply_catalog_rows, parse_catalog_xlsx
+
+    template = make_template()
+    successor = make_product(code="RT-NEW", name="Gói thay thế")
+    make_product(code="RT-KEEP", name="Cũ", default_template_id=template.id,
+                 replaced_by_id=successor.id)
+
+    rows = parse_catalog_xlsx(db_session, _xlsx([_row(code="RT-KEEP", name="Mới")]))
+    apply_catalog_rows(db_session, rows)
+
+    db_session.expire_all()
+    kept = db_session.query(Product).filter_by(code="RT-KEEP").one()
+    assert kept.name == "Mới"
+    assert kept.default_template_id == template.id
+    assert kept.replaced_by_id == successor.id
+
+
+def test_duplicate_code_inside_the_file_is_an_error(db_session):
+    from app.services.product_service import parse_catalog_xlsx
+
+    rows = parse_catalog_xlsx(db_session, _xlsx([_row(code="IM-DUP"), _row(code="im-dup")]))
+    assert [r["action"] for r in rows] == ["create", "error"]
+    assert "xuất hiện nhiều lần" in rows[1]["error"]
+
+
+def test_missing_column_is_refused_on_upload(client):
+    content = _xlsx([], header=_columns()[:-1])
+    resp = client.post("/products/import",
+                       files={"file": ("cat.xlsx", content, XLSX_MIME)})
+    assert resp.status_code == 422
+    assert "thiếu cột" in resp.text
+
+
+def test_export_then_import_the_same_file_changes_nothing(client, db_session, make_product):
+    from decimal import Decimal
+
+    from app.models.product import Product
+    from app.services.product_service import (apply_catalog_rows, form_values,
+                                              parse_catalog_xlsx)
+
+    make_product(code="RT-A", name="Gói A", group_code="NHOM-RT", kind="main",
+                 unit_label="cơ sở", default_price=Decimal("500000"),
+                 default_vat_rate=Decimal("8.5"), min_quantity=2000, quantity_step=500,
+                 contract_number_format="{seq}/{slug}/{year}", sort_order=3)
+    make_product(code="RT-B", name="Gói B", group_code="NHOM-RT", kind="addon",
+                 default_price=Decimal("150000"), default_vat_rate=Decimal("10"),
+                 account_limit=3, is_active=False)
+
+    def snapshot():
+        db_session.expire_all()
+        return {p.code: {**form_values(p), "is_active": p.is_active}
+                for p in db_session.query(Product).all()}
+
+    before = snapshot()
+    exported = client.get("/products/export.xlsx")
+    assert exported.status_code == 200
+    rows = parse_catalog_xlsx(db_session, exported.content)
+    assert len(rows) == 2
+    assert all(r["action"] == "update" for r in rows)
+    assert apply_catalog_rows(db_session, rows) == (0, 2)
+    assert snapshot() == before
+
+
+def test_apply_route_writes_the_rows_from_the_preview(client, db_session):
+    import json
+    from decimal import Decimal
+    from urllib.parse import unquote
+
+    from app.models.product import Product
+    from app.services.product_service import parse_catalog_xlsx
+
+    rows = parse_catalog_xlsx(db_session, _xlsx([_row(code="IM-VIA", default_vat_rate=8.5)]))
+    resp = client.post("/products/import/apply",
+                       data={"rows_json": json.dumps(rows, ensure_ascii=False, default=str)},
+                       follow_redirects=False)
+
+    assert resp.status_code == 303
+    assert "Đã tạo 1 sản phẩm" in unquote(resp.headers["location"])
+    db_session.expire_all()
+    product = db_session.query(Product).filter_by(code="IM-VIA").one()
+    assert product.default_vat_rate == Decimal("8.5")
+
+
+def test_apply_route_refuses_preview_that_still_has_an_error(client, db_session):
+    import json
+    from urllib.parse import unquote
+
+    from app.models.product import Product
+    from app.services.product_service import parse_catalog_xlsx
+
+    rows = parse_catalog_xlsx(db_session, _xlsx([
+        _row(code="IM-HALF"), _row(code="IM-BROKEN", default_price="abc")]))
+    resp = client.post("/products/import/apply",
+                       data={"rows_json": json.dumps(rows, ensure_ascii=False, default=str)},
+                       follow_redirects=False)
+
+    assert resp.status_code == 303
+    assert "Chưa ghi file nào" in unquote(resp.headers["location"])
+    db_session.expire_all()
+    assert db_session.query(Product).filter_by(code="IM-HALF").count() == 0
+
+
+def test_export_lists_every_product_with_header(client, make_product):
+    make_product(code="EXP-1", name="Một")
+    make_product(code="EXP-2", name="Hai")
+    rows = _read_xlsx(client.get("/products/export.xlsx").content)
+    assert rows[0] == _columns()
+    assert sorted(r[0] for r in rows[1:]) == ["EXP-1", "EXP-2"]
