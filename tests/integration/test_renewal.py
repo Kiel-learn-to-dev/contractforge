@@ -231,3 +231,28 @@ def test_full_year_contract_ends_on_31_december_and_renews_from_1_january(
         "items_json": json.dumps([{"product_id": prod.id}])})
     db_session.expire_all()
     assert child.end_date == date(2028, 12, 31)
+
+
+def test_new_contract_renewal_ignores_the_appendix_template_and_uses_the_product_default(
+        client, db_session, legacy_parent, make_template):
+    """Form gia hạn chỉ có một ô mẫu, dành cho phụ lục. Chọn hợp đồng mới không được dùng ô đó."""
+    from app.models.contract import Contract
+
+    p = legacy_parent
+    contract_tpl = make_template(name="Hợp đồng gia hạn RN", contract_type="Hợp đồng",
+                                 product_group="RN-G")
+    appendix_tpl = make_template(name="Phụ lục gia hạn RN", contract_type="Phụ lục",
+                                 product_group="RN-G")
+    p["new"].default_template_id = contract_tpl.id
+    db_session.commit()
+
+    resp = client.post(f"/contracts/{p['parent'].id}/renewal/new", data={
+        "mode": "contract", "contract_number": "HD-RN-FORM-2", "start_date": "2026-01-01",
+        "month_count": "12", "template_id": str(appendix_tpl.id),
+        "line_product": [str(p["new"].id)],
+    }, follow_redirects=False)
+    assert resp.status_code == 303
+
+    db_session.expire_all()
+    child = db_session.query(Contract).filter(Contract.contract_number == "HD-RN-FORM-2").one()
+    assert child.template_id == contract_tpl.id

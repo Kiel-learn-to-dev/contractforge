@@ -798,6 +798,9 @@ async def renewal_submit(request: Request, contract_id: int):
     form = await request.form()
     data = dict(form)
     mode = data.get("mode") or "addendum"
+    if mode == "contract":
+        # Ô mẫu trên form này là mẫu phụ lục; hợp đồng mới lấy mẫu mặc định của gói.
+        data.pop("template_id", None)
     raw_lines = form.getlist("line_product")
     items, line_error = [], ""
     for idx, val in enumerate(raw_lines, start=1):
