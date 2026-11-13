@@ -338,7 +338,12 @@ function setDateField(id, isoValue) {
 }
 
 // ─── TÍNH NGÀY KẾT THÚC / NGHIỆM THU / THANH LÝ ─────────────────────────────
-function toISO(d) { return d.toISOString().split('T')[0]; }
+// Lấy ngày theo múi giờ máy (không dùng toISOString: nó đổi sang UTC và lùi 1 ngày ở UTC+7)
+function toISO(d) {
+  var m = ('0' + (d.getMonth() + 1)).slice(-2);
+  var day = ('0' + d.getDate()).slice(-2);
+  return d.getFullYear() + '-' + m + '-' + day;
+}
 
 function calcEndDate() {
   var startEl = gid('inp-start');
