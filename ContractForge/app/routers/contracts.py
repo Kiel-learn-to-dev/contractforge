@@ -371,8 +371,9 @@ async def new_submit(request: Request):
                 bundle = [] if attachment_ids else None
                 contract = generate_docx(db, contract.id, attachment_ids, bundle)
                 if bundle:
-                    return _bundle_download(contract.contract_number, bundle)
-                flash_msg = f"Đã tạo hợp đồng và sinh file {contract.output_file_name}"
+                    flash_msg = f"Đã tạo hợp đồng, sinh file và {len(bundle) - 1} văn bản kèm theo"
+                else:
+                    flash_msg = f"Đã tạo hợp đồng và sinh file {contract.output_file_name}"
             except (LookupError, FileNotFoundError, ValueError) as gen_err:
                 flash_msg = f"Đã tạo bản nháp nhưng chưa sinh được file: {gen_err}"
                 flash_type = "warning"
@@ -408,16 +409,23 @@ def _template_options(db, group, role):
             for t in templates_for(db, group, role)]
 
 
-def _bundle_download(contract_number: str, bundle):
-    """Trả về một file ZIP gồm hợp đồng chính và các văn bản kèm theo đã tick."""
-    from app.services.attachment_service import build_bundle_zip
-    safe = re.sub(r'[\\/:*?"<>|]+', "-", contract_number or "").strip() or "hop-dong"
-    data = build_bundle_zip(bundle)
-    return StreamingResponse(
-        io.BytesIO(data),
-        media_type="application/zip",
-        headers={"Content-Disposition": f'attachment; filename="{safe}_kem_theo.zip"'},
-    )
+@router.get("/{contract_id}/bundle")
+def download_bundle(contract_id: int):
+    """ZIP văn bản kèm theo của lượt sinh gần nhất (hợp đồng chính nằm trong .docx riêng)."""
+    from app.services.contract_service import bundle_path_for
+    db = SessionLocal()
+    try:
+        c = get_contract(db, contract_id)
+        if not c:
+            raise HTTPException(404, "Không tìm thấy hợp đồng")
+        number = c.contract_number
+    finally:
+        db.close()
+    path = bundle_path_for(contract_id)
+    if not path:
+        raise HTTPException(404, "Chưa có ZIP văn bản kèm theo. Hãy tick văn bản rồi sinh lại.")
+    safe = re.sub(r'[\\/:*?"<>|]+', "-", number or "").strip() or "hop-dong"
+    return FileResponse(path, media_type="application/zip", filename=f"{safe}_kem_theo.zip")
 
 
 
@@ -610,6 +618,7 @@ def contract_detail(request: Request, contract_id: int):
         parent_contract = c.parent
         can_addendum = addendum_service.can_add_addendum(c)
         from app.services.template_service import ROLE_ATTACHMENT, group_of_contract
+        from app.services.contract_service import bundle_path_for
         attachment_templates = _template_options(db, group_of_contract(c), ROLE_ATTACHMENT)
         allowed_next = [s.value for s in VALID_TRANSITIONS.get(c.status, set())]
     finally:
@@ -623,6 +632,7 @@ def contract_detail(request: Request, contract_id: int):
         "parent_contract": parent_contract,
         "can_addendum": can_addendum,
         "attachment_templates": attachment_templates,
+        "bundle_ready": bundle_path_for(c.id) is not None,
         "events": events, "allowed_next": allowed_next,
         "status_labels": STATUS_LABELS,
         **_fv(request),
@@ -863,13 +873,14 @@ async def do_generate(request: Request, contract_id: int):
         bundle = [] if attachment_ids else None
         contract = generate_docx(db, contract_id, attachment_ids, bundle)
         fname = contract.output_file_name
-        if bundle:
-            return _bundle_download(contract.contract_number, bundle)
     except (LookupError, FileNotFoundError, ValueError) as e:
         return _flash(f"/contracts/{contract_id}", str(e), "danger")
     finally:
         db.close()
 
+    if bundle:
+        return _flash(f"/contracts/{contract_id}",
+                      f"Đã sinh file {fname} và {len(bundle) - 1} văn bản kèm theo", "success")
     return _flash(f"/contracts/{contract_id}",
                   f"Đã sinh file {fname}", "success")
 

@@ -114,8 +114,9 @@ Copy nguyên thư mục `data/` ra USB/Google Drive là đủ.
   ngừng được gợi ý thay bằng gói thay thế; so sánh giá theo tháng hiện ngay trên form.
 - **Khuôn số phụ lục:** đặt trong Cài đặt, phải có {seq} và {parent}.
 - **Văn bản kèm theo khi sinh hợp đồng:** trong form tạo hợp đồng hoặc ở chi tiết,
-  mở "Kèm văn bản" rồi tick các biên bản cần thiết. Có tick thì tải về một file ZIP
-  gồm hợp đồng chính và các văn bản đã chọn. Mẫu Phụ lục 01 BM02 / BM03 (tích hợp,
+  mở "Kèm văn bản" rồi tick các biên bản cần thiết. Có tick thì các văn bản được sinh
+  cùng lúc và lưu thành một file ZIP (hợp đồng chính cùng văn bản đã chọn). Sau khi
+  sinh, trang chi tiết có nút "Tải ZIP văn bản kèm theo". Mẫu Phụ lục 01 BM02 / BM03 (tích hợp,
   cho thuê bổ sung) là mẫu hợp đồng chính: chọn trong ô "Mẫu hợp đồng".
 
 ## Bộ văn bản theo sản phẩm (0.10.0)

@@ -143,11 +143,14 @@ def test_generate_bundles_own_group_and_shared_attachments(client, db_session, w
     w = world
     resp = client.post(f"/contracts/{w['draft'].id}/generate",
                        data={"attachment_ids": [str(w["t"]["a_handover"].id),
-                                                str(w["t"]["shared_ack"].id)]})
+                                                str(w["t"]["shared_ack"].id)]},
+                       follow_redirects=False)
 
-    assert resp.status_code == 200
-    assert resp.headers["content-type"] == "application/zip"
-    assert len(zipfile.ZipFile(io.BytesIO(resp.content)).namelist()) == 3
+    assert resp.status_code == 303
+    bundle = client.get(f"/contracts/{w['draft'].id}/bundle")
+    assert bundle.status_code == 200
+    assert bundle.headers["content-type"] == "application/zip"
+    assert len(zipfile.ZipFile(io.BytesIO(bundle.content)).namelist()) == 3
 
 
 def test_attachment_download_of_another_group_is_400(client, world):

@@ -28,6 +28,12 @@ và báo giá của riêng mình.
 - **Hợp đồng cũ mở được sau khi nâng cấp:** khởi động trên cơ sở dữ liệu cũ tự thêm
   cột nhóm sản phẩm.
 
+### Thay đổi
+
+- Sinh hợp đồng có tick văn bản kèm theo không còn tải ZIP ngay. Hệ thống lưu ZIP cạnh
+  file .docx (`outputs/bundles/<id>/`), chuyển về trang chi tiết kèm thông báo, và có nút
+  "Tải ZIP văn bản kèm theo". Sinh lại không tick thì ZIP cũ bị xóa; xóa hợp đồng thì xóa luôn ZIP.
+
 ## [0.9.0] — chưa phát hành
 
 Danh mục gói cước, hợp đồng theo dòng, phụ lục và gia hạn, văn bản kèm theo.
@@ -47,7 +53,7 @@ Danh mục gói cước, hợp đồng theo dòng, phụ lục và gia hạn, v�
 - **Văn bản kèm theo** (nghiệm thu, bàn giao, thanh lý, khác) sinh từ mẫu bất kỳ
   của loại đó, không đổi trạng thái hợp đồng.
 - **Tick văn bản kèm theo khi sinh hợp đồng** (form tạo hợp đồng và nút sinh ở chi tiết):
-  các văn bản được tick sinh cùng lượt và tải về một file ZIP cùng hợp đồng chính.
+  các văn bản được tick sinh cùng lượt và lưu thành một file ZIP cùng hợp đồng chính.
   Một văn bản lỗi thì hủy cả lượt: hợp đồng không chuyển sang Đã sinh và không ghi file.
 - **Mẫu biên bản:** gợi ý loại theo tiêu đề "BIÊN BẢN" (bàn giao, nghiệm thu), không chỉ theo trường.
 - **Xuất Excel** có thêm trước thuế, thuế, loại văn bản, hợp đồng gốc và sheet

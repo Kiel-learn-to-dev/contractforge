@@ -50,7 +50,7 @@
                 <label class="form-check-label" for="gen-att-{{ t.id }}">[{{ t.type }}] {{ t.name }}</label>
               </div>
               {% endfor %}
-              <div class="form-text">Có tick thì tải về file ZIP gồm hợp đồng và văn bản đã chọn. Lỗi một văn bản thì hủy cả lượt.</div>
+              <div class="form-text">Có tick thì sinh cùng lúc và lưu một file ZIP gồm hợp đồng và văn bản đã chọn; tải ZIP ở khung file bên phải. Lỗi một văn bản thì hủy cả lượt.</div>
             </div>
           </details>
           {% endif %}
@@ -290,6 +290,9 @@
           <div style="min-width:0;">
             <div class="fw-semibold text-truncate" style="font-size:.83rem;" title="{{ c.output_file_name }}">{{ c.output_file_name }}</div>
             <a href="/contracts/{{ c.id }}/download" class="small text-success"><i class="bi bi-download me-1"></i>Tải về</a>
+            {% if bundle_ready %}
+            <div><a href="/contracts/{{ c.id }}/bundle" class="small text-success"><i class="bi bi-file-zip me-1"></i>Tải ZIP văn bản kèm theo</a></div>
+            {% endif %}
           </div>
         </div>
         {% else %}

@@ -14,6 +14,7 @@ Chức năng:
 
 import json
 import os
+import shutil
 import re
 import unicodedata
 from datetime import date, datetime
@@ -809,6 +810,15 @@ def generate_docx(db: Session, contract_id: int, attachment_ids=(),
     with open(fpath, "wb") as f:
         f.write(rendered_bytes)
 
+    # ZIP văn bản kèm theo cũng ghi trước commit, để lượt sinh có ZIP khớp với file .docx mới
+    new_bundle = None
+    if bundle is not None:
+        try:
+            new_bundle = _write_bundle(contract.id, fname, bundle)
+        except OSError as exc:
+            _remove_quietly(fpath)
+            raise ValueError(f"Không ghi được file ZIP văn bản kèm theo: {exc}")
+
     # Lưu đường dẫn file cũ để xóa sau khi commit thành công
     old_file_path = contract.output_file_path
 
@@ -826,10 +836,9 @@ def generate_docx(db: Session, contract_id: int, attachment_ids=(),
         db.commit()
     except Exception as commit_err:
         # Commit fail → xóa file mới vừa ghi để tránh file rác, giữ nguyên trạng thái DB
-        try:
-            os.remove(fpath)
-        except OSError:
-            pass
+        _remove_quietly(fpath)
+        if new_bundle:
+            _remove_quietly(new_bundle)
         raise ValueError(f"Lỗi khi lưu thông tin hợp đồng: {commit_err}")
 
     # Commit thành công → xóa file .docx cũ (nếu khác file mới)
@@ -838,6 +847,8 @@ def generate_docx(db: Session, contract_id: int, attachment_ids=(),
             os.remove(old_file_path)
         except OSError:
             pass  # Không chặn flow nếu xóa file cũ thất bại
+    # ZIP của lượt trước không còn khớp với file .docx mới: chỉ giữ ZIP của lượt này (nếu có tick)
+    _clear_bundles(contract.id, keep=new_bundle)
     db.refresh(contract)
     return contract
 
@@ -907,6 +918,55 @@ _CONTRACT_OWNED_FILE_COLUMNS = (
 )
 
 
+def _bundle_dir(contract_id: int) -> str:
+    """Thư mục ZIP văn bản kèm theo của một hợp đồng: outputs/bundles/<id>, cạnh outputs/contracts."""
+    return os.path.join(os.path.dirname(OUTPUT_DIR), "bundles", str(contract_id))
+
+
+def bundle_path_for(contract_id: int) -> Optional[str]:
+    """File ZIP văn bản kèm theo của hợp đồng, hoặc None nếu chưa có."""
+    folder = _bundle_dir(contract_id)
+    if not os.path.isdir(folder):
+        return None
+    zips = [os.path.join(folder, name) for name in os.listdir(folder) if name.endswith(".zip")]
+    return max(zips, key=os.path.getmtime) if zips else None
+
+
+def _write_bundle(contract_id: int, docx_name: str, items) -> str:
+    """Ghi ZIP gồm hợp đồng chính và văn bản kèm theo. Tên ZIP lấy theo tên .docx của lượt này."""
+    from app.services.attachment_service import build_bundle_zip
+    folder = _bundle_dir(contract_id)
+    os.makedirs(folder, exist_ok=True)
+    stem = docx_name.rsplit(".", 1)[0]
+    path = os.path.join(folder, f"{stem}_kem_theo.zip")
+    with open(path, "wb") as f:
+        f.write(build_bundle_zip(items))
+    return path
+
+
+def _clear_bundles(contract_id: int, keep: Optional[str] = None) -> None:
+    """Xóa ZIP cũ của hợp đồng. `keep` là ZIP vừa sinh; None nghĩa là không còn ZIP nào."""
+    folder = _bundle_dir(contract_id)
+    if not os.path.isdir(folder):
+        return
+    for name in os.listdir(folder):
+        path = os.path.join(folder, name)
+        if path != keep:
+            _remove_quietly(path)
+    if keep is None:
+        try:
+            os.rmdir(folder)
+        except OSError:
+            pass
+
+
+def _remove_quietly(path: str) -> None:
+    try:
+        os.remove(path)
+    except OSError:
+        pass
+
+
 def _delete_owned_files(contract: Contract) -> int:
     """Xoá các file thuộc riêng hợp đồng này khỏi đĩa. Trả về số file đã xoá.
 
@@ -926,6 +986,7 @@ def _delete_owned_files(contract: Contract) -> int:
                 removed += 1
         except OSError:
             pass
+    shutil.rmtree(_bundle_dir(contract.id), ignore_errors=True)  # ZIP văn bản kèm theo
     return removed
 
 

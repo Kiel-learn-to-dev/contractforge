@@ -26,6 +26,10 @@ def setup_contract(db_session, make_customer, make_contract, make_template, tmp_
                              contract_type="Hợp đồng", name="Mẫu hợp đồng hư cấu")
     contract = make_contract(customer=customer, contract_number="HD-KT-1",
                              status=ContractStatus.Draft, template_id=main_tpl.id)
+    # Thư mục output dùng chung cho cả phiên test, id hợp đồng lặp lại giữa các test: dọn ZIP cũ.
+    import shutil
+    from app.services.contract_service import _bundle_dir
+    shutil.rmtree(_bundle_dir(contract.id), ignore_errors=True)
     return {"contract": contract, "main": main_tpl, "tmp": tmp_path}
 
 
@@ -92,17 +96,82 @@ def test_a_template_of_another_kind_is_refused_before_anything_is_written(
     assert contract.status == ContractStatus.Draft
 
 
-def test_generate_route_returns_a_zip_when_attachments_are_ticked(
+def test_generate_route_saves_the_zip_and_goes_back_to_the_contract(
         client, db_session, setup_contract, make_template, data_root):
     s = setup_contract
+    cid = s["contract"].id
     a1 = _att(make_template, s["tmp"], "Biên bản route hư cấu", "Bàn giao")
 
-    resp = client.post(f"/contracts/{s['contract'].id}/generate",
-                       data={"attachment_ids": [str(a1.id)]})
+    resp = client.post(f"/contracts/{cid}/generate",
+                       data={"attachment_ids": [str(a1.id)]}, follow_redirects=False)
 
-    assert resp.status_code == 200
-    assert resp.headers["content-type"] == "application/zip"
-    assert len(zipfile.ZipFile(io.BytesIO(resp.content)).namelist()) == 2
+    assert resp.status_code == 303
+    assert resp.headers["location"].startswith(f"/contracts/{cid}?")
+    bundle = client.get(f"/contracts/{cid}/bundle")
+    assert bundle.status_code == 200
+    assert bundle.headers["content-type"] == "application/zip"
+    assert "_kem_theo.zip" in bundle.headers["content-disposition"]
+    assert len(zipfile.ZipFile(io.BytesIO(bundle.content)).namelist()) == 2
+
+
+def test_contract_page_offers_the_zip_only_when_one_exists(
+        client, db_session, setup_contract, make_template, data_root):
+    s = setup_contract
+    cid = s["contract"].id
+    assert "/bundle" not in client.get(f"/contracts/{cid}").text
+
+    a1 = _att(make_template, s["tmp"], "Biên bản trang hư cấu", "Bàn giao")
+    client.post(f"/contracts/{cid}/generate", data={"attachment_ids": [str(a1.id)]})
+
+    assert f"/contracts/{cid}/bundle" in client.get(f"/contracts/{cid}").text
+
+
+def test_bundle_route_is_404_when_nothing_was_ticked(client, db_session, setup_contract, data_root):
+    cid = setup_contract["contract"].id
+    assert client.get(f"/contracts/{cid}/bundle").status_code == 404
+
+
+def test_failed_run_leaves_no_zip_behind(db_session, setup_contract, make_template, data_root):
+    from app.services.contract_service import bundle_path_for, generate_docx
+
+    s = setup_contract
+    good = _att(make_template, s["tmp"], "Biên bản tốt không zip", "Bàn giao")
+    broken = make_template(file_path=str(s["tmp"] / "khong_co_zip.docx"), contract_type="Nghiệm thu",
+                           name="Mẫu hỏng không zip")
+
+    with pytest.raises(ValueError, match="Mẫu hỏng không zip"):
+        generate_docx(db_session, s["contract"].id, [str(good.id), str(broken.id)], [])
+
+    assert bundle_path_for(s["contract"].id) is None
+
+
+def test_regenerating_without_ticks_removes_the_old_zip(db_session, setup_contract, make_template,
+                                                        data_root):
+    from app.services.contract_service import bundle_path_for, generate_docx
+
+    s = setup_contract
+    a1 = _att(make_template, s["tmp"], "Biên bản sinh lại hư cấu", "Bàn giao")
+    generate_docx(db_session, s["contract"].id, [str(a1.id)], [])
+    assert bundle_path_for(s["contract"].id) is not None
+
+    generate_docx(db_session, s["contract"].id)  # không tick gì
+
+    assert bundle_path_for(s["contract"].id) is None
+
+
+def test_deleting_the_contract_removes_its_zip(db_session, setup_contract, make_template, data_root):
+    import os
+    from app.services.contract_service import bundle_path_for, delete_contract, generate_docx
+
+    s = setup_contract
+    a1 = _att(make_template, s["tmp"], "Biên bản xóa hư cấu", "Bàn giao")
+    generate_docx(db_session, s["contract"].id, [str(a1.id)], [])
+    zip_path = bundle_path_for(s["contract"].id)
+    assert zip_path and os.path.exists(zip_path)
+
+    assert delete_contract(db_session, s["contract"].id)
+
+    assert not os.path.exists(zip_path)
 
 
 def test_generate_route_without_ticks_keeps_the_old_redirect(client, db_session, setup_contract,
