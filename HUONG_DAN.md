@@ -117,3 +117,23 @@ Copy nguyên thư mục `data/` ra USB/Google Drive là đủ.
   mở "Kèm văn bản" rồi tick các biên bản cần thiết. Có tick thì tải về một file ZIP
   gồm hợp đồng chính và các văn bản đã chọn. Mẫu Phụ lục 01 BM02 / BM03 (tích hợp,
   cho thuê bổ sung) là mẫu hợp đồng chính: chọn trong ô "Mẫu hợp đồng".
+
+## Bộ văn bản theo sản phẩm (0.10.0)
+
+Mỗi nhóm sản phẩm có bộ hợp đồng, phụ lục, biên bản và báo giá riêng. Mẫu không
+thuộc nhóm nào thì gọi là "dùng chung" và hiện ở mọi nhóm.
+
+- **Gán nhóm cho mẫu:** vào Mẫu hợp đồng, sửa mẫu, chọn "Thuộc nhóm sản phẩm".
+  Chọn "Dùng chung cho mọi sản phẩm" nếu mẫu dùng cho tất cả nhóm.
+- **Tải nhiều mẫu một lượt:** ở đầu trang Mẫu hợp đồng, chọn nhóm, chọn nhiều file .docx
+  rồi bấm "Tải nhiều mẫu". Loại mẫu (hợp đồng, phụ lục, biên bản...) được nhận ra từ
+  nội dung file. File trùng nội dung với mẫu đã có sẽ bị bỏ qua và được báo lại.
+- **Bật / tắt mẫu:** trong danh sách mẫu, bỏ tick "Bật trong danh sách chọn" để ẩn mẫu
+  khỏi các ô chọn. Mẫu tắt vẫn còn trong thư viện, không bị xóa.
+- **Biên bản tick sẵn:** khi lập hợp đồng, biên bản bàn giao và nghiệm thu của đúng nhóm
+  được tick sẵn. Biên bản thông tin (khác) và biên bản dùng chung không tick sẵn.
+- **Phụ lục bổ sung:** chỉ ghép được gói bổ sung cùng nhóm với gói chính.
+- **Ngày hết hạn là ngày cuối kỳ:** hợp đồng từ 01/01/2027 đủ 12 tháng hết hạn 31/12/2027.
+  Gia hạn bắt đầu từ 01/01/2028. Hợp đồng cũ giữ nguyên ngày đã lưu.
+- **Sinh hàng loạt:** ô chọn mẫu hiện mọi mẫu đang bật. Dòng nào chọn mẫu khác nhóm
+  với sản phẩm của dòng đó sẽ báo lỗi và không tạo hợp đồng.

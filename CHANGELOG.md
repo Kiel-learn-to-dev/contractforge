@@ -3,6 +3,31 @@
 Định dạng theo [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 đánh phiên bản theo [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0] — chưa phát hành
+
+Bộ văn bản riêng theo từng nhóm sản phẩm: mỗi nhóm có bộ hợp đồng, phụ lục, biên bản
+và báo giá của riêng mình.
+
+### Thêm mới
+
+- **Nhóm sản phẩm cho mẫu:** mỗi mẫu thuộc một nhóm hoặc dùng chung. Mẫu của nhóm
+  chỉ hiện ở sản phẩm cùng nhóm, trên form hợp đồng, phụ lục, gia hạn, biên bản và báo giá.
+- **Bật / tắt mẫu** trong danh sách mẫu. Mẫu tắt vẫn còn trong thư viện nhưng không
+  hiện trong ô chọn. Mẫu cũ được giữ, không bị xóa.
+- **Tải nhiều mẫu một lượt** cho một nhóm. Loại mẫu được nhận ra từ nội dung file.
+- **Gói sản phẩm có danh sách chức năng** nhập từ form sản phẩm, để in bảng chức năng
+  trong mẫu.
+- **Hợp đồng gia hạn bằng hợp đồng mới** tự lấy mẫu hợp đồng mặc định của gói.
+
+### Sửa lỗi
+
+- **Ngày kết thúc luôn là ngày cuối kỳ.** Hợp đồng từ 01/01 đủ 12 tháng hết hạn
+  31/12. Trước đây trình duyệt ở múi giờ UTC+7 lùi ngày kết thúc (và ngày nghiệm thu)
+  đi một ngày.
+- **Gia hạn bằng hợp đồng mới không còn bị từ chối** vì ô mẫu phụ lục đã điền sẵn.
+- **Hợp đồng cũ mở được sau khi nâng cấp:** khởi động trên cơ sở dữ liệu cũ tự thêm
+  cột nhóm sản phẩm.
+
 ## [0.9.0] — chưa phát hành
 
 Danh mục gói cước, hợp đồng theo dòng, phụ lục và gia hạn, văn bản kèm theo.
