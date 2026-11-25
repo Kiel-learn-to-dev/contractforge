@@ -1,0 +1,20 @@
+[package]
+name = "cf-docx"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+quick-xml = { workspace = true }
+regex = { workspace = true }
+thiserror = { workspace = true }
+zip = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[[bin]]
+name = "cf-render"
+path = "src/bin/cf-render.rs"
+
+[dev-dependencies]
+cf-testkit = { path = "../cf-testkit", features = ["docx"] }
+tempfile = { workspace = true }

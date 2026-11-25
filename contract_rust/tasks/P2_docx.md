@@ -8,7 +8,7 @@ Khác biệt có chủ ý: KB-03, KB-04, KB-05, KB-06.
 ---
 
 ### T2.01 — Lỗi và đọc gói ZIP · S
-- [ ] Xong
+- [x] Xong
 - **Làm:** `pub enum DocxError { Open(String), Xml(String), Io(io::Error) }`; `Package::read(bytes)`
   liệt kê entry theo thứ tự; `is_text_part(name)` theo bảng `04_DOCX_ENGINE.md` §2.
   Lỗi mở → `DocxError::Open` với `Display` = `"Không mở được file .docx: {chi tiết}"`.
@@ -19,7 +19,7 @@ Khác biệt có chủ ý: KB-03, KB-04, KB-05, KB-06.
 - **Phụ thuộc:** T0.03
 
 ### T2.02 — Cây XML: parse và serialize · M
-- [ ] Xong
+- [x] Xong
 - **Làm:** `xml::Node` (Element{name (giữ prefix), attrs (giữ thứ tự), children} | Text | Raw cho
   comment/PI/khai báo); `parse(&[u8]) -> Node`, `serialize(&Node) -> Vec<u8>` (giữ khai báo
   `<?xml ... standalone="yes"?>`, escape đúng). Text giữ nguyên khoảng trắng.
@@ -30,7 +30,7 @@ Khác biệt có chủ ý: KB-03, KB-04, KB-05, KB-06.
 - **Phụ thuộc:** T2.01
 
 ### T2.03 — Trích văn bản theo đoạn (dùng cho test) · S
-- [ ] Xong
+- [x] Xong
 - **Làm:** `pub fn paragraph_texts(part: &Node) -> Vec<String>` theo đúng `docx_render.json → text_extraction_rule`
   (mỗi `w:p` một chuỗi; `w:t`→chữ, `w:br`/`w:cr`→`\n`, `w:tab` là con của `w:r`→`\t`; bỏ chữ của đoạn lồng).
   `pub fn docx_texts(bytes) -> BTreeMap<String, Vec<String>>` cho document/header*/footer*.
@@ -42,7 +42,7 @@ Khác biệt có chủ ý: KB-03, KB-04, KB-05, KB-06.
 - **Phụ thuộc:** T2.02
 
 ### T2.04 — Tiện ích dựng docx tối giản cho test · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** trong `cf-testkit`: `pub fn make_docx(document_body_xml: &str) -> Vec<u8>` tạo ZIP hợp lệ tối thiểu
   (`[Content_Types].xml`, `_rels/.rels`, `word/document.xml` với namespace `w`, `word/_rels/document.xml.rels`).
 - **File:** `crates/cf-testkit/src/docx.rs`
@@ -51,7 +51,7 @@ Khác biệt có chủ ý: KB-03, KB-04, KB-05, KB-06.
 - **Phụ thuộc:** T2.01
 
 ### T2.05 — Đoạn chữ của một `w:p` · S
-- [ ] Xong
+- [x] Xong
 - **Làm:** `para::text_nodes(p) -> Vec<NodePath>`: các `w:t` của chính đoạn (qua `w:r` trực tiếp hoặc trong
   `w:hyperlink`, `w:ins`, `w:smartTag`, `w:sdt/w:sdtContent`), bỏ những `w:t` có tổ tiên `w:p` khác gần hơn.
   `para::joined_text(p)` + bảng ánh xạ vị trí ký tự → (chỉ số nút, offset **theo char**).
@@ -61,7 +61,7 @@ Khác biệt có chủ ý: KB-03, KB-04, KB-05, KB-06.
 - **Phụ thuộc:** T2.02, T2.04
 
 ### T2.06 — Quét placeholder thành Slot · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** regex `\{\{(\??)([A-Z][A-Z0-9_]*)\}\}`; `scan(p) -> Vec<Slot{key, optional, start, end}>`.
 - **File:** `src/slot.rs`
 - **Test (unit):** `{{A}}{{A}}` → 2 slot; `{{ A }}`, `{{a}}` → 0; `{{?A}}` → optional; placeholder cắt qua 3 `w:t` → start/end đúng nút.
@@ -69,7 +69,7 @@ Khác biệt có chủ ý: KB-03, KB-04, KB-05, KB-06.
 - **Phụ thuộc:** T2.05
 
 ### T2.07 — Thay một slot (KB-04) · S
-- [ ] Xong
+- [x] Xong
 - **Làm:** `replace_slot(p, slot, value)` theo `04_DOCX_ENGINE.md` §5 bước 4 mục 2–3, 5. Không xóa run, không đụng `w:rPr`.
   Đặt `xml:space="preserve"` khi cần.
 - **File:** `src/replace.rs`
@@ -79,7 +79,7 @@ Khác biệt có chủ ý: KB-03, KB-04, KB-05, KB-06.
 - **Phụ thuộc:** T2.06
 
 ### T2.08 — Xuống dòng và tab trong giá trị · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** giá trị có `\r\n`/`\n` → `w:br`, `\t` → `w:tab`, chèn trong cùng run (tách `w:t`).
 - **File:** `src/replace.rs`
 - **Test:** đoạn `"Nhiều dòng: ..."` trong scenario `lists_full` cho ra `"Nhiều dòng: Dòng 1\nDòng 2\tsau tab"`.
@@ -87,7 +87,7 @@ Khác biệt có chủ ý: KB-03, KB-04, KB-05, KB-06.
 - **Phụ thuộc:** T2.07
 
 ### T2.09 — `Template::compile` + `render` (chỉ thay giá trị) · M
-- [ ] Xong
+- [x] Xong
 - **Làm:** API `04_DOCX_ENGINE.md` §1 (`RenderData`); compile: parse các phần chữ; render: clone cây, thay mọi slot
   ở mọi `w:p` mọi độ sâu (KB-03), slot của khóa không có → giữ nguyên; ghi ZIP mới — entry không phải
   phần chữ **chép raw** (`raw_copy_file`), giữ thứ tự entry.
@@ -101,7 +101,7 @@ Khác biệt có chủ ý: KB-03, KB-04, KB-05, KB-06.
 - **Phụ thuộc:** T2.08
 
 ### T2.10 — Khóa của chính một dòng bảng · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** `row_keys(tr) -> BTreeSet<(key, optional)>` chỉ tính chữ thuộc các ô của dòng này (bỏ bảng lồng trong ô).
 - **File:** `src/table.rs`
 - **Test (unit):** ô chứa bảng lồng có `ITEM_NAME` → dòng ngoài **không** có khóa đó.
@@ -109,7 +109,7 @@ Khác biệt có chủ ý: KB-03, KB-04, KB-05, KB-06.
 - **Phụ thuộc:** T2.06
 
 ### T2.11 — Nhân dòng lặp · S
-- [ ] Xong
+- [x] Xong
 - **Làm:** bước 1 của §5 (không gồm bỏ bảng). Áp cho mọi `w:tbl` mọi độ sâu. Chạy trước khi thay giá trị chung.
 - **File:** `src/table.rs`, `src/template.rs`, `tests/render_lists.rs`
 - **Test:** render với `lists` của scenario `lists_full`: bảng thứ 2 có 4 dòng, chữ các dòng
@@ -118,7 +118,7 @@ Khác biệt có chủ ý: KB-03, KB-04, KB-05, KB-06.
 - **Phụ thuộc:** T2.09, T2.10
 
 ### T2.12 — Bỏ bảng rỗng (KB-05) và `omit_empty_tables` · XS
-- [ ] Xong
+- [x] Xong
 - **File:** `src/table.rs`, `tests/render_lists.rs`
 - **Test:** với `lists` rỗng: bảng dòng lặp còn 2 dòng (tiêu đề + tổng), bảng features biến mất (KB-05);
   với `omit_empty_tables={"features"}`: bảng features biến mất. Đếm bảng cấp 1 bằng `inspect`.
@@ -126,7 +126,7 @@ Khác biệt có chủ ý: KB-03, KB-04, KB-05, KB-06.
 - **Phụ thuộc:** T2.11
 
 ### T2.13 — Chế độ tương thích dòng Bên A · S
-- [ ] Xong
+- [x] Xong
 - **Làm:** `04_DOCX_ENGINE.md` §6, chỉ bảng **cấp 1 của thân**, chạy trước bước thay giá trị.
 - **Nguồn:** `ContractForge/app/services/docx_renderer.py::_insert_party_a_optional_rows, _set_cell_text`
 - **File:** `src/legacy_party_a.rs`, `src/template.rs`, `tests/render_lists.rs`
@@ -135,7 +135,7 @@ Khác biệt có chủ ý: KB-03, KB-04, KB-05, KB-06.
 - **Phụ thuộc:** T2.12
 
 ### T2.14 — Dòng tùy chọn `{{?KHOA}}` (KB-06) · S
-- [ ] Xong
+- [x] Xong
 - **Làm:** §5 bước 2 (dòng bảng và đoạn ngoài bảng). `{{?K}}` còn lại được thay như `{{K}}`.
 - **File:** `src/optional.rs`, `src/template.rs`, `tests/render_optional.rs`
 - **Test (dùng `make_docx`):** bảng 3 dòng `{{?A}}`, `{{?B}}`, `{{?C}}` với A="x", B="", C thiếu → còn 1 dòng chữ "x";
@@ -144,7 +144,7 @@ Khác biệt có chủ ý: KB-03, KB-04, KB-05, KB-06.
 - **Phụ thuộc:** T2.11
 
 ### T2.15 — Phân tích mẫu `analysis()` · S
-- [ ] Xong
+- [x] Xong
 - **Làm:** `04_DOCX_ENGINE.md` §7. `mapping` mặc định cần `CANONICAL_MAP` → `cf-docx` **không** phụ thuộc cf-core:
   trả `placeholders`, để cf-services dựng mapping. `uses_legacy_party_a`, `optional_keys` mới.
 - **Nguồn:** `ContractForge/app/services/template_analyzer.py::analyze`
@@ -155,7 +155,7 @@ Khác biệt có chủ ý: KB-03, KB-04, KB-05, KB-06.
 - **Phụ thuộc:** T2.09, T2.10
 
 ### T2.16 — Mẫu thật trong repo và báo giá tự nhập · XS
-- [ ] Xong
+- [x] Xong
 - **File:** `tests/render_samples.rs`
 - **Test:** `docx_render.json → samples` (render `sample_service_contract.docx`, `sample_form_08a.docx` với `context`/`lists`)
   và `manual_quotation` (`sample_quote_features.docx`, `omit_empty_tables={"features"}`).
@@ -163,7 +163,7 @@ Khác biệt có chủ ý: KB-03, KB-04, KB-05, KB-06.
 - **Phụ thuộc:** T2.13
 
 ### T2.17 — `write_new_file` · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** §8: `create_new`, hậu tố `_2`, `_3`…, `sync_all`, lỗi khi ghi → xóa file vừa tạo. Không dùng `rename`.
 - **File:** `src/write.rs`
 - **Test (unit, tempfile):** ghi 3 lần cùng tên → `a.docx`, `a_2.docx`, `a_3.docx`; nội dung file cũ không đổi.
@@ -171,7 +171,7 @@ Khác biệt có chủ ý: KB-03, KB-04, KB-05, KB-06.
 - **Phụ thuộc:** T2.01
 
 ### T2.18 — `TemplateCache` · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** khóa `(PathBuf, len, mtime)`, giá trị `Arc<Template>`, tối đa 32 mục (bỏ mục dùng lâu nhất).
   `get_or_compile(path) -> Result<Arc<Template>>`.
 - **File:** `src/cache.rs`
@@ -180,7 +180,7 @@ Khác biệt có chủ ý: KB-03, KB-04, KB-05, KB-06.
 - **Phụ thuộc:** T2.09
 
 ### T2.19 — CLI `cf-render` và kiểm bằng Word · S
-- [ ] Xong
+- [x] Xong
 - **Làm:** `src/bin/cf-render.rs`: `cf-render <mẫu.docx> <data.json> <thư_mục_ra> [tên]` — `data.json` dạng
   `{"values":{}, "lists":{}|null, "omit_empty_tables":[]}`; in đường dẫn file ra. Sinh 5 file từ 5 scenario
   vào `contract_rust/target/docx-check/` để chủ dự án mở bằng Word.
@@ -191,6 +191,6 @@ Khác biệt có chủ ý: KB-03, KB-04, KB-05, KB-06.
 ---
 
 ## Điểm kiểm Đợt 2
-- [ ] `cargo test -p cf-docx` xanh
-- [ ] `cargo tree -p cf-docx` không có cf-core, cf-db, rusqlite, slint
-- [ ] ĐD2 đã qua
+- [x] `cargo test -p cf-docx` xanh
+- [x] `cargo tree -p cf-docx` không có cf-core, cf-db, rusqlite, slint
+- [x] ĐD2 đã qua
