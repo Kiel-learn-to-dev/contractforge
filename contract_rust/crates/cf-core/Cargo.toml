@@ -1,0 +1,16 @@
+[package]
+name = "cf-core"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+chrono = { workspace = true }
+regex = { workspace = true }
+rust_decimal = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+unicode-normalization = { workspace = true }
+
+[dev-dependencies]
+cf-testkit = { path = "../cf-testkit" }
+serde_json = { workspace = true }

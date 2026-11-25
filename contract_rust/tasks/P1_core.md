@@ -12,7 +12,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 ## 1A. Nền
 
 ### T1.01 — Khung module và lỗi · S
-- [ ] Xong
+- [x] Xong
 - **Làm:** khai báo các module rỗng trong `lib.rs`: `text, money, fmt, parse, words, dates, names,
   lifecycle, numbering, pricing, template_rules, render_context, customer`. Tạo `error.rs`:
   `pub enum CoreError { Invalid(String) }` (thiserror, `Display` = chuỗi bên trong, không thêm tiền tố).
@@ -21,7 +21,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 - **Phụ thuộc:** T0.03
 
 ### T1.02 — `text::strip_diacritics`, `text::search_key` · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** `strip_diacritics(s)`: `Đ→D, đ→d` rồi NFD, bỏ ký tự combining (dùng
   `unicode_normalization::char::is_combining_mark`). `search_key(s) = strip_diacritics(s).to_lowercase()`.
 - **Nguồn:** `ContractForge/app/utils/file_naming.py::sanitize_for_filename` (phần bỏ dấu), JS `normalize` trong `ContractForge/templates/contracts/form.html`
@@ -31,7 +31,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 - **Phụ thuộc:** T1.01
 
 ### T1.03 — `money`: làm tròn và đọc Decimal · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** `round_half_up(d) -> Decimal` (MidpointAwayFromZero, 0 chữ số);
   `trunc_int(d) -> i128`; `to_decimal(raw: &str, field: &str) -> Result<Decimal, CoreError>`:
   rỗng/space → `"Thiếu {field}."`; không phải số → `"{field} không phải là số: '{raw}'"` (dấu nháy đơn như Python `repr`).
@@ -43,7 +43,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 - **Phụ thuộc:** T1.01
 
 ### T1.04 — `fmt::fmt_currency` · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** `fmt_currency(Option<Decimal>) -> String`: None → `""`; **cắt** về số nguyên; chấm ngăn nghìn; số âm giữ dấu `-`.
 - **Nguồn:** `ContractForge/app/services/docx_renderer.py::_fmt_currency`
 - **File:** `src/fmt.rs`, `tests/fixture_formatting.rs`
@@ -52,7 +52,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 - **Phụ thuộc:** T1.03
 
 ### T1.05 — `fmt::fmt_number` · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** None → `""`; giá trị nguyên → không phần lẻ; có lẻ → in Decimal **giữ nguyên số chữ số** như đã lưu (`12.3400` → `"12.3400"`, không bỏ 0 thừa).
 - **Nguồn:** `docx_renderer.py::_fmt_number`
 - **File:** `src/fmt.rs`, `tests/fixture_formatting.rs`
@@ -61,7 +61,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 - **Phụ thuộc:** T1.04
 
 ### T1.06 — `fmt::fmt_vat` · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** như `fmt_number` nhưng thêm `%`.
 - **Nguồn:** `docx_renderer.py::_fmt_vat`
 - **File:** `src/fmt.rs`, `tests/fixture_formatting.rs`
@@ -70,7 +70,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 - **Phụ thuộc:** T1.05
 
 ### T1.07 — `fmt::fmt_money` · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** **làm tròn half-up** rồi chấm ngăn nghìn (khác `fmt_currency`).
 - **Nguồn:** `pricing.py::fmt_money`
 - **File:** `src/fmt.rs`, `tests/fixture_formatting.rs`
@@ -79,7 +79,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 - **Phụ thuộc:** T1.04
 
 ### T1.08 — `parse::safe_decimal` · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** `safe_decimal(&str) -> Option<Decimal>`: trim; rỗng → None; **bỏ mọi `.`** rồi `,`→`.`; parse; lỗi → None.
   Lưu ý `"12 000"` → xem fixture (Python `Decimal("12 000")` lỗi → None).
 - **Nguồn:** `ContractForge/app/services/contract_service.py::_safe_decimal`
@@ -89,7 +89,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 - **Phụ thuộc:** T1.03
 
 ### T1.09 — `parse::safe_int` · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** trim; rỗng → None; bỏ `,` và `.`; parse `i64`; lỗi → None. `"007"` → 7, `"-5"` → -5.
 - **Nguồn:** `contract_service.py::_safe_int`
 - **File:** `src/parse.rs`, `tests/fixture_formatting.rs`
@@ -98,7 +98,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 - **Phụ thuộc:** T1.08
 
 ### T1.10 — `parse::dec_str` · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** `dec_str(Option<Decimal>) -> String`: None → `""`; bỏ số 0 thừa, không dạng mũ (`1E+3` → `"1000"`).
 - **Nguồn:** `contract_service.py::_dec_str`
 - **File:** `src/parse.rs`, `tests/fixture_formatting.rs`
@@ -107,7 +107,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 - **Phụ thuộc:** T1.08
 
 ### T1.11 — `parse::manual_number`, `fmt::unit_price_text` · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** `manual_number(raw, label, money) -> Result<Decimal, CoreError>` theo `03_NGHIEP_VU.md` §1.4;
   `unit_price_text(Decimal) -> String` (giữ phần lẻ, chấm ngăn nghìn, phẩy thập phân, bỏ 0 thừa).
 - **Nguồn:** `ContractForge/app/services/manual_quotation.py::_number, _unit_price_text`
@@ -119,7 +119,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 ## 1B. Chữ, ngày, tên
 
 ### T1.12 — `words::amount_to_words` (+ KB-01) · S
-- [ ] Xong
+- [x] Xong
 - **Làm:** `amount_to_words(n: u64) -> String`, `amount_to_words_chan(n: u64)`, và
   `amount_to_words_dec(d: Decimal) -> Result<String, CoreError>` (cắt phần lẻ; âm → `"Không hỗ trợ số âm"`).
   Phần tỷ ≥ 1000 → gọi đệ quy (không suffix) rồi thêm `" tỷ"` (**KB-01**).
@@ -131,7 +131,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 - **Phụ thuộc:** T1.03
 
 ### T1.13 — `dates::add_months` · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** `add_months(d: NaiveDate, months: i32) -> NaiveDate`, kẹp ngày cuối tháng.
 - **Nguồn:** `ContractForge/app/utils/date_helpers.py::add_months`
 - **File:** `src/dates.rs`, `tests/fixture_dates.rs`
@@ -140,7 +140,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 - **Phụ thuộc:** T1.01
 
 ### T1.14 — `dates::compute_end_date`, `months_between` · XS
-- [ ] Xong
+- [x] Xong
 - **Nguồn:** `date_helpers.py::compute_end_date, months_between`
 - **File:** `src/dates.rs`, `tests/fixture_dates.rs`
 - **Test:** `dates.json → compute_end_date, months_between`.
@@ -148,7 +148,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 - **Phụ thuộc:** T1.13
 
 ### T1.15 — `dates::parse_date_input` · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** `-> Result<Option<NaiveDate>, CoreError>`; 5 định dạng theo thứ tự; năm 2 chữ số theo quy tắc
   Python `%y` (00–68 → 20xx, 69–99 → 19xx); câu lỗi y fixture.
 - **Nguồn:** `date_helpers.py::parse_date_input`
@@ -158,7 +158,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 - **Phụ thuộc:** T1.13
 
 ### T1.16 — `dates::format_date_vn`, `split_date_parts` · XS
-- [ ] Xong
+- [x] Xong
 - **Nguồn:** `date_helpers.py::format_date_vn, split_date_parts`
 - **File:** `src/dates.rs`, `tests/fixture_dates.rs`
 - **Test:** `dates.json → format`.
@@ -166,7 +166,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 - **Phụ thuộc:** T1.13
 
 ### T1.17 — `names::make_contract_slug` · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** theo `03_NGHIEP_VU.md` §1.3. Regex không phân biệt hoa thường, `\b` Unicode. Thay thế lần lượt như Python.
 - **Nguồn:** `ContractForge/app/services/contract_service.py::make_contract_slug`
 - **File:** `src/names.rs`, `tests/fixture_names.rs`
@@ -175,7 +175,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 - **Phụ thuộc:** T1.02
 
 ### T1.18 — `names::sanitize_for_filename` · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** thay `ĐđƠơƯư`, NFD bỏ dấu, `[^\w\-]`→`_`, gộp `_`, bỏ `_` hai đầu, **cắt theo số ký tự** rồi viết hoa.
 - **Nguồn:** `ContractForge/app/utils/file_naming.py::sanitize_for_filename`
 - **File:** `src/names.rs`, `tests/fixture_names.rs`
@@ -184,7 +184,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 - **Phụ thuộc:** T1.02
 
 ### T1.19 — `names::make_output_filename` · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** nhận `ts: NaiveDateTime` (không tự lấy giờ).
 - **Nguồn:** `file_naming.py::make_output_filename`
 - **File:** `src/names.rs`, `tests/fixture_names.rs`
@@ -193,7 +193,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 - **Phụ thuộc:** T1.18
 
 ### T1.20 — `names::safe_number_part`, `names::windows_safe_filename` (KB-19) · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** `safe_number_part(s)` = thay mọi ký tự không khớp `[\w-]` bằng `_` (dùng cho tên file scan/hóa đơn/ủy nhiệm chi).
   `windows_safe_filename(s)` = thay `\ / : * ? " < > |` bằng `-`.
 - **Nguồn:** `ContractForge/app/routers/contracts.py` (`re.sub(r"[^\w\-]", "_", ...)`), **KB-19**
@@ -205,7 +205,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 ## 1C. Vòng đời
 
 ### T1.21 — `lifecycle::ContractStatus` · S
-- [ ] Xong
+- [x] Xong
 - **Làm:** enum 10 giá trị + `Unknown(String)`; `as_str`, `FromStr` (chuỗi lạ → `Unknown`), `parse_status`
   (chuỗi lạ → lỗi `"Trạng thái không hợp lệ: '...'"`); `label()` và `color()` từ `STATUS_LABELS`;
   hằng `ACTIVE_LIFECYCLE`, `RENEWAL_COUNTS`, `IN_SERVICE`, `UNPAID`, `DEPRECATED` (`&[ContractStatus]`);
@@ -217,7 +217,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 - **Phụ thuộc:** T1.01
 
 ### T1.22 — `lifecycle::validate_transition` · S
-- [ ] Xong
+- [x] Xong
 - **Làm:** `pub struct Evidence { has_invoice: bool, has_payment_slip: bool }`;
   `valid_targets(from) -> &[ContractStatus]`; `validate_transition(from, to: &str, ev) -> Result<ContractStatus, CoreError>`
   câu lỗi y Python (danh sách cho phép sắp theo tên, rỗng → `'không có'`).
@@ -229,7 +229,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 - **Phụ thuộc:** T1.21
 
 ### T1.23 — `lifecycle`: hết hạn · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** `days_to_expiry(end, today)`, `expiry_bucket(end, today) -> Option<Bucket>`
   (`Expired|Critical|Warning|Info`), `is_expiring_soon`. Hằng ngưỡng 7/14/30/60.
 - **Nguồn:** `lifecycle.py::days_to_expiry, expiry_bucket, is_expiring_soon`
@@ -241,7 +241,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 ## 1D. Đánh số
 
 ### T1.24 — `numbering::validate_format`, `build_number` · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** câu lỗi y fixture (`{sorted(unknown)}` in dạng `['foo']`). `build_number(seq, slug, fmt: Option<&str>, year)`.
 - **Nguồn:** `ContractForge/app/services/numbering.py::validate_format, build_number`
 - **File:** `src/numbering.rs`, `tests/fixture_numbering.rs`
@@ -250,7 +250,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 - **Phụ thuộc:** T1.01
 
 ### T1.25 — `numbering::next_number` (KB-02) · S
-- [ ] Xong
+- [x] Xong
 - **Làm:** `format_regex(fmt, year) -> Regex` (mục KB-02); `next_seq(used: &BTreeSet<u32>) -> String` (lấp khoảng trống, đệm 2);
   `next_number(fmt, slug, year, existing_numbers_of_customer: &[&str]) -> String`.
   `seq_of` của Python **không** port.
@@ -261,7 +261,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 - **Phụ thuộc:** T1.24
 
 ### T1.26 — `numbering`: khuôn phụ lục · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** `validate_addendum_format`, `build_addendum_number`, `parse_addendum_seq`, `next_addendum_seq`. Mặc định `PL{seq}/{parent}`.
 - **Nguồn:** `numbering.py` (phần addendum)
 - **File:** `src/numbering.rs`, `tests/fixture_numbering.rs`
@@ -272,7 +272,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 ## 1E. Tính tiền
 
 ### T1.27 — `pricing::normalize_quantity`, `period_count` · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** `PricingError` = `CoreError::Invalid` với câu y Python.
 - **Nguồn:** `ContractForge/app/services/pricing.py::normalize_quantity, period_count`
 - **File:** `src/pricing.rs`, `tests/fixture_pricing.rs`
@@ -281,7 +281,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 - **Phụ thuộc:** T1.03
 
 ### T1.28 — `pricing::price_line` · S
-- [ ] Xong
+- [x] Xong
 - **Làm:** `pub struct Line {description, unit_label, quantity, period_count, unit_price_pre_vat, vat_rate,
   amount_pre_vat, vat_amount, amount_total, product_id: Option<i64>, note}`;
   `pub struct LineInput {...}` (các trường chuỗi/Decimal như Python); `price_line(LineInput) -> Result<Line, CoreError>`.
@@ -293,7 +293,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 - **Phụ thuộc:** T1.27
 
 ### T1.29 — `pricing::sum_lines`, `unit_price_with_vat`, `describe` · XS
-- [ ] Xong
+- [x] Xong
 - **Nguồn:** `pricing.py::sum_lines, unit_price_with_vat, describe`
 - **File:** `src/pricing.rs`, `tests/fixture_pricing.rs`
 - **Test:** `pricing.json → sum_lines, unit_price_with_vat, empty_sum`.
@@ -301,7 +301,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 - **Phụ thuộc:** T1.28, T1.12, T1.07
 
 ### T1.30 — `pricing::addon_months` · XS
-- [ ] Xong
+- [x] Xong
 - **Nguồn:** `pricing.py::addon_months`
 - **File:** `src/pricing.rs`, `tests/fixture_pricing.rs`
 - **Test:** `pricing.json → addon_months`.
@@ -309,7 +309,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 - **Phụ thuộc:** T1.13
 
 ### T1.31 — `pricing::legacy_amounts` · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** gộp công thức legacy của `create_draft` và `_build_contract_from_params` thành một hàm:
   vào `(unit_count, month_count, unit_price_pre_vat, vat_rate, unit_price_vat, quantity, total_amount)` (Option),
   ra các giá trị đã điền. **Không làm tròn.** `amount_text` = `amount_to_words_dec(total)` nếu có tổng.
@@ -325,7 +325,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 ## 1F. Mẫu và ngữ cảnh
 
 ### T1.32 — `template_rules`: vai trò · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** `enum Role {Contract, Addon, Renewal, Attachment, Quotation, QuoteRequest}`; hằng nhãn loại;
   `CONTRACT_TYPES`; `has_role(contract_type, role)`; `normalize_group(Option<&str>) -> Option<String>`;
   `role_of_doc_kind`.
@@ -336,7 +336,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 - **Phụ thuộc:** T1.01
 
 ### T1.33 — `template_rules::check_template_for`, `preselected_attachment`, `template_kind` · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** `pub struct TemplateInfo { id, name, contract_type, product_group: Option<String>, is_active }`.
 - **Nguồn:** `template_service.py::check_template_for, preselected_attachment, _template_kind`
 - **File:** `src/template_rules.rs`, `tests/fixture_template_rules.rs`
@@ -345,7 +345,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 - **Phụ thuộc:** T1.32
 
 ### T1.34 — `template_rules::templates_for`, `default_template_for` · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** nhận `&[TemplateInfo]`, trả `Vec<&TemplateInfo>` lọc + sắp (mẫu riêng trước, rồi tên `to_lowercase`).
 - **Nguồn:** `template_service.py::templates_for, default_template_for`
 - **File:** `src/template_rules.rs`
@@ -354,7 +354,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 - **Phụ thuộc:** T1.33
 
 ### T1.35 — `render_context`: struct đầu vào · S
-- [ ] Xong
+- [x] Xong
 - **Làm:** struct thuần (không phụ thuộc cf-db): `CustomerView` (mọi trường dùng trong ngữ cảnh + `units: Vec<UnitView>`),
   `ContractView`, `ParentView {contract_number, sign_date}`, `ProductView {name, code}`, `PartyB` (13 trường),
   `TemplateMapping(BTreeMap<String,String>)`. `ContractStatus` dùng của `lifecycle`.
@@ -367,7 +367,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 - **Phụ thuộc:** T1.21
 
 ### T1.36 — `render_context::build_render_context` · S
-- [ ] Xong
+- [x] Xong
 - **Làm:** `build_render_context(c: &ContractView, cust: &CustomerView, parent: Option<&ParentView>,
   product: Option<&ProductView>, party_b: &PartyB, addendum_format: Option<&str>) -> BTreeMap<String,String>`.
   Mọi khóa y fixture.
@@ -378,7 +378,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 - **Phụ thuộc:** T1.35, T1.04–T1.07, T1.12, T1.16, T1.26
 
 ### T1.37 — `render_context::build_08a_context`, `work_content` · XS
-- [ ] Xong
+- [x] Xong
 - **Nguồn:** `ContractForge/app/services/form08a_service.py::build_08a_context, _work_content`
 - **File:** `src/render_context.rs`, `tests/fixture_render_context.rs`
 - **Test:** `render_context.json → cases[*].context_08a, work_content`.
@@ -386,7 +386,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 - **Phụ thuộc:** T1.36
 
 ### T1.38 — `render_context`: `CANONICAL_MAP` và `apply_template_mapping` · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** hằng `CANONICAL_MAP: &[(&str,&str)]`, `ROW_PLACEHOLDERS`, `ALL_CANONICAL_FIELDS` (sắp xếp, không trùng) —
   **chép từ fixture** `render_context.json → canonical_map, row_placeholders`. `apply_template_mapping(ctx, mapping)`.
 - **Nguồn:** `ContractForge/app/services/template_analyzer.py::CANONICAL_MAP`, `docx_renderer.py::apply_template_mapping`
@@ -396,7 +396,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 - **Phụ thuộc:** T1.36
 
 ### T1.39 — `render_context::lists_from_lines` · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** vào `&[Line]` + `&[Vec<Feature>]` (`Feature {name, description: Option<String>}`), ra
   `BTreeMap<String, Vec<BTreeMap<String,String>>>` với khóa `items`, `features`.
 - **Nguồn:** `docx_renderer.py::lists_from_lines`
@@ -406,7 +406,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 - **Phụ thuộc:** T1.28, T1.36
 
 ### T1.40 — `pricing::auto_pricing_description` (legacy) · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** `"Số tiền = Đơn giá có VAT ({X} VNĐ) × {N} cơ sở{ (tên; tên) nếu >1} × {M} tháng = {T} VNĐ"`;
   thiếu giá có VAT hoặc tháng → `""`. Tiền **cắt** (`int`) rồi chấm ngăn nghìn.
 - **Nguồn:** `ContractForge/app/services/batch_generator.py::_auto_pricing_description`
@@ -417,7 +417,7 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 - **Phụ thuộc:** T1.04
 
 ### T1.41 — `pricing::build_lines` (dòng từ form) · S
-- [ ] Xong
+- [x] Xong
 - **Làm:** `pub struct ProductRule { id, name, kind, group_code, is_active, unit_label, default_price,
   default_vat_rate, price_period_months, min_quantity, quantity_step }`;
   `build_lines(items: &[ItemInput], products: impl Fn(i64)->Option<ProductRule>, month_count, require_main) -> Result<Vec<Line>, CoreError>`;
@@ -433,6 +433,6 @@ Lệnh chạy test một nhóm: `cargo test -p cf-core --test fixture_<module>`.
 ---
 
 ## Điểm kiểm Đợt 1
-- [ ] `cargo test -p cf-core` xanh, mọi fixture của cf-core được dùng ít nhất một lần
-- [ ] `cargo clippy -p cf-core -- -D warnings` sạch
-- [ ] `cargo tree -p cf-core` không có rusqlite/zip/slint
+- [x] `cargo test -p cf-core` xanh, mọi fixture của cf-core được dùng ít nhất một lần
+- [x] `cargo clippy -p cf-core -- -D warnings` sạch
+- [x] `cargo tree -p cf-core` không có rusqlite/zip/slint
