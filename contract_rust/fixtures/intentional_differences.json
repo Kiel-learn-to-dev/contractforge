@@ -1,0 +1,147 @@
+{
+ "note": "Những chỗ bản Rust CỐ Ý ra kết quả khác fixture Python. SINH BỞI tools/gen_fixtures.py (python_result = code Python thật; rust_expected = bản cài tham chiếu trong script). Test Rust dùng 'rust_expected'. Mô tả: docs/06_KHAC_BIET_CO_CHU_Y.md",
+ "KB-01_amount_to_words": [
+  {
+   "input": "1000000000000",
+   "python_result": {
+    "err": "IndexError",
+    "msg": "list index out of range"
+   },
+   "rust_expected": {
+    "words": "Một nghìn tỷ đồng",
+    "chan": "Một nghìn tỷ đồng chẵn"
+   }
+  },
+  {
+   "input": "1000000000001",
+   "python_result": {
+    "err": "IndexError",
+    "msg": "list index out of range"
+   },
+   "rust_expected": {
+    "words": "Một nghìn tỷ, một đồng",
+    "chan": "Một nghìn tỷ, một đồng chẵn"
+   }
+  },
+  {
+   "input": "2500000000000",
+   "python_result": {
+    "err": "IndexError",
+    "msg": "list index out of range"
+   },
+   "rust_expected": {
+    "words": "Hai nghìn, năm trăm tỷ đồng",
+    "chan": "Hai nghìn, năm trăm tỷ đồng chẵn"
+   }
+  },
+  {
+   "input": "999999999999999",
+   "python_result": {
+    "err": "IndexError",
+    "msg": "list index out of range"
+   },
+   "rust_expected": {
+    "words": "Chín trăm chín mươi chín nghìn, chín trăm chín mươi chín tỷ, chín trăm chín mươi chín triệu, chín trăm chín mươi chín nghìn, chín trăm chín mươi chín đồng",
+    "chan": "Chín trăm chín mươi chín nghìn, chín trăm chín mươi chín tỷ, chín trăm chín mươi chín triệu, chín trăm chín mươi chín nghìn, chín trăm chín mươi chín đồng chẵn"
+   }
+  }
+ ],
+ "KB-02_numbering_next_seq": [
+  {
+   "case": "seq không đứng đầu",
+   "format": "HD{seq}",
+   "year": 2026,
+   "slug": "TYTSONGXANH",
+   "existing_numbers_of_customer": [
+    "HD01",
+    "HD02"
+   ],
+   "python_result": "HD01",
+   "rust_expected": "HD03"
+  },
+  {
+   "case": "khuôn khác không đếm chung",
+   "format": "{seq}/{slug}/{year}",
+   "year": 2026,
+   "slug": "TYTSONGXANH",
+   "existing_numbers_of_customer": [
+    "01/ABC-TYTSONGXANH/XYZ/2026"
+   ],
+   "python_result": "02/TYTSONGXANH/2026",
+   "rust_expected": "01/TYTSONGXANH/2026"
+  },
+  {
+   "case": "cùng khuôn vẫn lấp khoảng trống",
+   "format": "{seq}/{slug}/{year}",
+   "year": 2026,
+   "slug": "TYTSONGXANH",
+   "existing_numbers_of_customer": [
+    "01/TYTSONGXANH/2026",
+    "03/TYTSONGXANH/2026",
+    "02/TYTSONGXANH/2025"
+   ],
+   "python_result": "02/TYTSONGXANH/2026",
+   "rust_expected": "02/TYTSONGXANH/2026"
+  },
+  {
+   "case": "slug cũ (khách đổi tên) vẫn được đếm",
+   "format": "{seq}/{slug}/{year}",
+   "year": 2026,
+   "slug": "TYTMOI",
+   "existing_numbers_of_customer": [
+    "01/TYTCU/2026"
+   ],
+   "python_result": "02/TYTMOI/2026",
+   "rust_expected": "02/TYTMOI/2026"
+  },
+  {
+   "case": "khuôn có tiền tố cố định",
+   "format": "{seq}/ABC-{slug}/XYZ/{year}",
+   "year": 2026,
+   "slug": "TYTSONGXANH",
+   "existing_numbers_of_customer": [
+    "01/ABC-TYTSONGXANH/XYZ/2026",
+    "01/TYTSONGXANH/2026"
+   ],
+   "python_result": "02/ABC-TYTSONGXANH/XYZ/2026",
+   "rust_expected": "02/ABC-TYTSONGXANH/XYZ/2026"
+  }
+ ],
+ "KB-03_docx_nested_and_all_parts": {
+  "applies_to": "docx_render.json → scenarios[*].expected_texts['word/document.xml']",
+  "replace_paragraph": {
+   "from": "Lồng: {{CONTRACT_NUMBER}}",
+   "to": "Lồng: 01/TYTSONGXANH/2026"
+  }
+ },
+ "KB-05_docx_empty_table_removed": [
+  {
+   "scenario": "lists_empty",
+   "python_top_level_table_rows": [
+    6,
+    2,
+    0,
+    1
+   ],
+   "rust_expected": [
+    6,
+    2,
+    1
+   ]
+  }
+ ],
+ "KB-19_manual_quotation_filename": [
+  {
+   "layout": "features",
+   "quote_date": "05/01/2026",
+   "python_result": "BaoGia_features_05/01/2026.docx",
+   "rust_expected": "BaoGia_features_05-01-2026.docx"
+  },
+  {
+   "layout": "compact",
+   "quote_date": "2026-01-05",
+   "python_result": "BaoGia_compact_2026-01-05.docx",
+   "rust_expected": "BaoGia_compact_2026-01-05.docx"
+  }
+ ]
+}

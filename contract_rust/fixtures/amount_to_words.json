@@ -1,0 +1,456 @@
+{
+ "source": "app/utils/amount_to_words_vi.py",
+ "cases": [
+  {
+   "input": "0",
+   "words": {
+    "ok": "Không đồng"
+   },
+   "chan": {
+    "ok": "Không đồng chẵn"
+   }
+  },
+  {
+   "input": "1",
+   "words": {
+    "ok": "Một đồng"
+   },
+   "chan": {
+    "ok": "Một đồng chẵn"
+   }
+  },
+  {
+   "input": "5",
+   "words": {
+    "ok": "Năm đồng"
+   },
+   "chan": {
+    "ok": "Năm đồng chẵn"
+   }
+  },
+  {
+   "input": "10",
+   "words": {
+    "ok": "Mười đồng"
+   },
+   "chan": {
+    "ok": "Mười đồng chẵn"
+   }
+  },
+  {
+   "input": "11",
+   "words": {
+    "ok": "Mười một đồng"
+   },
+   "chan": {
+    "ok": "Mười một đồng chẵn"
+   }
+  },
+  {
+   "input": "14",
+   "words": {
+    "ok": "Mười bốn đồng"
+   },
+   "chan": {
+    "ok": "Mười bốn đồng chẵn"
+   }
+  },
+  {
+   "input": "15",
+   "words": {
+    "ok": "Mười lăm đồng"
+   },
+   "chan": {
+    "ok": "Mười lăm đồng chẵn"
+   }
+  },
+  {
+   "input": "20",
+   "words": {
+    "ok": "Hai mươi đồng"
+   },
+   "chan": {
+    "ok": "Hai mươi đồng chẵn"
+   }
+  },
+  {
+   "input": "21",
+   "words": {
+    "ok": "Hai mươi mốt đồng"
+   },
+   "chan": {
+    "ok": "Hai mươi mốt đồng chẵn"
+   }
+  },
+  {
+   "input": "24",
+   "words": {
+    "ok": "Hai mươi bốn đồng"
+   },
+   "chan": {
+    "ok": "Hai mươi bốn đồng chẵn"
+   }
+  },
+  {
+   "input": "25",
+   "words": {
+    "ok": "Hai mươi lăm đồng"
+   },
+   "chan": {
+    "ok": "Hai mươi lăm đồng chẵn"
+   }
+  },
+  {
+   "input": "55",
+   "words": {
+    "ok": "Năm mươi lăm đồng"
+   },
+   "chan": {
+    "ok": "Năm mươi lăm đồng chẵn"
+   }
+  },
+  {
+   "input": "100",
+   "words": {
+    "ok": "Một trăm đồng"
+   },
+   "chan": {
+    "ok": "Một trăm đồng chẵn"
+   }
+  },
+  {
+   "input": "101",
+   "words": {
+    "ok": "Một trăm không mươi một đồng"
+   },
+   "chan": {
+    "ok": "Một trăm không mươi một đồng chẵn"
+   }
+  },
+  {
+   "input": "105",
+   "words": {
+    "ok": "Một trăm không mươi năm đồng"
+   },
+   "chan": {
+    "ok": "Một trăm không mươi năm đồng chẵn"
+   }
+  },
+  {
+   "input": "110",
+   "words": {
+    "ok": "Một trăm mười đồng"
+   },
+   "chan": {
+    "ok": "Một trăm mười đồng chẵn"
+   }
+  },
+  {
+   "input": "111",
+   "words": {
+    "ok": "Một trăm mười một đồng"
+   },
+   "chan": {
+    "ok": "Một trăm mười một đồng chẵn"
+   }
+  },
+  {
+   "input": "115",
+   "words": {
+    "ok": "Một trăm mười lăm đồng"
+   },
+   "chan": {
+    "ok": "Một trăm mười lăm đồng chẵn"
+   }
+  },
+  {
+   "input": "121",
+   "words": {
+    "ok": "Một trăm hai mươi mốt đồng"
+   },
+   "chan": {
+    "ok": "Một trăm hai mươi mốt đồng chẵn"
+   }
+  },
+  {
+   "input": "125",
+   "words": {
+    "ok": "Một trăm hai mươi lăm đồng"
+   },
+   "chan": {
+    "ok": "Một trăm hai mươi lăm đồng chẵn"
+   }
+  },
+  {
+   "input": "999",
+   "words": {
+    "ok": "Chín trăm chín mươi chín đồng"
+   },
+   "chan": {
+    "ok": "Chín trăm chín mươi chín đồng chẵn"
+   }
+  },
+  {
+   "input": "1000",
+   "words": {
+    "ok": "Một nghìn đồng"
+   },
+   "chan": {
+    "ok": "Một nghìn đồng chẵn"
+   }
+  },
+  {
+   "input": "1001",
+   "words": {
+    "ok": "Một nghìn, một đồng"
+   },
+   "chan": {
+    "ok": "Một nghìn, một đồng chẵn"
+   }
+  },
+  {
+   "input": "1005",
+   "words": {
+    "ok": "Một nghìn, năm đồng"
+   },
+   "chan": {
+    "ok": "Một nghìn, năm đồng chẵn"
+   }
+  },
+  {
+   "input": "1010",
+   "words": {
+    "ok": "Một nghìn, mười đồng"
+   },
+   "chan": {
+    "ok": "Một nghìn, mười đồng chẵn"
+   }
+  },
+  {
+   "input": "1015",
+   "words": {
+    "ok": "Một nghìn, mười lăm đồng"
+   },
+   "chan": {
+    "ok": "Một nghìn, mười lăm đồng chẵn"
+   }
+  },
+  {
+   "input": "10000",
+   "words": {
+    "ok": "Mười nghìn đồng"
+   },
+   "chan": {
+    "ok": "Mười nghìn đồng chẵn"
+   }
+  },
+  {
+   "input": "15000",
+   "words": {
+    "ok": "Mười lăm nghìn đồng"
+   },
+   "chan": {
+    "ok": "Mười lăm nghìn đồng chẵn"
+   }
+  },
+  {
+   "input": "100000",
+   "words": {
+    "ok": "Một trăm nghìn đồng"
+   },
+   "chan": {
+    "ok": "Một trăm nghìn đồng chẵn"
+   }
+  },
+  {
+   "input": "105000",
+   "words": {
+    "ok": "Một trăm không mươi năm nghìn đồng"
+   },
+   "chan": {
+    "ok": "Một trăm không mươi năm nghìn đồng chẵn"
+   }
+  },
+  {
+   "input": "1000000",
+   "words": {
+    "ok": "Một triệu đồng"
+   },
+   "chan": {
+    "ok": "Một triệu đồng chẵn"
+   }
+  },
+  {
+   "input": "1000005",
+   "words": {
+    "ok": "Một triệu, năm đồng"
+   },
+   "chan": {
+    "ok": "Một triệu, năm đồng chẵn"
+   }
+  },
+  {
+   "input": "1005000",
+   "words": {
+    "ok": "Một triệu, năm nghìn đồng"
+   },
+   "chan": {
+    "ok": "Một triệu, năm nghìn đồng chẵn"
+   }
+  },
+  {
+   "input": "21000000",
+   "words": {
+    "ok": "Hai mươi mốt triệu đồng"
+   },
+   "chan": {
+    "ok": "Hai mươi mốt triệu đồng chẵn"
+   }
+  },
+  {
+   "input": "24000000",
+   "words": {
+    "ok": "Hai mươi bốn triệu đồng"
+   },
+   "chan": {
+    "ok": "Hai mươi bốn triệu đồng chẵn"
+   }
+  },
+  {
+   "input": "22856736",
+   "words": {
+    "ok": "Hai mươi hai triệu, tám trăm năm mươi sáu nghìn, bảy trăm ba mươi sáu đồng"
+   },
+   "chan": {
+    "ok": "Hai mươi hai triệu, tám trăm năm mươi sáu nghìn, bảy trăm ba mươi sáu đồng chẵn"
+   }
+  },
+  {
+   "input": "100000000",
+   "words": {
+    "ok": "Một trăm triệu đồng"
+   },
+   "chan": {
+    "ok": "Một trăm triệu đồng chẵn"
+   }
+  },
+  {
+   "input": "999999999",
+   "words": {
+    "ok": "Chín trăm chín mươi chín triệu, chín trăm chín mươi chín nghìn, chín trăm chín mươi chín đồng"
+   },
+   "chan": {
+    "ok": "Chín trăm chín mươi chín triệu, chín trăm chín mươi chín nghìn, chín trăm chín mươi chín đồng chẵn"
+   }
+  },
+  {
+   "input": "1000000000",
+   "words": {
+    "ok": "Một tỷ đồng"
+   },
+   "chan": {
+    "ok": "Một tỷ đồng chẵn"
+   }
+  },
+  {
+   "input": "1000000001",
+   "words": {
+    "ok": "Một tỷ, một đồng"
+   },
+   "chan": {
+    "ok": "Một tỷ, một đồng chẵn"
+   }
+  },
+  {
+   "input": "2500000000",
+   "words": {
+    "ok": "Hai tỷ, năm trăm triệu đồng"
+   },
+   "chan": {
+    "ok": "Hai tỷ, năm trăm triệu đồng chẵn"
+   }
+  },
+  {
+   "input": "1000000000000",
+   "words": {
+    "err": "IndexError",
+    "msg": "list index out of range"
+   },
+   "chan": {
+    "err": "IndexError",
+    "msg": "list index out of range"
+   }
+  },
+  {
+   "input": "999999999999",
+   "words": {
+    "ok": "Chín trăm chín mươi chín tỷ, chín trăm chín mươi chín triệu, chín trăm chín mươi chín nghìn, chín trăm chín mươi chín đồng"
+   },
+   "chan": {
+    "ok": "Chín trăm chín mươi chín tỷ, chín trăm chín mươi chín triệu, chín trăm chín mươi chín nghìn, chín trăm chín mươi chín đồng chẵn"
+   }
+  },
+  {
+   "input": "999999999999999",
+   "words": {
+    "err": "IndexError",
+    "msg": "list index out of range"
+   },
+   "chan": {
+    "err": "IndexError",
+    "msg": "list index out of range"
+   }
+  },
+  {
+   "input": "1234.99",
+   "words": {
+    "ok": "Một nghìn, hai trăm ba mươi bốn đồng"
+   },
+   "chan": {
+    "ok": "Một nghìn, hai trăm ba mươi bốn đồng chẵn"
+   }
+  },
+  {
+   "input": "1234.5",
+   "words": {
+    "ok": "Một nghìn, hai trăm ba mươi bốn đồng"
+   },
+   "chan": {
+    "ok": "Một nghìn, hai trăm ba mươi bốn đồng chẵn"
+   }
+  },
+  {
+   "input": "-1",
+   "words": {
+    "err": "ValueError",
+    "msg": "Không hỗ trợ số âm"
+   },
+   "chan": {
+    "err": "ValueError",
+    "msg": "Không hỗ trợ số âm"
+   }
+  },
+  {
+   "input": "abc",
+   "words": {
+    "err": "ValueError",
+    "msg": "Không hợp lệ: 'abc'"
+   },
+   "chan": {
+    "err": "ValueError",
+    "msg": "Không hợp lệ: 'abc'"
+   }
+  },
+  {
+   "input": "",
+   "words": {
+    "err": "ValueError",
+    "msg": "Không hợp lệ: ''"
+   },
+   "chan": {
+    "err": "ValueError",
+    "msg": "Không hợp lệ: ''"
+   }
+  }
+ ]
+}

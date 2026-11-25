@@ -1,0 +1,598 @@
+{
+ "source": "app/services/template_service.py",
+ "CONTRACT_TYPES": [
+  "Hợp đồng",
+  "Phụ lục bổ sung",
+  "Phụ lục gia hạn",
+  "Nghiệm thu",
+  "Bàn giao",
+  "Thanh lý",
+  "Báo giá",
+  "Yêu cầu báo giá",
+  "Khác"
+ ],
+ "has_role": [
+  {
+   "contract_type": "Hợp đồng",
+   "role": "contract",
+   "output": true
+  },
+  {
+   "contract_type": "Hợp đồng",
+   "role": "addon",
+   "output": false
+  },
+  {
+   "contract_type": "Hợp đồng",
+   "role": "renewal",
+   "output": false
+  },
+  {
+   "contract_type": "Hợp đồng",
+   "role": "attachment",
+   "output": false
+  },
+  {
+   "contract_type": "Hợp đồng",
+   "role": "quotation",
+   "output": false
+  },
+  {
+   "contract_type": "Hợp đồng",
+   "role": "quote_request",
+   "output": false
+  },
+  {
+   "contract_type": "Phụ lục bổ sung",
+   "role": "contract",
+   "output": false
+  },
+  {
+   "contract_type": "Phụ lục bổ sung",
+   "role": "addon",
+   "output": true
+  },
+  {
+   "contract_type": "Phụ lục bổ sung",
+   "role": "renewal",
+   "output": false
+  },
+  {
+   "contract_type": "Phụ lục bổ sung",
+   "role": "attachment",
+   "output": false
+  },
+  {
+   "contract_type": "Phụ lục bổ sung",
+   "role": "quotation",
+   "output": false
+  },
+  {
+   "contract_type": "Phụ lục bổ sung",
+   "role": "quote_request",
+   "output": false
+  },
+  {
+   "contract_type": "Phụ lục gia hạn",
+   "role": "contract",
+   "output": false
+  },
+  {
+   "contract_type": "Phụ lục gia hạn",
+   "role": "addon",
+   "output": false
+  },
+  {
+   "contract_type": "Phụ lục gia hạn",
+   "role": "renewal",
+   "output": true
+  },
+  {
+   "contract_type": "Phụ lục gia hạn",
+   "role": "attachment",
+   "output": false
+  },
+  {
+   "contract_type": "Phụ lục gia hạn",
+   "role": "quotation",
+   "output": false
+  },
+  {
+   "contract_type": "Phụ lục gia hạn",
+   "role": "quote_request",
+   "output": false
+  },
+  {
+   "contract_type": "Nghiệm thu",
+   "role": "contract",
+   "output": false
+  },
+  {
+   "contract_type": "Nghiệm thu",
+   "role": "addon",
+   "output": false
+  },
+  {
+   "contract_type": "Nghiệm thu",
+   "role": "renewal",
+   "output": false
+  },
+  {
+   "contract_type": "Nghiệm thu",
+   "role": "attachment",
+   "output": true
+  },
+  {
+   "contract_type": "Nghiệm thu",
+   "role": "quotation",
+   "output": false
+  },
+  {
+   "contract_type": "Nghiệm thu",
+   "role": "quote_request",
+   "output": false
+  },
+  {
+   "contract_type": "Bàn giao",
+   "role": "contract",
+   "output": false
+  },
+  {
+   "contract_type": "Bàn giao",
+   "role": "addon",
+   "output": false
+  },
+  {
+   "contract_type": "Bàn giao",
+   "role": "renewal",
+   "output": false
+  },
+  {
+   "contract_type": "Bàn giao",
+   "role": "attachment",
+   "output": true
+  },
+  {
+   "contract_type": "Bàn giao",
+   "role": "quotation",
+   "output": false
+  },
+  {
+   "contract_type": "Bàn giao",
+   "role": "quote_request",
+   "output": false
+  },
+  {
+   "contract_type": "Thanh lý",
+   "role": "contract",
+   "output": false
+  },
+  {
+   "contract_type": "Thanh lý",
+   "role": "addon",
+   "output": false
+  },
+  {
+   "contract_type": "Thanh lý",
+   "role": "renewal",
+   "output": false
+  },
+  {
+   "contract_type": "Thanh lý",
+   "role": "attachment",
+   "output": true
+  },
+  {
+   "contract_type": "Thanh lý",
+   "role": "quotation",
+   "output": false
+  },
+  {
+   "contract_type": "Thanh lý",
+   "role": "quote_request",
+   "output": false
+  },
+  {
+   "contract_type": "Báo giá",
+   "role": "contract",
+   "output": false
+  },
+  {
+   "contract_type": "Báo giá",
+   "role": "addon",
+   "output": false
+  },
+  {
+   "contract_type": "Báo giá",
+   "role": "renewal",
+   "output": false
+  },
+  {
+   "contract_type": "Báo giá",
+   "role": "attachment",
+   "output": false
+  },
+  {
+   "contract_type": "Báo giá",
+   "role": "quotation",
+   "output": true
+  },
+  {
+   "contract_type": "Báo giá",
+   "role": "quote_request",
+   "output": false
+  },
+  {
+   "contract_type": "Yêu cầu báo giá",
+   "role": "contract",
+   "output": false
+  },
+  {
+   "contract_type": "Yêu cầu báo giá",
+   "role": "addon",
+   "output": false
+  },
+  {
+   "contract_type": "Yêu cầu báo giá",
+   "role": "renewal",
+   "output": false
+  },
+  {
+   "contract_type": "Yêu cầu báo giá",
+   "role": "attachment",
+   "output": false
+  },
+  {
+   "contract_type": "Yêu cầu báo giá",
+   "role": "quotation",
+   "output": false
+  },
+  {
+   "contract_type": "Yêu cầu báo giá",
+   "role": "quote_request",
+   "output": true
+  },
+  {
+   "contract_type": "Khác",
+   "role": "contract",
+   "output": false
+  },
+  {
+   "contract_type": "Khác",
+   "role": "addon",
+   "output": false
+  },
+  {
+   "contract_type": "Khác",
+   "role": "renewal",
+   "output": false
+  },
+  {
+   "contract_type": "Khác",
+   "role": "attachment",
+   "output": true
+  },
+  {
+   "contract_type": "Khác",
+   "role": "quotation",
+   "output": false
+  },
+  {
+   "contract_type": "Khác",
+   "role": "quote_request",
+   "output": false
+  },
+  {
+   "contract_type": "Phụ lục",
+   "role": "contract",
+   "output": false
+  },
+  {
+   "contract_type": "Phụ lục",
+   "role": "addon",
+   "output": true
+  },
+  {
+   "contract_type": "Phụ lục",
+   "role": "renewal",
+   "output": true
+  },
+  {
+   "contract_type": "Phụ lục",
+   "role": "attachment",
+   "output": false
+  },
+  {
+   "contract_type": "Phụ lục",
+   "role": "quotation",
+   "output": false
+  },
+  {
+   "contract_type": "Phụ lục",
+   "role": "quote_request",
+   "output": false
+  },
+  {
+   "contract_type": "Tùy ý",
+   "role": "contract",
+   "output": true
+  },
+  {
+   "contract_type": "Tùy ý",
+   "role": "addon",
+   "output": false
+  },
+  {
+   "contract_type": "Tùy ý",
+   "role": "renewal",
+   "output": false
+  },
+  {
+   "contract_type": "Tùy ý",
+   "role": "attachment",
+   "output": false
+  },
+  {
+   "contract_type": "Tùy ý",
+   "role": "quotation",
+   "output": false
+  },
+  {
+   "contract_type": "Tùy ý",
+   "role": "quote_request",
+   "output": false
+  },
+  {
+   "contract_type": "",
+   "role": "contract",
+   "output": true
+  },
+  {
+   "contract_type": "",
+   "role": "addon",
+   "output": false
+  },
+  {
+   "contract_type": "",
+   "role": "renewal",
+   "output": false
+  },
+  {
+   "contract_type": "",
+   "role": "attachment",
+   "output": false
+  },
+  {
+   "contract_type": "",
+   "role": "quotation",
+   "output": false
+  },
+  {
+   "contract_type": "",
+   "role": "quote_request",
+   "output": false
+  }
+ ],
+ "check_template_for": [
+  {
+   "contract_type": "Hợp đồng",
+   "template_group": null,
+   "group": "G1",
+   "role": "contract",
+   "result": {
+    "ok": null
+   }
+  },
+  {
+   "contract_type": "Hợp đồng",
+   "template_group": "G1",
+   "group": "G1",
+   "role": "contract",
+   "result": {
+    "ok": null
+   }
+  },
+  {
+   "contract_type": "Hợp đồng",
+   "template_group": "G1",
+   "group": "G2",
+   "role": "contract",
+   "result": {
+    "err": "TemplateMismatch",
+    "msg": "Mẫu 'Mẫu thử' thuộc nhóm sản phẩm 'G1', không dùng cho nhóm 'G2'."
+   }
+  },
+  {
+   "contract_type": "Hợp đồng",
+   "template_group": "G1",
+   "group": null,
+   "role": "contract",
+   "result": {
+    "err": "TemplateMismatch",
+    "msg": "Mẫu 'Mẫu thử' thuộc nhóm sản phẩm 'G1', không dùng cho nhóm 'chưa có nhóm'."
+   }
+  },
+  {
+   "contract_type": "Nghiệm thu",
+   "template_group": null,
+   "group": null,
+   "role": "contract",
+   "result": {
+    "err": "TemplateMismatch",
+    "msg": "Mẫu 'Mẫu thử' loại 'Nghiệm thu' không dùng được ở đây."
+   }
+  },
+  {
+   "contract_type": "Nghiệm thu",
+   "template_group": "G1",
+   "group": "G1",
+   "role": "attachment",
+   "result": {
+    "ok": null
+   }
+  },
+  {
+   "contract_type": "Phụ lục",
+   "template_group": null,
+   "group": "G1",
+   "role": "addon",
+   "result": {
+    "ok": null
+   }
+  },
+  {
+   "contract_type": "Phụ lục",
+   "template_group": null,
+   "group": "G1",
+   "role": "renewal",
+   "result": {
+    "ok": null
+   }
+  },
+  {
+   "contract_type": "Báo giá",
+   "template_group": " G1 ",
+   "group": "G1",
+   "role": "quotation",
+   "result": {
+    "ok": null
+   }
+  }
+ ],
+ "template_kind": [
+  {
+   "placeholders": [],
+   "heading": "",
+   "output": "Hợp đồng"
+  },
+  {
+   "placeholders": [
+    "QUOTE_DATE_DAY"
+   ],
+   "heading": "",
+   "output": "Báo giá"
+  },
+  {
+   "placeholders": [
+    "REQUEST_DATE"
+   ],
+   "heading": "",
+   "output": "Yêu cầu báo giá"
+  },
+  {
+   "placeholders": [
+    "ACCEPTANCE_DATE"
+   ],
+   "heading": "",
+   "output": "Nghiệm thu"
+  },
+  {
+   "placeholders": [
+    "LIQUIDATION_DATE_DAY"
+   ],
+   "heading": "",
+   "output": "Thanh lý"
+  },
+  {
+   "placeholders": [
+    "PARENT_CONTRACT_NUMBER"
+   ],
+   "heading": "",
+   "output": "Phụ lục bổ sung"
+  },
+  {
+   "placeholders": [
+    "PARENT_CONTRACT_NUMBER",
+    "START_DATE",
+    "END_DATE"
+   ],
+   "heading": "",
+   "output": "Phụ lục gia hạn"
+  },
+  {
+   "placeholders": [],
+   "heading": "BIÊN BẢN BÀN GIAO VÀ NGHIỆM THU",
+   "output": "Bàn giao"
+  },
+  {
+   "placeholders": [],
+   "heading": "BIÊN BẢN NGHIỆM THU",
+   "output": "Nghiệm thu"
+  },
+  {
+   "placeholders": [
+    "QUOTE_DATE"
+   ],
+   "heading": "BIÊN BẢN THANH LÝ",
+   "output": "Báo giá"
+  }
+ ],
+ "preselected_attachment": [
+  {
+   "contract_type": "Bàn giao",
+   "product_group": null,
+   "output": false
+  },
+  {
+   "contract_type": "Bàn giao",
+   "product_group": "",
+   "output": false
+  },
+  {
+   "contract_type": "Bàn giao",
+   "product_group": "G1",
+   "output": true
+  },
+  {
+   "contract_type": "Nghiệm thu",
+   "product_group": null,
+   "output": false
+  },
+  {
+   "contract_type": "Nghiệm thu",
+   "product_group": "",
+   "output": false
+  },
+  {
+   "contract_type": "Nghiệm thu",
+   "product_group": "G1",
+   "output": true
+  },
+  {
+   "contract_type": "Thanh lý",
+   "product_group": null,
+   "output": false
+  },
+  {
+   "contract_type": "Thanh lý",
+   "product_group": "",
+   "output": false
+  },
+  {
+   "contract_type": "Thanh lý",
+   "product_group": "G1",
+   "output": false
+  },
+  {
+   "contract_type": "Khác",
+   "product_group": null,
+   "output": false
+  },
+  {
+   "contract_type": "Khác",
+   "product_group": "",
+   "output": false
+  },
+  {
+   "contract_type": "Khác",
+   "product_group": "G1",
+   "output": false
+  }
+ ],
+ "role_of_doc_kind": {
+  "contract": "contract",
+  "addendum_addon": "addon",
+  "addendum_renewal": "renewal",
+  "x": "contract"
+ }
+}

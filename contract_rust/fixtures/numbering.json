@@ -1,0 +1,551 @@
+{
+ "source": "app/services/numbering.py",
+ "DEFAULT_FORMAT": "{seq}/{slug}/{year}",
+ "DEFAULT_ADDENDUM_FORMAT": "PL{seq}/{parent}",
+ "validate_format": [
+  {
+   "input": "{seq}/{slug}/{year}",
+   "result": {
+    "ok": "{seq}/{slug}/{year}"
+   }
+  },
+  {
+   "input": "{seq}/ABC-{slug}/XYZ/{year}",
+   "result": {
+    "ok": "{seq}/ABC-{slug}/XYZ/{year}"
+   }
+  },
+  {
+   "input": "{slug}/{year}",
+   "result": {
+    "err": "InvalidNumberFormat",
+    "msg": "Khuôn phải chứa {seq}, nếu không mọi hợp đồng sẽ trùng số."
+   }
+  },
+  {
+   "input": "{seq}/{foo}",
+   "result": {
+    "err": "InvalidNumberFormat",
+    "msg": "Chỗ điền không hợp lệ: ['foo']. Chỉ dùng được: ['seq', 'slug', 'year']"
+   }
+  },
+  {
+   "input": "",
+   "result": {
+    "err": "InvalidNumberFormat",
+    "msg": "Khuôn số hợp đồng không được để trống."
+   }
+  },
+  {
+   "input": "   ",
+   "result": {
+    "err": "InvalidNumberFormat",
+    "msg": "Khuôn số hợp đồng không được để trống."
+   }
+  },
+  {
+   "input": "HD{seq}",
+   "result": {
+    "ok": "HD{seq}"
+   }
+  },
+  {
+   "input": "{seq}-{seq}/{year}",
+   "result": {
+    "ok": "{seq}-{seq}/{year}"
+   }
+  }
+ ],
+ "build_and_like": [
+  {
+   "seq": "01",
+   "slug": "TYTSONGXANH",
+   "format": null,
+   "year": 2026,
+   "result": {
+    "ok": "01/TYTSONGXANH/2026"
+   }
+  },
+  {
+   "format": null,
+   "year": 2026,
+   "like": {
+    "ok": "%/%/2026"
+   }
+  },
+  {
+   "seq": "01",
+   "slug": "TYTSONGXANH",
+   "format": "{seq}/{slug}/{year}",
+   "year": 2026,
+   "result": {
+    "ok": "01/TYTSONGXANH/2026"
+   }
+  },
+  {
+   "format": "{seq}/{slug}/{year}",
+   "year": 2026,
+   "like": {
+    "ok": "%/%/2026"
+   }
+  },
+  {
+   "seq": "01",
+   "slug": "TYTSONGXANH",
+   "format": "{seq}/ABC-{slug}/XYZ/{year}",
+   "year": 2026,
+   "result": {
+    "ok": "01/ABC-TYTSONGXANH/XYZ/2026"
+   }
+  },
+  {
+   "format": "{seq}/ABC-{slug}/XYZ/{year}",
+   "year": 2026,
+   "like": {
+    "ok": "%/ABC-%/XYZ/2026"
+   }
+  },
+  {
+   "seq": "01",
+   "slug": "TYTSONGXANH",
+   "format": "HD{seq}",
+   "year": 2026,
+   "result": {
+    "ok": "HD01"
+   }
+  },
+  {
+   "format": "HD{seq}",
+   "year": 2026,
+   "like": {
+    "ok": "HD%"
+   }
+  },
+  {
+   "seq": "01",
+   "slug": "TYTSONGXANH",
+   "format": "{slug}/{year}",
+   "year": 2026,
+   "result": {
+    "err": "InvalidNumberFormat",
+    "msg": "Khuôn phải chứa {seq}, nếu không mọi hợp đồng sẽ trùng số."
+   }
+  },
+  {
+   "format": "{slug}/{year}",
+   "year": 2026,
+   "like": {
+    "err": "InvalidNumberFormat",
+    "msg": "Khuôn phải chứa {seq}, nếu không mọi hợp đồng sẽ trùng số."
+   }
+  }
+ ],
+ "next_seq": [
+  {
+   "used": [],
+   "output": "01"
+  },
+  {
+   "used": [
+    1
+   ],
+   "output": "02"
+  },
+  {
+   "used": [
+    2
+   ],
+   "output": "01"
+  },
+  {
+   "used": [
+    1,
+    2,
+    3
+   ],
+   "output": "04"
+  },
+  {
+   "used": [
+    1,
+    3
+   ],
+   "output": "02"
+  },
+  {
+   "used": [
+    1,
+    2,
+    4,
+    5
+   ],
+   "output": "03"
+  },
+  {
+   "used": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53,
+    54,
+    55,
+    56,
+    57,
+    58,
+    59,
+    60,
+    61,
+    62,
+    63,
+    64,
+    65,
+    66,
+    67,
+    68,
+    69,
+    70,
+    71,
+    72,
+    73,
+    74,
+    75,
+    76,
+    77,
+    78,
+    79,
+    80,
+    81,
+    82,
+    83,
+    84,
+    85,
+    86,
+    87,
+    88,
+    89,
+    90,
+    91,
+    92,
+    93,
+    94,
+    95,
+    96,
+    97,
+    98,
+    99
+   ],
+   "output": "100"
+  }
+ ],
+ "seq_of": [
+  {
+   "input": "01/ABC/2026",
+   "output": 1
+  },
+  {
+   "input": "12/X",
+   "output": 12
+  },
+  {
+   "input": " 7 /Y",
+   "output": 7
+  },
+  {
+   "input": "ABC/01",
+   "output": null
+  },
+  {
+   "input": "",
+   "output": null
+  },
+  {
+   "input": "PL01/02/X",
+   "output": null
+  },
+  {
+   "input": "100",
+   "output": 100
+  }
+ ],
+ "infer_format": [
+  {
+   "number": "01/ABC-TYTSONGXANH/XYZ/2026",
+   "slug": "TYTSONGXANH",
+   "year": 2026,
+   "output": "{seq}/ABC-{slug}/XYZ/{year}"
+  },
+  {
+   "number": "03/TYTSONGXANH/2026",
+   "slug": "TYTSONGXANH",
+   "year": 2026,
+   "output": "{seq}/{slug}/{year}"
+  },
+  {
+   "number": "01/TYT2026/2026",
+   "slug": "TYT2026",
+   "year": 2026,
+   "output": "{seq}/{slug}/{year}"
+  },
+  {
+   "number": "AB/TYT/2026",
+   "slug": "TYT",
+   "year": 2026,
+   "output": null
+  },
+  {
+   "number": "01/OTHER/2026",
+   "slug": "TYT",
+   "year": 2026,
+   "output": null
+  },
+  {
+   "number": "01/TYT/2025",
+   "slug": "TYT",
+   "year": 2026,
+   "output": null
+  },
+  {
+   "number": "",
+   "slug": "TYT",
+   "year": 2026,
+   "output": null
+  },
+  {
+   "number": "01/TYT/2026",
+   "slug": "",
+   "year": 2026,
+   "output": null
+  }
+ ],
+ "addendum": [
+  {
+   "format": "PL{seq}/{parent}",
+   "validate": {
+    "ok": "PL{seq}/{parent}"
+   },
+   "build": {
+    "ok": "PL02/01/ABC/2026"
+   },
+   "parse": [
+    {
+     "number": "PL02/01/ABC/2026",
+     "output": {
+      "ok": 2
+     }
+    },
+    {
+     "number": "01/ABC/2026/PL03",
+     "output": {
+      "ok": null
+     }
+    },
+    {
+     "number": "PLxx/01",
+     "output": {
+      "ok": null
+     }
+    },
+    {
+     "number": "PL7",
+     "output": {
+      "ok": null
+     }
+    }
+   ]
+  },
+  {
+   "format": "{parent}/PL{seq}",
+   "validate": {
+    "ok": "{parent}/PL{seq}"
+   },
+   "build": {
+    "ok": "01/ABC/2026/PL02"
+   },
+   "parse": [
+    {
+     "number": "PL02/01/ABC/2026",
+     "output": {
+      "ok": null
+     }
+    },
+    {
+     "number": "01/ABC/2026/PL03",
+     "output": {
+      "ok": 3
+     }
+    },
+    {
+     "number": "PLxx/01",
+     "output": {
+      "ok": null
+     }
+    },
+    {
+     "number": "PL7",
+     "output": {
+      "ok": null
+     }
+    }
+   ]
+  },
+  {
+   "format": "PL{seq}",
+   "validate": {
+    "err": "InvalidNumberFormat",
+    "msg": "Khuôn phụ lục phải chứa {seq} và {parent}, nếu không các phụ lục sẽ trùng số."
+   },
+   "build": {
+    "err": "InvalidNumberFormat",
+    "msg": "Khuôn phụ lục phải chứa {seq} và {parent}, nếu không các phụ lục sẽ trùng số."
+   },
+   "parse": [
+    {
+     "number": "PL02/01/ABC/2026",
+     "output": {
+      "ok": null
+     }
+    },
+    {
+     "number": "01/ABC/2026/PL03",
+     "output": {
+      "ok": null
+     }
+    },
+    {
+     "number": "PLxx/01",
+     "output": {
+      "ok": null
+     }
+    },
+    {
+     "number": "PL7",
+     "output": {
+      "ok": 7
+     }
+    }
+   ]
+  },
+  {
+   "format": "{seq}{parent}{x}",
+   "validate": {
+    "err": "InvalidNumberFormat",
+    "msg": "Chỗ điền không hợp lệ: ['x']. Khuôn phụ lục chỉ dùng được: ['seq', 'parent']"
+   },
+   "build": {
+    "err": "InvalidNumberFormat",
+    "msg": "Chỗ điền không hợp lệ: ['x']. Khuôn phụ lục chỉ dùng được: ['seq', 'parent']"
+   },
+   "parse": [
+    {
+     "number": "PL02/01/ABC/2026",
+     "output": {
+      "ok": null
+     }
+    },
+    {
+     "number": "01/ABC/2026/PL03",
+     "output": {
+      "ok": null
+     }
+    },
+    {
+     "number": "PLxx/01",
+     "output": {
+      "ok": null
+     }
+    },
+    {
+     "number": "PL7",
+     "output": {
+      "ok": null
+     }
+    }
+   ]
+  },
+  {
+   "format": "",
+   "validate": {
+    "err": "InvalidNumberFormat",
+    "msg": "Khuôn số phụ lục không được để trống."
+   },
+   "build": {
+    "ok": "PL02/01/ABC/2026"
+   },
+   "parse": [
+    {
+     "number": "PL02/01/ABC/2026",
+     "output": {
+      "ok": 2
+     }
+    },
+    {
+     "number": "01/ABC/2026/PL03",
+     "output": {
+      "ok": null
+     }
+    },
+    {
+     "number": "PLxx/01",
+     "output": {
+      "ok": null
+     }
+    },
+    {
+     "number": "PL7",
+     "output": {
+      "ok": null
+     }
+    }
+   ]
+  }
+ ]
+}

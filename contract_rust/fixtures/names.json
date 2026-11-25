@@ -1,0 +1,400 @@
+{
+ "source": [
+  "contract_service.make_contract_slug",
+  "utils/file_naming.py"
+ ],
+ "slug": [
+  {
+   "input": "Trạm Y tế xã Sông Xanh",
+   "output": "TYTSONGXANH"
+  },
+  {
+   "input": "Trung tâm Y tế huyện Đồi Cát",
+   "output": "TYTDOICAT"
+  },
+  {
+   "input": "Phòng y tế Thành phố Mây",
+   "output": "TYTMAY"
+  },
+  {
+   "input": "Công ty TNHH An Bình",
+   "output": "CONGTYTNHHANBINH"
+  },
+  {
+   "input": "Trạm y tế phường Hòa Đông",
+   "output": "TYTHOADONG"
+  },
+  {
+   "input": "Đơn vị Ước Mơ",
+   "output": "DONVIUOCMO"
+  },
+  {
+   "input": "TRẠM Y TẾ THỊ TRẤN BẾN ĐÁ",
+   "output": "TYTBENDA"
+  },
+  {
+   "input": "Bệnh viện  Quận   Năm",
+   "output": "BENHVIENNAM"
+  },
+  {
+   "input": "Trạm y tế xã Ơn Ưu (cơ sở 2)",
+   "output": "TYTONUUCOSO2"
+  },
+  {
+   "input": "",
+   "output": ""
+  }
+ ],
+ "sanitize": [
+  {
+   "input": "Trạm Y tế xã Sông Xanh",
+   "max_len": 10,
+   "output": "TRAM_Y_TE_"
+  },
+  {
+   "input": "Trạm Y tế xã Sông Xanh",
+   "max_len": 15,
+   "output": "TRAM_Y_TE_XA_SO"
+  },
+  {
+   "input": "Trạm Y tế xã Sông Xanh",
+   "max_len": 30,
+   "output": "TRAM_Y_TE_XA_SONG_XANH"
+  },
+  {
+   "input": "Trạm Y tế xã Sông Xanh",
+   "max_len": 40,
+   "output": "TRAM_Y_TE_XA_SONG_XANH"
+  },
+  {
+   "input": "Trung tâm Y tế huyện Đồi Cát",
+   "max_len": 10,
+   "output": "TRUNG_TAM_"
+  },
+  {
+   "input": "Trung tâm Y tế huyện Đồi Cát",
+   "max_len": 15,
+   "output": "TRUNG_TAM_Y_TE_"
+  },
+  {
+   "input": "Trung tâm Y tế huyện Đồi Cát",
+   "max_len": 30,
+   "output": "TRUNG_TAM_Y_TE_HUYEN_DOI_CAT"
+  },
+  {
+   "input": "Trung tâm Y tế huyện Đồi Cát",
+   "max_len": 40,
+   "output": "TRUNG_TAM_Y_TE_HUYEN_DOI_CAT"
+  },
+  {
+   "input": "Phòng y tế Thành phố Mây",
+   "max_len": 10,
+   "output": "PHONG_Y_TE"
+  },
+  {
+   "input": "Phòng y tế Thành phố Mây",
+   "max_len": 15,
+   "output": "PHONG_Y_TE_THAN"
+  },
+  {
+   "input": "Phòng y tế Thành phố Mây",
+   "max_len": 30,
+   "output": "PHONG_Y_TE_THANH_PHO_MAY"
+  },
+  {
+   "input": "Phòng y tế Thành phố Mây",
+   "max_len": 40,
+   "output": "PHONG_Y_TE_THANH_PHO_MAY"
+  },
+  {
+   "input": "Công ty TNHH An Bình",
+   "max_len": 10,
+   "output": "CONG_TY_TN"
+  },
+  {
+   "input": "Công ty TNHH An Bình",
+   "max_len": 15,
+   "output": "CONG_TY_TNHH_AN"
+  },
+  {
+   "input": "Công ty TNHH An Bình",
+   "max_len": 30,
+   "output": "CONG_TY_TNHH_AN_BINH"
+  },
+  {
+   "input": "Công ty TNHH An Bình",
+   "max_len": 40,
+   "output": "CONG_TY_TNHH_AN_BINH"
+  },
+  {
+   "input": "Trạm y tế phường Hòa Đông",
+   "max_len": 10,
+   "output": "TRAM_Y_TE_"
+  },
+  {
+   "input": "Trạm y tế phường Hòa Đông",
+   "max_len": 15,
+   "output": "TRAM_Y_TE_PHUON"
+  },
+  {
+   "input": "Trạm y tế phường Hòa Đông",
+   "max_len": 30,
+   "output": "TRAM_Y_TE_PHUONG_HOA_DONG"
+  },
+  {
+   "input": "Trạm y tế phường Hòa Đông",
+   "max_len": 40,
+   "output": "TRAM_Y_TE_PHUONG_HOA_DONG"
+  },
+  {
+   "input": "Đơn vị Ước Mơ",
+   "max_len": 10,
+   "output": "DON_VI_UOC"
+  },
+  {
+   "input": "Đơn vị Ước Mơ",
+   "max_len": 15,
+   "output": "DON_VI_UOC_MO"
+  },
+  {
+   "input": "Đơn vị Ước Mơ",
+   "max_len": 30,
+   "output": "DON_VI_UOC_MO"
+  },
+  {
+   "input": "Đơn vị Ước Mơ",
+   "max_len": 40,
+   "output": "DON_VI_UOC_MO"
+  },
+  {
+   "input": "TRẠM Y TẾ THỊ TRẤN BẾN ĐÁ",
+   "max_len": 10,
+   "output": "TRAM_Y_TE_"
+  },
+  {
+   "input": "TRẠM Y TẾ THỊ TRẤN BẾN ĐÁ",
+   "max_len": 15,
+   "output": "TRAM_Y_TE_THI_T"
+  },
+  {
+   "input": "TRẠM Y TẾ THỊ TRẤN BẾN ĐÁ",
+   "max_len": 30,
+   "output": "TRAM_Y_TE_THI_TRAN_BEN_DA"
+  },
+  {
+   "input": "TRẠM Y TẾ THỊ TRẤN BẾN ĐÁ",
+   "max_len": 40,
+   "output": "TRAM_Y_TE_THI_TRAN_BEN_DA"
+  },
+  {
+   "input": "Bệnh viện  Quận   Năm",
+   "max_len": 10,
+   "output": "BENH_VIEN_"
+  },
+  {
+   "input": "Bệnh viện  Quận   Năm",
+   "max_len": 15,
+   "output": "BENH_VIEN_QUAN_"
+  },
+  {
+   "input": "Bệnh viện  Quận   Năm",
+   "max_len": 30,
+   "output": "BENH_VIEN_QUAN_NAM"
+  },
+  {
+   "input": "Bệnh viện  Quận   Năm",
+   "max_len": 40,
+   "output": "BENH_VIEN_QUAN_NAM"
+  },
+  {
+   "input": "Trạm y tế xã Ơn Ưu (cơ sở 2)",
+   "max_len": 10,
+   "output": "TRAM_Y_TE_"
+  },
+  {
+   "input": "Trạm y tế xã Ơn Ưu (cơ sở 2)",
+   "max_len": 15,
+   "output": "TRAM_Y_TE_XA_ON"
+  },
+  {
+   "input": "Trạm y tế xã Ơn Ưu (cơ sở 2)",
+   "max_len": 30,
+   "output": "TRAM_Y_TE_XA_ON_UU_CO_SO_2"
+  },
+  {
+   "input": "Trạm y tế xã Ơn Ưu (cơ sở 2)",
+   "max_len": 40,
+   "output": "TRAM_Y_TE_XA_ON_UU_CO_SO_2"
+  },
+  {
+   "input": "",
+   "max_len": 10,
+   "output": ""
+  },
+  {
+   "input": "",
+   "max_len": 15,
+   "output": ""
+  },
+  {
+   "input": "",
+   "max_len": 30,
+   "output": ""
+  },
+  {
+   "input": "",
+   "max_len": 40,
+   "output": ""
+  },
+  {
+   "input": "01/ABC/2026",
+   "max_len": 10,
+   "output": "01_ABC_202"
+  },
+  {
+   "input": "01/ABC/2026",
+   "max_len": 15,
+   "output": "01_ABC_2026"
+  },
+  {
+   "input": "01/ABC/2026",
+   "max_len": 30,
+   "output": "01_ABC_2026"
+  },
+  {
+   "input": "01/ABC/2026",
+   "max_len": 40,
+   "output": "01_ABC_2026"
+  },
+  {
+   "input": "Hợp đồng",
+   "max_len": 10,
+   "output": "HOP_DONG"
+  },
+  {
+   "input": "Hợp đồng",
+   "max_len": 15,
+   "output": "HOP_DONG"
+  },
+  {
+   "input": "Hợp đồng",
+   "max_len": 30,
+   "output": "HOP_DONG"
+  },
+  {
+   "input": "Hợp đồng",
+   "max_len": 40,
+   "output": "HOP_DONG"
+  },
+  {
+   "input": "Phụ lục bổ sung",
+   "max_len": 10,
+   "output": "PHU_LUC_BO"
+  },
+  {
+   "input": "Phụ lục bổ sung",
+   "max_len": 15,
+   "output": "PHU_LUC_BO_SUNG"
+  },
+  {
+   "input": "Phụ lục bổ sung",
+   "max_len": 30,
+   "output": "PHU_LUC_BO_SUNG"
+  },
+  {
+   "input": "Phụ lục bổ sung",
+   "max_len": 40,
+   "output": "PHU_LUC_BO_SUNG"
+  },
+  {
+   "input": "KH-001",
+   "max_len": 10,
+   "output": "KH-001"
+  },
+  {
+   "input": "KH-001",
+   "max_len": 15,
+   "output": "KH-001"
+  },
+  {
+   "input": "KH-001",
+   "max_len": 30,
+   "output": "KH-001"
+  },
+  {
+   "input": "KH-001",
+   "max_len": 40,
+   "output": "KH-001"
+  },
+  {
+   "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "max_len": 10,
+   "output": "AAAAAAAAAA"
+  },
+  {
+   "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "max_len": 15,
+   "output": "AAAAAAAAAAAAAAA"
+  },
+  {
+   "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "max_len": 30,
+   "output": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  },
+  {
+   "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "max_len": 40,
+   "output": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  },
+  {
+   "input": "x--y__z",
+   "max_len": 10,
+   "output": "X--Y_Z"
+  },
+  {
+   "input": "x--y__z",
+   "max_len": 15,
+   "output": "X--Y_Z"
+  },
+  {
+   "input": "x--y__z",
+   "max_len": 30,
+   "output": "X--Y_Z"
+  },
+  {
+   "input": "x--y__z",
+   "max_len": 40,
+   "output": "X--Y_Z"
+  }
+ ],
+ "output_filename": [
+  {
+   "contract_number": "01/ABC/2026",
+   "customer_code": "KH-001",
+   "contract_type": "Hợp đồng",
+   "ts": "2026-01-15T09:30:45",
+   "output": "HOP_DONG_KH-001_01_ABC_2026_20260115_093045.docx"
+  },
+  {
+   "contract_number": "PL01/02/XYZ/2026",
+   "customer_code": "KH-002",
+   "contract_type": "Phụ lục bổ sung",
+   "ts": "2026-01-15T09:30:45",
+   "output": "PHU_LUC_BO_KH-002_PL01_02_XYZ_2026_20260115_093045.docx"
+  },
+  {
+   "contract_number": "",
+   "customer_code": "",
+   "contract_type": "",
+   "ts": "2026-01-15T09:30:45",
+   "output": "HD_KH_UNKNOWN_20260115_093045.docx"
+  },
+  {
+   "contract_number": "03/TYTSONGXANH/2026",
+   "customer_code": "KH-010",
+   "contract_type": "Nghiệm thu",
+   "ts": "2026-01-15T09:30:45",
+   "output": "NGHIEM_THU_KH-010_03_TYTSONGXANH_2026_20260115_093045.docx"
+  }
+ ]
+}

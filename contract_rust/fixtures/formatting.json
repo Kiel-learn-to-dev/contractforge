@@ -1,0 +1,398 @@
+{
+ "source": [
+  "docx_renderer._fmt_currency/_fmt_number/_fmt_vat",
+  "contract_service._safe_decimal/_safe_int/_dec_str",
+  "pricing.fmt_money",
+  "manual_quotation._number/_unit_price_text"
+ ],
+ "fmt_currency": [
+  {
+   "input": null,
+   "output": ""
+  },
+  {
+   "input": 0,
+   "output": "0"
+  },
+  {
+   "input": 1,
+   "output": "1"
+  },
+  {
+   "input": 999,
+   "output": "999"
+  },
+  {
+   "input": 1000,
+   "output": "1.000"
+  },
+  {
+   "input": 24000000,
+   "output": "24.000.000"
+  },
+  {
+   "input": "24000000.00",
+   "output": "24.000.000"
+  },
+  {
+   "input": "1234.5",
+   "output": "1.234"
+  },
+  {
+   "input": "1234.99",
+   "output": "1.234"
+  },
+  {
+   "input": "-1500",
+   "output": "-1.500"
+  },
+  {
+   "input": "abc",
+   "output": "abc"
+  },
+  {
+   "input": "0.5",
+   "output": "0"
+  },
+  {
+   "input": "12.3400",
+   "output": "12"
+  }
+ ],
+ "fmt_number": [
+  {
+   "input": null,
+   "output": ""
+  },
+  {
+   "input": 0,
+   "output": "0"
+  },
+  {
+   "input": 1,
+   "output": "1"
+  },
+  {
+   "input": 999,
+   "output": "999"
+  },
+  {
+   "input": 1000,
+   "output": "1000"
+  },
+  {
+   "input": 24000000,
+   "output": "24000000"
+  },
+  {
+   "input": "24000000.00",
+   "output": "24000000"
+  },
+  {
+   "input": "1234.5",
+   "output": "1234.5"
+  },
+  {
+   "input": "1234.99",
+   "output": "1234.99"
+  },
+  {
+   "input": "-1500",
+   "output": "-1500"
+  },
+  {
+   "input": "abc",
+   "output": "abc"
+  },
+  {
+   "input": "0.5",
+   "output": "0.5"
+  },
+  {
+   "input": "12.3400",
+   "output": "12.3400"
+  }
+ ],
+ "fmt_vat": [
+  {
+   "input": null,
+   "output": ""
+  },
+  {
+   "input": 0,
+   "output": "0%"
+  },
+  {
+   "input": 8,
+   "output": "8%"
+  },
+  {
+   "input": 10,
+   "output": "10%"
+  },
+  {
+   "input": "10.00",
+   "output": "10%"
+  },
+  {
+   "input": "8.5",
+   "output": "8.5%"
+  },
+  {
+   "input": "5.50",
+   "output": "5.50%"
+  },
+  {
+   "input": "x",
+   "output": "x"
+  }
+ ],
+ "safe_decimal": [
+  {
+   "input": "",
+   "output": null
+  },
+  {
+   "input": "  ",
+   "output": null
+  },
+  {
+   "input": "1000",
+   "output": "1000"
+  },
+  {
+   "input": "1.000.000",
+   "output": "1000000"
+  },
+  {
+   "input": "1,5",
+   "output": "1.5"
+  },
+  {
+   "input": "82.5",
+   "output": "825"
+  },
+  {
+   "input": "500.000",
+   "output": "500000"
+  },
+  {
+   "input": "1.234,56",
+   "output": "1234.56"
+  },
+  {
+   "input": "abc",
+   "output": null
+  },
+  {
+   "input": "12 000",
+   "output": null
+  },
+  {
+   "input": "-5",
+   "output": "-5"
+  },
+  {
+   "input": "0",
+   "output": "0"
+  },
+  {
+   "input": "007",
+   "output": "7"
+  }
+ ],
+ "safe_int": [
+  {
+   "input": "",
+   "output": null
+  },
+  {
+   "input": "  ",
+   "output": null
+  },
+  {
+   "input": "1000",
+   "output": 1000
+  },
+  {
+   "input": "1.000.000",
+   "output": 1000000
+  },
+  {
+   "input": "1,5",
+   "output": 15
+  },
+  {
+   "input": "82.5",
+   "output": 825
+  },
+  {
+   "input": "500.000",
+   "output": 500000
+  },
+  {
+   "input": "1.234,56",
+   "output": 123456
+  },
+  {
+   "input": "abc",
+   "output": null
+  },
+  {
+   "input": "12 000",
+   "output": null
+  },
+  {
+   "input": "-5",
+   "output": -5
+  },
+  {
+   "input": "0",
+   "output": 0
+  },
+  {
+   "input": "007",
+   "output": 7
+  }
+ ],
+ "dec_str": [
+  {
+   "input": null,
+   "output": ""
+  },
+  {
+   "input": "500000.00",
+   "output": "500000"
+  },
+  {
+   "input": "0.50",
+   "output": "0.5"
+  },
+  {
+   "input": 12,
+   "output": "12"
+  },
+  {
+   "input": "1E+3",
+   "output": "1000"
+  }
+ ],
+ "fmt_money": [
+  {
+   "input": 0,
+   "output": {
+    "ok": "0"
+   }
+  },
+  {
+   "input": 1234567,
+   "output": {
+    "ok": "1.234.567"
+   }
+  },
+  {
+   "input": "1234.5",
+   "output": {
+    "ok": "1.235"
+   }
+  },
+  {
+   "input": "1234.49",
+   "output": {
+    "ok": "1.234"
+   }
+  },
+  {
+   "input": "-2.5",
+   "output": {
+    "ok": "-3"
+   }
+  }
+ ],
+ "manual_number": [
+  {
+   "input": "1.000.000",
+   "money": true,
+   "result": {
+    "ok": "1000000"
+   }
+  },
+  {
+   "input": "1.000.000",
+   "money": false,
+   "result": {
+    "err": "PricingError",
+    "msg": "Giá trị không phải là số: '1.000.000'"
+   }
+  },
+  {
+   "input": "1.000",
+   "money": true,
+   "result": {
+    "ok": "1000"
+   }
+  },
+  {
+   "input": "1.5",
+   "money": true,
+   "result": {
+    "ok": "1.5"
+   }
+  },
+  {
+   "input": "1,5",
+   "money": false,
+   "result": {
+    "ok": "1.5"
+   }
+  },
+  {
+   "input": "12 345",
+   "money": true,
+   "result": {
+    "ok": "12345"
+   }
+  },
+  {
+   "input": "82.5",
+   "money": false,
+   "result": {
+    "ok": "82.5"
+   }
+  },
+  {
+   "input": "",
+   "money": false,
+   "result": {
+    "err": "PricingError",
+    "msg": "Thiếu Giá trị."
+   }
+  },
+  {
+   "input": "x",
+   "money": true,
+   "result": {
+    "err": "PricingError",
+    "msg": "Giá trị không phải là số: 'x'"
+   }
+  }
+ ],
+ "unit_price_text": [
+  {
+   "input": "1000",
+   "output": "1.000"
+  },
+  {
+   "input": "1234567.50",
+   "output": "1.234.567,5"
+  },
+  {
+   "input": "0.125",
+   "output": "0,125"
+  },
+  {
+   "input": "82.5",
+   "output": "82,5"
+  }
+ ]
+}

@@ -1,0 +1,548 @@
+{
+ "source": "app/services/pricing.py",
+ "round_money": [
+  {
+   "input": "0.5",
+   "output": {
+    "ok": "1"
+   }
+  },
+  {
+   "input": "1.5",
+   "output": {
+    "ok": "2"
+   }
+  },
+  {
+   "input": "2.5",
+   "output": {
+    "ok": "3"
+   }
+  },
+  {
+   "input": "-0.5",
+   "output": {
+    "ok": "-1"
+   }
+  },
+  {
+   "input": "-1.5",
+   "output": {
+    "ok": "-2"
+   }
+  },
+  {
+   "input": "1.49",
+   "output": {
+    "ok": "1"
+   }
+  },
+  {
+   "input": "1234.5000",
+   "output": {
+    "ok": "1235"
+   }
+  },
+  {
+   "input": "abc",
+   "output": {
+    "err": "PricingError",
+    "msg": "giá trị không phải là số: 'abc'"
+   }
+  },
+  {
+   "input": "",
+   "output": {
+    "err": "PricingError",
+    "msg": "Thiếu giá trị."
+   }
+  }
+ ],
+ "normalize_quantity": [
+  {
+   "raw": "1",
+   "min_quantity": null,
+   "step": null,
+   "result": {
+    "ok": "1"
+   }
+  },
+  {
+   "raw": "1500",
+   "min_quantity": 2000,
+   "step": 500,
+   "result": {
+    "ok": "2000"
+   }
+  },
+  {
+   "raw": "2100",
+   "min_quantity": 2000,
+   "step": 500,
+   "result": {
+    "ok": "2500"
+   }
+  },
+  {
+   "raw": "2500",
+   "min_quantity": 2000,
+   "step": 500,
+   "result": {
+    "ok": "2500"
+   }
+  },
+  {
+   "raw": "3",
+   "min_quantity": null,
+   "step": 2,
+   "result": {
+    "ok": "4"
+   }
+  },
+  {
+   "raw": "0",
+   "min_quantity": null,
+   "step": null,
+   "result": {
+    "err": "PricingError",
+    "msg": "Số lượng phải lớn hơn 0."
+   }
+  },
+  {
+   "raw": "-1",
+   "min_quantity": null,
+   "step": null,
+   "result": {
+    "err": "PricingError",
+    "msg": "Số lượng phải lớn hơn 0."
+   }
+  },
+  {
+   "raw": "2.5",
+   "min_quantity": null,
+   "step": null,
+   "result": {
+    "ok": "2.5"
+   }
+  },
+  {
+   "raw": "",
+   "min_quantity": null,
+   "step": null,
+   "result": {
+    "err": "PricingError",
+    "msg": "Thiếu số lượng."
+   }
+  },
+  {
+   "raw": "7",
+   "min_quantity": 10,
+   "step": null,
+   "result": {
+    "ok": "10"
+   }
+  }
+ ],
+ "period_count": [
+  {
+   "months": 12,
+   "price_period_months": 1,
+   "result": {
+    "ok": "12"
+   }
+  },
+  {
+   "months": 12,
+   "price_period_months": 12,
+   "result": {
+    "ok": "1"
+   }
+  },
+  {
+   "months": 6,
+   "price_period_months": 12,
+   "result": {
+    "ok": "0.5"
+   }
+  },
+  {
+   "months": 13,
+   "price_period_months": 3,
+   "result": {
+    "ok": "4.333333333333333333333333333"
+   }
+  },
+  {
+   "months": 0,
+   "price_period_months": 1,
+   "result": {
+    "err": "PricingError",
+    "msg": "Số tháng và kỳ giá phải lớn hơn 0."
+   }
+  },
+  {
+   "months": 12,
+   "price_period_months": 0,
+   "result": {
+    "ok": "12"
+   }
+  },
+  {
+   "months": 12,
+   "price_period_months": null,
+   "result": {
+    "ok": "12"
+   }
+  }
+ ],
+ "price_line": [
+  {
+   "input": {
+    "description": "Gói A",
+    "unit_label": "cơ sở",
+    "quantity": "2",
+    "months": 12,
+    "unit_price_pre_vat": "440909",
+    "vat_rate": "10"
+   },
+   "result": {
+    "ok": {
+     "description": "Gói A",
+     "unit_label": "cơ sở",
+     "quantity": "2",
+     "period_count": "12",
+     "unit_price_pre_vat": "440909",
+     "vat_rate": "10",
+     "amount_pre_vat": "10581816",
+     "vat_amount": "1058182",
+     "amount_total": "11639998",
+     "product_id": null,
+     "note": ""
+    }
+   }
+  },
+  {
+   "input": {
+    "description": "Gói B",
+    "quantity": "3",
+    "months": 12,
+    "unit_price_pre_vat": "500000",
+    "vat_rate": "8"
+   },
+   "result": {
+    "ok": {
+     "description": "Gói B",
+     "unit_label": "",
+     "quantity": "3",
+     "period_count": "12",
+     "unit_price_pre_vat": "500000",
+     "vat_rate": "8",
+     "amount_pre_vat": "18000000",
+     "vat_amount": "1440000",
+     "amount_total": "19440000",
+     "product_id": null,
+     "note": ""
+    }
+   }
+  },
+  {
+   "input": {
+    "description": "Gói C",
+    "quantity": "1",
+    "months": 7,
+    "unit_price_pre_vat": "1000000",
+    "vat_rate": "0",
+    "price_period_months": 12
+   },
+   "result": {
+    "ok": {
+     "description": "Gói C",
+     "unit_label": "",
+     "quantity": "1",
+     "period_count": "0.5833333333333333333333333333",
+     "unit_price_pre_vat": "1000000",
+     "vat_rate": "0",
+     "amount_pre_vat": "583333",
+     "vat_amount": "0",
+     "amount_total": "583333",
+     "product_id": null,
+     "note": ""
+    }
+   }
+  },
+  {
+   "input": {
+    "description": "Gói D",
+    "quantity": "2000",
+    "months": 12,
+    "unit_price_pre_vat": "82.5",
+    "vat_rate": "5"
+   },
+   "result": {
+    "ok": {
+     "description": "Gói D",
+     "unit_label": "",
+     "quantity": "2000",
+     "period_count": "12",
+     "unit_price_pre_vat": "82.5",
+     "vat_rate": "5",
+     "amount_pre_vat": "1980000",
+     "vat_amount": "99000",
+     "amount_total": "2079000",
+     "product_id": null,
+     "note": ""
+    }
+   }
+  },
+  {
+   "input": {
+    "description": "Ghi đè",
+    "quantity": "1",
+    "months": 12,
+    "unit_price_pre_vat": "100",
+    "vat_rate": "10",
+    "amount_pre_vat_override": "999999",
+    "note": "Giảm giá đặc biệt"
+   },
+   "result": {
+    "ok": {
+     "description": "Ghi đè",
+     "unit_label": "",
+     "quantity": "1",
+     "period_count": "12",
+     "unit_price_pre_vat": "100",
+     "vat_rate": "10",
+     "amount_pre_vat": "999999",
+     "vat_amount": "100000",
+     "amount_total": "1099999",
+     "product_id": null,
+     "note": "Giảm giá đặc biệt"
+    }
+   }
+  },
+  {
+   "input": {
+    "description": "Ghi đè thiếu lý do",
+    "quantity": "1",
+    "months": 12,
+    "unit_price_pre_vat": "100",
+    "amount_pre_vat_override": "5"
+   },
+   "result": {
+    "err": "PricingError",
+    "msg": "Ghi đè thành tiền phải kèm ghi chú lý do."
+   }
+  },
+  {
+   "input": {
+    "description": "Âm",
+    "quantity": "1",
+    "months": 12,
+    "unit_price_pre_vat": "-1"
+   },
+   "result": {
+    "err": "PricingError",
+    "msg": "Đơn giá không được âm."
+   }
+  },
+  {
+   "input": {
+    "description": "VAT sai",
+    "quantity": "1",
+    "months": 12,
+    "unit_price_pre_vat": "1",
+    "vat_rate": "101"
+   },
+   "result": {
+    "err": "PricingError",
+    "msg": "Thuế suất phải trong khoảng 0–100."
+   }
+  },
+  {
+   "input": {
+    "description": "SL 0",
+    "quantity": "0",
+    "months": 12,
+    "unit_price_pre_vat": "1"
+   },
+   "result": {
+    "err": "PricingError",
+    "msg": "Số lượng phải lớn hơn 0."
+   }
+  },
+  {
+   "input": {
+    "description": "Nửa đồng",
+    "quantity": "1",
+    "months": 1,
+    "unit_price_pre_vat": "0.5",
+    "vat_rate": "10"
+   },
+   "result": {
+    "ok": {
+     "description": "Nửa đồng",
+     "unit_label": "",
+     "quantity": "1",
+     "period_count": "1",
+     "unit_price_pre_vat": "0.5",
+     "vat_rate": "10",
+     "amount_pre_vat": "1",
+     "vat_amount": "0",
+     "amount_total": "1",
+     "product_id": null,
+     "note": ""
+    }
+   }
+  },
+  {
+   "input": {
+    "description": "Nửa đồng thuế",
+    "quantity": "1",
+    "months": 1,
+    "unit_price_pre_vat": "5",
+    "vat_rate": "10"
+   },
+   "result": {
+    "ok": {
+     "description": "Nửa đồng thuế",
+     "unit_label": "",
+     "quantity": "1",
+     "period_count": "1",
+     "unit_price_pre_vat": "5",
+     "vat_rate": "10",
+     "amount_pre_vat": "5",
+     "vat_amount": "1",
+     "amount_total": "6",
+     "product_id": null,
+     "note": ""
+    }
+   }
+  }
+ ],
+ "sum_lines": {
+  "lines": [
+   {
+    "description": "Gói A",
+    "unit_label": "cơ sở",
+    "quantity": "2",
+    "period_count": "12",
+    "unit_price_pre_vat": "440909",
+    "vat_rate": "10",
+    "amount_pre_vat": "10581816",
+    "vat_amount": "1058182",
+    "amount_total": "11639998",
+    "product_id": null,
+    "note": ""
+   },
+   {
+    "description": "Gói B",
+    "unit_label": "",
+    "quantity": "3",
+    "period_count": "12",
+    "unit_price_pre_vat": "500000",
+    "vat_rate": "8",
+    "amount_pre_vat": "18000000",
+    "vat_amount": "1440000",
+    "amount_total": "19440000",
+    "product_id": null,
+    "note": ""
+   },
+   {
+    "description": "Gói C",
+    "unit_label": "",
+    "quantity": "1",
+    "period_count": "0.5833333333333333333333333333",
+    "unit_price_pre_vat": "1000000",
+    "vat_rate": "0",
+    "amount_pre_vat": "583333",
+    "vat_amount": "0",
+    "amount_total": "583333",
+    "product_id": null,
+    "note": ""
+   }
+  ],
+  "totals": {
+   "pre_vat": "29165149",
+   "vat": "2498182",
+   "total": "31663331",
+   "amount_text": "Ba mươi mốt triệu, sáu trăm sáu mươi ba nghìn, ba trăm ba mươi mốt đồng"
+  },
+  "describe": "Gói A: 11.639.998 VNĐ; Gói B: 19.440.000 VNĐ; Gói C: 583.333 VNĐ. Tổng cộng: 31.663.331 VNĐ"
+ },
+ "unit_price_with_vat": [
+  {
+   "price": "440909",
+   "vat": "10",
+   "output": "485000"
+  },
+  {
+   "price": "500000",
+   "vat": "8",
+   "output": "540000"
+  },
+  {
+   "price": "100",
+   "vat": "5",
+   "output": "105"
+  },
+  {
+   "price": "15",
+   "vat": "10",
+   "output": "17"
+  },
+  {
+   "price": "1",
+   "vat": "50",
+   "output": "2"
+  }
+ ],
+ "addon_months": [
+  {
+   "start": "2026-03-01",
+   "main_end": "2026-12-31",
+   "result": {
+    "ok": 10
+   }
+  },
+  {
+   "start": "2026-03-15",
+   "main_end": "2026-04-14",
+   "result": {
+    "ok": 1
+   }
+  },
+  {
+   "start": "2026-03-15",
+   "main_end": "2026-04-15",
+   "result": {
+    "ok": 2
+   }
+  },
+  {
+   "start": "2026-12-31",
+   "main_end": "2026-12-31",
+   "result": {
+    "ok": 1
+   }
+  },
+  {
+   "start": "2027-01-01",
+   "main_end": "2026-12-31",
+   "result": {
+    "err": "PricingError",
+    "msg": "Ngày bắt đầu gói bổ sung sau ngày hết hạn gói chính."
+   }
+  },
+  {
+   "start": "2026-01-31",
+   "main_end": "2026-02-28",
+   "result": {
+    "ok": 2
+   }
+  }
+ ],
+ "empty_sum": {
+  "err": "PricingError",
+  "msg": "Hợp đồng phải có ít nhất một dòng."
+ }
+}

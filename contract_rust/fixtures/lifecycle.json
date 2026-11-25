@@ -1,0 +1,4605 @@
+{
+ "source": "app/services/lifecycle.py",
+ "sets": {
+  "ACTIVE_LIFECYCLE_STATUSES": [
+   "Signed",
+   "Invoiced",
+   "PaidActive",
+   "Active",
+   "ExpiringSoon"
+  ],
+  "RENEWAL_COUNTS_STATUSES": [
+   "Signed",
+   "Invoiced",
+   "PaidActive",
+   "Active",
+   "ExpiringSoon"
+  ],
+  "IN_SERVICE_STATUSES": [
+   "Invoiced",
+   "PaidActive",
+   "Active",
+   "ExpiringSoon"
+  ],
+  "UNPAID_STATUSES": [
+   "Signed",
+   "Active",
+   "ExpiringSoon"
+  ],
+  "DEPRECATED_STATUSES": [
+   "ExpiringSoon"
+  ]
+ },
+ "valid_transitions": {
+  "Draft": [
+   "Generated"
+  ],
+  "Generated": [
+   "Sent",
+   "Signed"
+  ],
+  "Sent": [
+   "Signed"
+  ],
+  "Signed": [
+   "Invoiced",
+   "Terminated"
+  ],
+  "Invoiced": [
+   "PaidActive",
+   "Terminated"
+  ],
+  "PaidActive": [
+   "Expired",
+   "Terminated"
+  ],
+  "Active": [
+   "Expired",
+   "Invoiced",
+   "PaidActive",
+   "Terminated"
+  ],
+  "ExpiringSoon": [
+   "Expired",
+   "Invoiced",
+   "PaidActive",
+   "Terminated"
+  ],
+  "Expired": [
+   "Terminated"
+  ],
+  "Terminated": []
+ },
+ "status_labels": {
+  "Draft": [
+   "secondary",
+   "Nháp"
+  ],
+  "Generated": [
+   "info",
+   "Đã sinh file"
+  ],
+  "Sent": [
+   "primary",
+   "Đã gửi"
+  ],
+  "Signed": [
+   "success",
+   "Đã ký"
+  ],
+  "Invoiced": [
+   "info",
+   "Đã xuất hóa đơn"
+  ],
+  "PaidActive": [
+   "success",
+   "Đã thanh toán"
+  ],
+  "Active": [
+   "success",
+   "Hiệu lực"
+  ],
+  "ExpiringSoon": [
+   "warning",
+   "Sắp hết hạn"
+  ],
+  "Expired": [
+   "danger",
+   "Đã hết hạn"
+  ],
+  "Terminated": [
+   "dark",
+   "Thanh lý"
+  ]
+ },
+ "thresholds": {
+  "EXPIRY_CRITICAL_DAYS": 7,
+  "EXPIRY_WARNING_DAYS": 14,
+  "EXPIRING_SOON_DAYS": 30,
+  "EXPIRING_WARN_DAYS": 60
+ },
+ "transition_matrix": [
+  {
+   "from": "Draft",
+   "to": "Draft",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Draft sang Draft. Cho phép: ['Generated']"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "Draft",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Draft sang Draft. Cho phép: ['Generated']"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "Draft",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Draft sang Draft. Cho phép: ['Generated']"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "Draft",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Draft sang Draft. Cho phép: ['Generated']"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "Generated",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "ok": "Generated"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "Generated",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "ok": "Generated"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "Generated",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "ok": "Generated"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "Generated",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "ok": "Generated"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "Sent",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Draft sang Sent. Cho phép: ['Generated']"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "Sent",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Draft sang Sent. Cho phép: ['Generated']"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "Sent",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Draft sang Sent. Cho phép: ['Generated']"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "Sent",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Draft sang Sent. Cho phép: ['Generated']"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "Signed",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Draft sang Signed. Cho phép: ['Generated']"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "Signed",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Draft sang Signed. Cho phép: ['Generated']"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "Signed",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Draft sang Signed. Cho phép: ['Generated']"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "Signed",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Draft sang Signed. Cho phép: ['Generated']"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "Active",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Draft sang Active. Cho phép: ['Generated']"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "Active",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Draft sang Active. Cho phép: ['Generated']"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "Active",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Draft sang Active. Cho phép: ['Generated']"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "Active",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Draft sang Active. Cho phép: ['Generated']"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "Invoiced",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Draft sang Invoiced. Cho phép: ['Generated']"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "Invoiced",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Draft sang Invoiced. Cho phép: ['Generated']"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "Invoiced",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Draft sang Invoiced. Cho phép: ['Generated']"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "Invoiced",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Draft sang Invoiced. Cho phép: ['Generated']"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "PaidActive",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Draft sang PaidActive. Cho phép: ['Generated']"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "PaidActive",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Draft sang PaidActive. Cho phép: ['Generated']"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "PaidActive",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Draft sang PaidActive. Cho phép: ['Generated']"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "PaidActive",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Draft sang PaidActive. Cho phép: ['Generated']"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "ExpiringSoon",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Draft sang ExpiringSoon. Cho phép: ['Generated']"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "ExpiringSoon",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Draft sang ExpiringSoon. Cho phép: ['Generated']"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "ExpiringSoon",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Draft sang ExpiringSoon. Cho phép: ['Generated']"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "ExpiringSoon",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Draft sang ExpiringSoon. Cho phép: ['Generated']"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "Expired",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Draft sang Expired. Cho phép: ['Generated']"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "Expired",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Draft sang Expired. Cho phép: ['Generated']"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "Expired",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Draft sang Expired. Cho phép: ['Generated']"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "Expired",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Draft sang Expired. Cho phép: ['Generated']"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "Terminated",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Draft sang Terminated. Cho phép: ['Generated']"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "Terminated",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Draft sang Terminated. Cho phép: ['Generated']"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "Terminated",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Draft sang Terminated. Cho phép: ['Generated']"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "Terminated",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Draft sang Terminated. Cho phép: ['Generated']"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "Bogus",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "Bogus",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "Bogus",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "Draft",
+   "to": "Bogus",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "Draft",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Generated sang Draft. Cho phép: ['Sent', 'Signed']"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "Draft",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Generated sang Draft. Cho phép: ['Sent', 'Signed']"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "Draft",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Generated sang Draft. Cho phép: ['Sent', 'Signed']"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "Draft",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Generated sang Draft. Cho phép: ['Sent', 'Signed']"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "Generated",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Generated sang Generated. Cho phép: ['Sent', 'Signed']"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "Generated",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Generated sang Generated. Cho phép: ['Sent', 'Signed']"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "Generated",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Generated sang Generated. Cho phép: ['Sent', 'Signed']"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "Generated",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Generated sang Generated. Cho phép: ['Sent', 'Signed']"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "Sent",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "ok": "Sent"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "Sent",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "ok": "Sent"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "Sent",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "ok": "Sent"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "Sent",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "ok": "Sent"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "Signed",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "ok": "Signed"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "Signed",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "ok": "Signed"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "Signed",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "ok": "Signed"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "Signed",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "ok": "Signed"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "Active",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Generated sang Active. Cho phép: ['Sent', 'Signed']"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "Active",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Generated sang Active. Cho phép: ['Sent', 'Signed']"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "Active",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Generated sang Active. Cho phép: ['Sent', 'Signed']"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "Active",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Generated sang Active. Cho phép: ['Sent', 'Signed']"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "Invoiced",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Generated sang Invoiced. Cho phép: ['Sent', 'Signed']"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "Invoiced",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Generated sang Invoiced. Cho phép: ['Sent', 'Signed']"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "Invoiced",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Generated sang Invoiced. Cho phép: ['Sent', 'Signed']"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "Invoiced",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Generated sang Invoiced. Cho phép: ['Sent', 'Signed']"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "PaidActive",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Generated sang PaidActive. Cho phép: ['Sent', 'Signed']"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "PaidActive",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Generated sang PaidActive. Cho phép: ['Sent', 'Signed']"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "PaidActive",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Generated sang PaidActive. Cho phép: ['Sent', 'Signed']"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "PaidActive",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Generated sang PaidActive. Cho phép: ['Sent', 'Signed']"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "ExpiringSoon",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Generated sang ExpiringSoon. Cho phép: ['Sent', 'Signed']"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "ExpiringSoon",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Generated sang ExpiringSoon. Cho phép: ['Sent', 'Signed']"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "ExpiringSoon",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Generated sang ExpiringSoon. Cho phép: ['Sent', 'Signed']"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "ExpiringSoon",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Generated sang ExpiringSoon. Cho phép: ['Sent', 'Signed']"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "Expired",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Generated sang Expired. Cho phép: ['Sent', 'Signed']"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "Expired",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Generated sang Expired. Cho phép: ['Sent', 'Signed']"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "Expired",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Generated sang Expired. Cho phép: ['Sent', 'Signed']"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "Expired",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Generated sang Expired. Cho phép: ['Sent', 'Signed']"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "Terminated",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Generated sang Terminated. Cho phép: ['Sent', 'Signed']"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "Terminated",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Generated sang Terminated. Cho phép: ['Sent', 'Signed']"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "Terminated",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Generated sang Terminated. Cho phép: ['Sent', 'Signed']"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "Terminated",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Generated sang Terminated. Cho phép: ['Sent', 'Signed']"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "Bogus",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "Bogus",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "Bogus",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "Generated",
+   "to": "Bogus",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "Draft",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Sent sang Draft. Cho phép: ['Signed']"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "Draft",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Sent sang Draft. Cho phép: ['Signed']"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "Draft",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Sent sang Draft. Cho phép: ['Signed']"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "Draft",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Sent sang Draft. Cho phép: ['Signed']"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "Generated",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Sent sang Generated. Cho phép: ['Signed']"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "Generated",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Sent sang Generated. Cho phép: ['Signed']"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "Generated",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Sent sang Generated. Cho phép: ['Signed']"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "Generated",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Sent sang Generated. Cho phép: ['Signed']"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "Sent",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Sent sang Sent. Cho phép: ['Signed']"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "Sent",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Sent sang Sent. Cho phép: ['Signed']"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "Sent",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Sent sang Sent. Cho phép: ['Signed']"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "Sent",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Sent sang Sent. Cho phép: ['Signed']"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "Signed",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "ok": "Signed"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "Signed",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "ok": "Signed"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "Signed",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "ok": "Signed"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "Signed",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "ok": "Signed"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "Active",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Sent sang Active. Cho phép: ['Signed']"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "Active",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Sent sang Active. Cho phép: ['Signed']"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "Active",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Sent sang Active. Cho phép: ['Signed']"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "Active",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Sent sang Active. Cho phép: ['Signed']"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "Invoiced",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Sent sang Invoiced. Cho phép: ['Signed']"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "Invoiced",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Sent sang Invoiced. Cho phép: ['Signed']"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "Invoiced",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Sent sang Invoiced. Cho phép: ['Signed']"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "Invoiced",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Sent sang Invoiced. Cho phép: ['Signed']"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "PaidActive",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Sent sang PaidActive. Cho phép: ['Signed']"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "PaidActive",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Sent sang PaidActive. Cho phép: ['Signed']"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "PaidActive",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Sent sang PaidActive. Cho phép: ['Signed']"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "PaidActive",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Sent sang PaidActive. Cho phép: ['Signed']"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "ExpiringSoon",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Sent sang ExpiringSoon. Cho phép: ['Signed']"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "ExpiringSoon",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Sent sang ExpiringSoon. Cho phép: ['Signed']"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "ExpiringSoon",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Sent sang ExpiringSoon. Cho phép: ['Signed']"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "ExpiringSoon",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Sent sang ExpiringSoon. Cho phép: ['Signed']"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "Expired",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Sent sang Expired. Cho phép: ['Signed']"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "Expired",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Sent sang Expired. Cho phép: ['Signed']"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "Expired",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Sent sang Expired. Cho phép: ['Signed']"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "Expired",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Sent sang Expired. Cho phép: ['Signed']"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "Terminated",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Sent sang Terminated. Cho phép: ['Signed']"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "Terminated",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Sent sang Terminated. Cho phép: ['Signed']"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "Terminated",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Sent sang Terminated. Cho phép: ['Signed']"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "Terminated",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Sent sang Terminated. Cho phép: ['Signed']"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "Bogus",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "Bogus",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "Bogus",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "Sent",
+   "to": "Bogus",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "Draft",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Signed sang Draft. Cho phép: ['Invoiced', 'Terminated']"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "Draft",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Signed sang Draft. Cho phép: ['Invoiced', 'Terminated']"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "Draft",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Signed sang Draft. Cho phép: ['Invoiced', 'Terminated']"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "Draft",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Signed sang Draft. Cho phép: ['Invoiced', 'Terminated']"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "Generated",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Signed sang Generated. Cho phép: ['Invoiced', 'Terminated']"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "Generated",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Signed sang Generated. Cho phép: ['Invoiced', 'Terminated']"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "Generated",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Signed sang Generated. Cho phép: ['Invoiced', 'Terminated']"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "Generated",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Signed sang Generated. Cho phép: ['Invoiced', 'Terminated']"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "Sent",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Signed sang Sent. Cho phép: ['Invoiced', 'Terminated']"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "Sent",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Signed sang Sent. Cho phép: ['Invoiced', 'Terminated']"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "Sent",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Signed sang Sent. Cho phép: ['Invoiced', 'Terminated']"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "Sent",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Signed sang Sent. Cho phép: ['Invoiced', 'Terminated']"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "Signed",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Signed sang Signed. Cho phép: ['Invoiced', 'Terminated']"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "Signed",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Signed sang Signed. Cho phép: ['Invoiced', 'Terminated']"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "Signed",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Signed sang Signed. Cho phép: ['Invoiced', 'Terminated']"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "Signed",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Signed sang Signed. Cho phép: ['Invoiced', 'Terminated']"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "Active",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Signed sang Active. Cho phép: ['Invoiced', 'Terminated']"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "Active",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Signed sang Active. Cho phép: ['Invoiced', 'Terminated']"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "Active",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Signed sang Active. Cho phép: ['Invoiced', 'Terminated']"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "Active",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Signed sang Active. Cho phép: ['Invoiced', 'Terminated']"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "Invoiced",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Vui lòng upload file hóa đơn PDF trước khi chuyển sang 'Đã xuất hóa đơn'."
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "Invoiced",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Vui lòng upload file hóa đơn PDF trước khi chuyển sang 'Đã xuất hóa đơn'."
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "Invoiced",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "ok": "Invoiced"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "Invoiced",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "ok": "Invoiced"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "PaidActive",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Signed sang PaidActive. Cho phép: ['Invoiced', 'Terminated']"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "PaidActive",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Signed sang PaidActive. Cho phép: ['Invoiced', 'Terminated']"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "PaidActive",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Signed sang PaidActive. Cho phép: ['Invoiced', 'Terminated']"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "PaidActive",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Signed sang PaidActive. Cho phép: ['Invoiced', 'Terminated']"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "ExpiringSoon",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Signed sang ExpiringSoon. Cho phép: ['Invoiced', 'Terminated']"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "ExpiringSoon",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Signed sang ExpiringSoon. Cho phép: ['Invoiced', 'Terminated']"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "ExpiringSoon",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Signed sang ExpiringSoon. Cho phép: ['Invoiced', 'Terminated']"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "ExpiringSoon",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Signed sang ExpiringSoon. Cho phép: ['Invoiced', 'Terminated']"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "Expired",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Signed sang Expired. Cho phép: ['Invoiced', 'Terminated']"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "Expired",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Signed sang Expired. Cho phép: ['Invoiced', 'Terminated']"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "Expired",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Signed sang Expired. Cho phép: ['Invoiced', 'Terminated']"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "Expired",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Signed sang Expired. Cho phép: ['Invoiced', 'Terminated']"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "Terminated",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "ok": "Terminated"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "Terminated",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "ok": "Terminated"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "Terminated",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "ok": "Terminated"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "Terminated",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "ok": "Terminated"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "Bogus",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "Bogus",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "Bogus",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "Signed",
+   "to": "Bogus",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "Draft",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Active sang Draft. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "Draft",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Active sang Draft. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "Draft",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Active sang Draft. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "Draft",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Active sang Draft. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "Generated",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Active sang Generated. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "Generated",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Active sang Generated. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "Generated",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Active sang Generated. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "Generated",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Active sang Generated. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "Sent",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Active sang Sent. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "Sent",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Active sang Sent. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "Sent",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Active sang Sent. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "Sent",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Active sang Sent. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "Signed",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Active sang Signed. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "Signed",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Active sang Signed. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "Signed",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Active sang Signed. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "Signed",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Active sang Signed. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "Active",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Active sang Active. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "Active",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Active sang Active. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "Active",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Active sang Active. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "Active",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Active sang Active. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "Invoiced",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Vui lòng upload file hóa đơn PDF trước khi chuyển sang 'Đã xuất hóa đơn'."
+   }
+  },
+  {
+   "from": "Active",
+   "to": "Invoiced",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Vui lòng upload file hóa đơn PDF trước khi chuyển sang 'Đã xuất hóa đơn'."
+   }
+  },
+  {
+   "from": "Active",
+   "to": "Invoiced",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "ok": "Invoiced"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "Invoiced",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "ok": "Invoiced"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "PaidActive",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Vui lòng upload file ủy nhiệm chi trước khi chuyển sang 'Đã thanh toán'."
+   }
+  },
+  {
+   "from": "Active",
+   "to": "PaidActive",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "ok": "PaidActive"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "PaidActive",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Vui lòng upload file ủy nhiệm chi trước khi chuyển sang 'Đã thanh toán'."
+   }
+  },
+  {
+   "from": "Active",
+   "to": "PaidActive",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "ok": "PaidActive"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "ExpiringSoon",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Active sang ExpiringSoon. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "ExpiringSoon",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Active sang ExpiringSoon. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "ExpiringSoon",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Active sang ExpiringSoon. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "ExpiringSoon",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Active sang ExpiringSoon. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "Expired",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "ok": "Expired"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "Expired",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "ok": "Expired"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "Expired",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "ok": "Expired"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "Expired",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "ok": "Expired"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "Terminated",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "ok": "Terminated"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "Terminated",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "ok": "Terminated"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "Terminated",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "ok": "Terminated"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "Terminated",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "ok": "Terminated"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "Bogus",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "Bogus",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "Bogus",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "Active",
+   "to": "Bogus",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "Draft",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Invoiced sang Draft. Cho phép: ['PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "Draft",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Invoiced sang Draft. Cho phép: ['PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "Draft",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Invoiced sang Draft. Cho phép: ['PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "Draft",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Invoiced sang Draft. Cho phép: ['PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "Generated",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Invoiced sang Generated. Cho phép: ['PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "Generated",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Invoiced sang Generated. Cho phép: ['PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "Generated",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Invoiced sang Generated. Cho phép: ['PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "Generated",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Invoiced sang Generated. Cho phép: ['PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "Sent",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Invoiced sang Sent. Cho phép: ['PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "Sent",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Invoiced sang Sent. Cho phép: ['PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "Sent",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Invoiced sang Sent. Cho phép: ['PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "Sent",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Invoiced sang Sent. Cho phép: ['PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "Signed",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Invoiced sang Signed. Cho phép: ['PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "Signed",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Invoiced sang Signed. Cho phép: ['PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "Signed",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Invoiced sang Signed. Cho phép: ['PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "Signed",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Invoiced sang Signed. Cho phép: ['PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "Active",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Invoiced sang Active. Cho phép: ['PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "Active",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Invoiced sang Active. Cho phép: ['PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "Active",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Invoiced sang Active. Cho phép: ['PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "Active",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Invoiced sang Active. Cho phép: ['PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "Invoiced",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Invoiced sang Invoiced. Cho phép: ['PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "Invoiced",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Invoiced sang Invoiced. Cho phép: ['PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "Invoiced",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Invoiced sang Invoiced. Cho phép: ['PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "Invoiced",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Invoiced sang Invoiced. Cho phép: ['PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "PaidActive",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Vui lòng upload file ủy nhiệm chi trước khi chuyển sang 'Đã thanh toán'."
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "PaidActive",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "ok": "PaidActive"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "PaidActive",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Vui lòng upload file ủy nhiệm chi trước khi chuyển sang 'Đã thanh toán'."
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "PaidActive",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "ok": "PaidActive"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "ExpiringSoon",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Invoiced sang ExpiringSoon. Cho phép: ['PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "ExpiringSoon",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Invoiced sang ExpiringSoon. Cho phép: ['PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "ExpiringSoon",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Invoiced sang ExpiringSoon. Cho phép: ['PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "ExpiringSoon",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Invoiced sang ExpiringSoon. Cho phép: ['PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "Expired",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Invoiced sang Expired. Cho phép: ['PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "Expired",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Invoiced sang Expired. Cho phép: ['PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "Expired",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Invoiced sang Expired. Cho phép: ['PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "Expired",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Invoiced sang Expired. Cho phép: ['PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "Terminated",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "ok": "Terminated"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "Terminated",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "ok": "Terminated"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "Terminated",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "ok": "Terminated"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "Terminated",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "ok": "Terminated"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "Bogus",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "Bogus",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "Bogus",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "Invoiced",
+   "to": "Bogus",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "Draft",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ PaidActive sang Draft. Cho phép: ['Expired', 'Terminated']"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "Draft",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ PaidActive sang Draft. Cho phép: ['Expired', 'Terminated']"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "Draft",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ PaidActive sang Draft. Cho phép: ['Expired', 'Terminated']"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "Draft",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ PaidActive sang Draft. Cho phép: ['Expired', 'Terminated']"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "Generated",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ PaidActive sang Generated. Cho phép: ['Expired', 'Terminated']"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "Generated",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ PaidActive sang Generated. Cho phép: ['Expired', 'Terminated']"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "Generated",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ PaidActive sang Generated. Cho phép: ['Expired', 'Terminated']"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "Generated",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ PaidActive sang Generated. Cho phép: ['Expired', 'Terminated']"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "Sent",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ PaidActive sang Sent. Cho phép: ['Expired', 'Terminated']"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "Sent",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ PaidActive sang Sent. Cho phép: ['Expired', 'Terminated']"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "Sent",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ PaidActive sang Sent. Cho phép: ['Expired', 'Terminated']"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "Sent",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ PaidActive sang Sent. Cho phép: ['Expired', 'Terminated']"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "Signed",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ PaidActive sang Signed. Cho phép: ['Expired', 'Terminated']"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "Signed",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ PaidActive sang Signed. Cho phép: ['Expired', 'Terminated']"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "Signed",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ PaidActive sang Signed. Cho phép: ['Expired', 'Terminated']"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "Signed",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ PaidActive sang Signed. Cho phép: ['Expired', 'Terminated']"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "Active",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ PaidActive sang Active. Cho phép: ['Expired', 'Terminated']"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "Active",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ PaidActive sang Active. Cho phép: ['Expired', 'Terminated']"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "Active",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ PaidActive sang Active. Cho phép: ['Expired', 'Terminated']"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "Active",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ PaidActive sang Active. Cho phép: ['Expired', 'Terminated']"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "Invoiced",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ PaidActive sang Invoiced. Cho phép: ['Expired', 'Terminated']"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "Invoiced",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ PaidActive sang Invoiced. Cho phép: ['Expired', 'Terminated']"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "Invoiced",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ PaidActive sang Invoiced. Cho phép: ['Expired', 'Terminated']"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "Invoiced",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ PaidActive sang Invoiced. Cho phép: ['Expired', 'Terminated']"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "PaidActive",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ PaidActive sang PaidActive. Cho phép: ['Expired', 'Terminated']"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "PaidActive",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ PaidActive sang PaidActive. Cho phép: ['Expired', 'Terminated']"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "PaidActive",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ PaidActive sang PaidActive. Cho phép: ['Expired', 'Terminated']"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "PaidActive",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ PaidActive sang PaidActive. Cho phép: ['Expired', 'Terminated']"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "ExpiringSoon",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ PaidActive sang ExpiringSoon. Cho phép: ['Expired', 'Terminated']"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "ExpiringSoon",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ PaidActive sang ExpiringSoon. Cho phép: ['Expired', 'Terminated']"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "ExpiringSoon",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ PaidActive sang ExpiringSoon. Cho phép: ['Expired', 'Terminated']"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "ExpiringSoon",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ PaidActive sang ExpiringSoon. Cho phép: ['Expired', 'Terminated']"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "Expired",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "ok": "Expired"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "Expired",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "ok": "Expired"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "Expired",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "ok": "Expired"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "Expired",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "ok": "Expired"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "Terminated",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "ok": "Terminated"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "Terminated",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "ok": "Terminated"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "Terminated",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "ok": "Terminated"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "Terminated",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "ok": "Terminated"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "Bogus",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "Bogus",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "Bogus",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "PaidActive",
+   "to": "Bogus",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "Draft",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ ExpiringSoon sang Draft. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "Draft",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ ExpiringSoon sang Draft. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "Draft",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ ExpiringSoon sang Draft. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "Draft",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ ExpiringSoon sang Draft. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "Generated",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ ExpiringSoon sang Generated. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "Generated",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ ExpiringSoon sang Generated. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "Generated",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ ExpiringSoon sang Generated. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "Generated",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ ExpiringSoon sang Generated. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "Sent",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ ExpiringSoon sang Sent. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "Sent",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ ExpiringSoon sang Sent. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "Sent",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ ExpiringSoon sang Sent. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "Sent",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ ExpiringSoon sang Sent. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "Signed",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ ExpiringSoon sang Signed. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "Signed",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ ExpiringSoon sang Signed. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "Signed",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ ExpiringSoon sang Signed. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "Signed",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ ExpiringSoon sang Signed. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "Active",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ ExpiringSoon sang Active. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "Active",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ ExpiringSoon sang Active. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "Active",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ ExpiringSoon sang Active. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "Active",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ ExpiringSoon sang Active. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "Invoiced",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Vui lòng upload file hóa đơn PDF trước khi chuyển sang 'Đã xuất hóa đơn'."
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "Invoiced",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Vui lòng upload file hóa đơn PDF trước khi chuyển sang 'Đã xuất hóa đơn'."
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "Invoiced",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "ok": "Invoiced"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "Invoiced",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "ok": "Invoiced"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "PaidActive",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Vui lòng upload file ủy nhiệm chi trước khi chuyển sang 'Đã thanh toán'."
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "PaidActive",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "ok": "PaidActive"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "PaidActive",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Vui lòng upload file ủy nhiệm chi trước khi chuyển sang 'Đã thanh toán'."
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "PaidActive",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "ok": "PaidActive"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "ExpiringSoon",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ ExpiringSoon sang ExpiringSoon. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "ExpiringSoon",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ ExpiringSoon sang ExpiringSoon. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "ExpiringSoon",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ ExpiringSoon sang ExpiringSoon. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "ExpiringSoon",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ ExpiringSoon sang ExpiringSoon. Cho phép: ['Expired', 'Invoiced', 'PaidActive', 'Terminated']"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "Expired",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "ok": "Expired"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "Expired",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "ok": "Expired"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "Expired",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "ok": "Expired"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "Expired",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "ok": "Expired"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "Terminated",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "ok": "Terminated"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "Terminated",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "ok": "Terminated"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "Terminated",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "ok": "Terminated"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "Terminated",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "ok": "Terminated"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "Bogus",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "Bogus",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "Bogus",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "ExpiringSoon",
+   "to": "Bogus",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "Draft",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Expired sang Draft. Cho phép: ['Terminated']"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "Draft",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Expired sang Draft. Cho phép: ['Terminated']"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "Draft",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Expired sang Draft. Cho phép: ['Terminated']"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "Draft",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Expired sang Draft. Cho phép: ['Terminated']"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "Generated",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Expired sang Generated. Cho phép: ['Terminated']"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "Generated",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Expired sang Generated. Cho phép: ['Terminated']"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "Generated",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Expired sang Generated. Cho phép: ['Terminated']"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "Generated",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Expired sang Generated. Cho phép: ['Terminated']"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "Sent",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Expired sang Sent. Cho phép: ['Terminated']"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "Sent",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Expired sang Sent. Cho phép: ['Terminated']"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "Sent",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Expired sang Sent. Cho phép: ['Terminated']"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "Sent",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Expired sang Sent. Cho phép: ['Terminated']"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "Signed",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Expired sang Signed. Cho phép: ['Terminated']"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "Signed",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Expired sang Signed. Cho phép: ['Terminated']"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "Signed",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Expired sang Signed. Cho phép: ['Terminated']"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "Signed",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Expired sang Signed. Cho phép: ['Terminated']"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "Active",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Expired sang Active. Cho phép: ['Terminated']"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "Active",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Expired sang Active. Cho phép: ['Terminated']"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "Active",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Expired sang Active. Cho phép: ['Terminated']"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "Active",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Expired sang Active. Cho phép: ['Terminated']"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "Invoiced",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Expired sang Invoiced. Cho phép: ['Terminated']"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "Invoiced",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Expired sang Invoiced. Cho phép: ['Terminated']"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "Invoiced",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Expired sang Invoiced. Cho phép: ['Terminated']"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "Invoiced",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Expired sang Invoiced. Cho phép: ['Terminated']"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "PaidActive",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Expired sang PaidActive. Cho phép: ['Terminated']"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "PaidActive",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Expired sang PaidActive. Cho phép: ['Terminated']"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "PaidActive",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Expired sang PaidActive. Cho phép: ['Terminated']"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "PaidActive",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Expired sang PaidActive. Cho phép: ['Terminated']"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "ExpiringSoon",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Expired sang ExpiringSoon. Cho phép: ['Terminated']"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "ExpiringSoon",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Expired sang ExpiringSoon. Cho phép: ['Terminated']"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "ExpiringSoon",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Expired sang ExpiringSoon. Cho phép: ['Terminated']"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "ExpiringSoon",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Expired sang ExpiringSoon. Cho phép: ['Terminated']"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "Expired",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Expired sang Expired. Cho phép: ['Terminated']"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "Expired",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Expired sang Expired. Cho phép: ['Terminated']"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "Expired",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Expired sang Expired. Cho phép: ['Terminated']"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "Expired",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Expired sang Expired. Cho phép: ['Terminated']"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "Terminated",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "ok": "Terminated"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "Terminated",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "ok": "Terminated"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "Terminated",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "ok": "Terminated"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "Terminated",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "ok": "Terminated"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "Bogus",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "Bogus",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "Bogus",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "Expired",
+   "to": "Bogus",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "Draft",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang Draft. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "Draft",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang Draft. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "Draft",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang Draft. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "Draft",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang Draft. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "Generated",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang Generated. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "Generated",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang Generated. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "Generated",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang Generated. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "Generated",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang Generated. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "Sent",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang Sent. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "Sent",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang Sent. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "Sent",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang Sent. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "Sent",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang Sent. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "Signed",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang Signed. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "Signed",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang Signed. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "Signed",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang Signed. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "Signed",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang Signed. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "Active",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang Active. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "Active",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang Active. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "Active",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang Active. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "Active",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang Active. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "Invoiced",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang Invoiced. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "Invoiced",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang Invoiced. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "Invoiced",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang Invoiced. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "Invoiced",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang Invoiced. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "PaidActive",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang PaidActive. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "PaidActive",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang PaidActive. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "PaidActive",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang PaidActive. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "PaidActive",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang PaidActive. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "ExpiringSoon",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang ExpiringSoon. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "ExpiringSoon",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang ExpiringSoon. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "ExpiringSoon",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang ExpiringSoon. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "ExpiringSoon",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang ExpiringSoon. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "Expired",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang Expired. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "Expired",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang Expired. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "Expired",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang Expired. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "Expired",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang Expired. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "Terminated",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang Terminated. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "Terminated",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang Terminated. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "Terminated",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang Terminated. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "Terminated",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Không thể chuyển từ Terminated sang Terminated. Cho phép: không có"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "Bogus",
+   "has_invoice": false,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "Bogus",
+   "has_invoice": false,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "Bogus",
+   "has_invoice": true,
+   "has_slip": false,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  },
+  {
+   "from": "Terminated",
+   "to": "Bogus",
+   "has_invoice": true,
+   "has_slip": true,
+   "result": {
+    "err": "ValueError",
+    "msg": "Trạng thái không hợp lệ: 'Bogus'"
+   }
+  }
+ ],
+ "expiry": [
+  {
+   "days": null,
+   "end_date": null,
+   "today": "2026-06-15",
+   "days_to_expiry": null,
+   "bucket": null,
+   "is_expiring_soon": false
+  },
+  {
+   "days": -10,
+   "end_date": "2026-06-05",
+   "today": "2026-06-15",
+   "days_to_expiry": -10,
+   "bucket": "expired",
+   "is_expiring_soon": false
+  },
+  {
+   "days": -1,
+   "end_date": "2026-06-14",
+   "today": "2026-06-15",
+   "days_to_expiry": -1,
+   "bucket": "expired",
+   "is_expiring_soon": false
+  },
+  {
+   "days": 0,
+   "end_date": "2026-06-15",
+   "today": "2026-06-15",
+   "days_to_expiry": 0,
+   "bucket": "expired",
+   "is_expiring_soon": false
+  },
+  {
+   "days": 1,
+   "end_date": "2026-06-16",
+   "today": "2026-06-15",
+   "days_to_expiry": 1,
+   "bucket": "critical",
+   "is_expiring_soon": true
+  },
+  {
+   "days": 6,
+   "end_date": "2026-06-21",
+   "today": "2026-06-15",
+   "days_to_expiry": 6,
+   "bucket": "critical",
+   "is_expiring_soon": true
+  },
+  {
+   "days": 7,
+   "end_date": "2026-06-22",
+   "today": "2026-06-15",
+   "days_to_expiry": 7,
+   "bucket": "critical",
+   "is_expiring_soon": true
+  },
+  {
+   "days": 8,
+   "end_date": "2026-06-23",
+   "today": "2026-06-15",
+   "days_to_expiry": 8,
+   "bucket": "warning",
+   "is_expiring_soon": true
+  },
+  {
+   "days": 13,
+   "end_date": "2026-06-28",
+   "today": "2026-06-15",
+   "days_to_expiry": 13,
+   "bucket": "warning",
+   "is_expiring_soon": true
+  },
+  {
+   "days": 14,
+   "end_date": "2026-06-29",
+   "today": "2026-06-15",
+   "days_to_expiry": 14,
+   "bucket": "warning",
+   "is_expiring_soon": true
+  },
+  {
+   "days": 15,
+   "end_date": "2026-06-30",
+   "today": "2026-06-15",
+   "days_to_expiry": 15,
+   "bucket": "info",
+   "is_expiring_soon": true
+  },
+  {
+   "days": 29,
+   "end_date": "2026-07-14",
+   "today": "2026-06-15",
+   "days_to_expiry": 29,
+   "bucket": "info",
+   "is_expiring_soon": true
+  },
+  {
+   "days": 30,
+   "end_date": "2026-07-15",
+   "today": "2026-06-15",
+   "days_to_expiry": 30,
+   "bucket": "info",
+   "is_expiring_soon": true
+  },
+  {
+   "days": 31,
+   "end_date": "2026-07-16",
+   "today": "2026-06-15",
+   "days_to_expiry": 31,
+   "bucket": null,
+   "is_expiring_soon": false
+  },
+  {
+   "days": 59,
+   "end_date": "2026-08-13",
+   "today": "2026-06-15",
+   "days_to_expiry": 59,
+   "bucket": null,
+   "is_expiring_soon": false
+  },
+  {
+   "days": 60,
+   "end_date": "2026-08-14",
+   "today": "2026-06-15",
+   "days_to_expiry": 60,
+   "bucket": null,
+   "is_expiring_soon": false
+  },
+  {
+   "days": 61,
+   "end_date": "2026-08-15",
+   "today": "2026-06-15",
+   "days_to_expiry": 61,
+   "bucket": null,
+   "is_expiring_soon": false
+  },
+  {
+   "days": 365,
+   "end_date": "2027-06-15",
+   "today": "2026-06-15",
+   "days_to_expiry": 365,
+   "bucket": null,
+   "is_expiring_soon": false
+  }
+ ]
+}
