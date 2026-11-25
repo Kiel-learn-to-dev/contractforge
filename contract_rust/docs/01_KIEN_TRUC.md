@@ -5,7 +5,7 @@
 ```
 contract_rust/
 ├── Cargo.toml                 # [workspace], resolver = "3", edition 2024 cho mọi crate
-├── rust-toolchain.toml        # channel = "1.94.1"  (máy phát triển đã có rustc 1.94.1)
+├── rust-toolchain.toml        # channel = "1.95.0"  (Slint 1.19.1 yêu cầu Rust 1.95)
 ├── crates/
 │   ├── cf-core/               # Nghiệp vụ thuần. KHÔNG I/O, KHÔNG rusqlite, KHÔNG file.
 │   ├── cf-docx/               # Engine docx: đọc mẫu, điền, phân tích placeholder.
@@ -22,12 +22,11 @@ contract_rust/
 
 ```
 cf-app ──► cf-services ──► cf-db ──► cf-core
-                   │                    ▲
-                   └──► cf-docx ────────┘ (cf-docx chỉ dùng cf-core::text nếu cần; không dùng cf-db)
+                   └──► cf-docx
 ```
 
 - `cf-core` không phụ thuộc crate nội bộ nào.
-- `cf-docx` không biết gì về hợp đồng: nhận `HashMap<String,String>` + danh sách dòng lặp, trả bytes.
+- `cf-docx` không biết gì về hợp đồng hoặc `cf-core`: nhận `HashMap<String,String>` + danh sách dòng lặp, trả bytes.
 - `cf-app` không gọi `cf-db` trực tiếp; mọi thứ đi qua `cf-services`.
 
 ## 2. Thư viện (đã tra phiên bản bằng `cargo search` ngày 25/11/2026)
@@ -44,12 +43,12 @@ Khai báo ở `[workspace.dependencies]`, crate con dùng `x = { workspace = tru
 | `thiserror` | `2.0` | mọi crate thư viện | |
 | `zip` | `9.8` | docx, services | tắt mặc định, bật `deflate` |
 | `quick-xml` | `0.42` | docx | |
-| `rusqlite` | `0.43` | db | feature `bundled` (không cần SQLite cài sẵn) |
+| `rusqlite` | `0.43` | db, services | feature `bundled` (không cần SQLite cài sẵn) |
 | `calamine` | `0.38` | services | đọc .xlsx |
 | `rust_xlsxwriter` | `0.104` | services | ghi .xlsx |
 | `sha2` | `0.11` | services | băm mẫu (mã `BUNDLED-…`) |
 | `uuid` | `1.29` | services | feature `v4` (mã batch job, tên file mẫu) |
-| `fs4` | `1.1` | app | khóa file `.cf_writer.lock` |
+| `fs4` | `1.1` | db | khóa file `.cf_writer.lock` qua API `cf-db::lock` |
 | `slint` / `slint-build` | `1.19.1` | app | |
 | `rfd` | `0.18` | app | hộp thoại Mở/Lưu file native |
 | `open` | `5.4` | app | mở file/thư mục bằng ứng dụng mặc định |

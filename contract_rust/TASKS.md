@@ -9,8 +9,8 @@ hàm, có nguồn Python làm chuẩn, có test, có lệnh "xong khi".
 2. Mở **file Python nguồn** ghi trong task, đọc đúng hàm đó. Python là đặc tả về **kết quả**,
    không phải về cách viết code. Đường dẫn Python tính từ gốc repo, ví dụ `ContractForge/app/services/pricing.py`.
 3. Nếu task có mã `KB-xx`: đọc dòng đó trong `docs/06_KHAC_BIET_CO_CHU_Y.md` và **làm theo KB**, không theo Python.
-4. Viết test trước (fixture hoặc ví dụ ghi trong task), rồi viết code cho test xanh.
-5. Chạy lệnh "Xong khi". Rồi chạy kiểm chung (DoD bên dưới).
+4. Theo yêu cầu triển khai hiện tại: hoàn thành code cho các phần thuần trong một đợt trước; sau đó hoàn thiện test fixture/unit và chạy test theo đợt. Không bỏ test hoặc tiêu chí đầu ra của task.
+5. Chỉ đánh dấu "Xong" sau khi chạy lệnh "Xong khi" và kiểm chung (DoD bên dưới). Các điểm kiểm cần thao tác người thật vẫn để chờ người dùng.
 6. Không sửa file ngoài danh sách "File" của task, trừ `lib.rs`/`mod.rs` để khai báo module.
 7. Không thêm thư viện ngoài bảng ở `docs/01_KIEN_TRUC.md` §2.
 8. Kẹt quá 2 lần cùng một lỗi → dừng, ghi lại lỗi vào cuối task trong file đợt, báo người giao việc.
@@ -26,6 +26,13 @@ hàm, có nguồn Python làm chuẩn, có test, có lệnh "xong khi".
 - [ ] Tick ô của task trong file đợt
 
 Lệnh gộp: `pwsh contract_rust/tools/check.ps1` (tạo ở T0.04).
+
+## Ghi chú triển khai
+
+- Viết mã trước, ưu tiên nghiệp vụ thuần `cf-core`, engine độc lập `cf-docx`, rồi Store và services; gom thực thi kiểm thử sau khi hoàn tất phần code thuần.
+- `cf-docx` giữ độc lập với `cf-core` theo tiêu chí task P2 (`cargo tree -p cf-docx` không có cf-core); mapping nghiệp vụ thuộc `cf-services`.
+- `cf-db` sở hữu khóa writer (task T3.04), do đó crate này sẽ dùng `fs4`; `cf-app` chỉ khởi động/giữ đối tượng khóa qua API cf-db.
+- Trong T3.13, tham chiếu id mới là kiểu `ChangeValue::Ref(usize)` riêng, trỏ tới vị trí kết quả Insert trước đó; `rusqlite::types::Value` không có biến thể `Ref`.
 
 ## Quy ước mã task
 

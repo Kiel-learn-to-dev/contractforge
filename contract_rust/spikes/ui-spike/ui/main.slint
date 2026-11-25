@@ -1,0 +1,49 @@
+import { LineEdit, Palette, StandardTableView, TextEdit } from "std-widgets.slint";
+import { MonthlyBars, ProductPie } from "chart.slint";
+
+export component MainWindow inherits Window {
+    title: "ContractForge — kiểm tra Slint";
+    width: 1000px;
+    height: 700px;
+    default-font-family: "Segoe UI";
+    background: #f1f4f8;
+    init => { Palette.color-scheme = ColorScheme.light; }
+    in property <[[StandardListViewItem]]> rows;
+    callback sort-ascending(int);
+    callback sort-descending(int);
+
+    VerticalLayout {
+        padding: 20px;
+        spacing: 12px;
+        Text { text: "Bản thử giao diện ContractForge"; font-size: 22px; font-weight: 700; color: #20334a; }
+        HorizontalLayout {
+            spacing: 12px;
+            LineEdit { placeholder-text: "Gõ tên khách hàng bằng tiếng Việt"; }
+            LineEdit { placeholder-text: "Số hợp đồng"; }
+            LineEdit { placeholder-text: "Ngày ký"; }
+        }
+        TextEdit { placeholder-text: "Gõ nhiều dòng: Trạm y tế xã Đồng Tâm"; height: 64px; }
+        HorizontalLayout {
+            spacing: 24px;
+            Text { text: "10 pt · Trạm y tế xã Đồng Tâm"; font-size: 10pt; color: #20334a; }
+            Text { text: "12 pt · Nguyễn Thị Hương"; font-size: 12pt; color: #20334a; }
+            Text { text: "14 pt · Quyết định số 12/QĐ-UBND"; font-size: 14pt; color: #20334a; }
+        }
+        StandardTableView {
+            vertical-stretch: 1;
+            min-height: 120px;
+            columns: [
+                { title: "Khách hàng", width: 240px }, { title: "Mã", width: 120px },
+                { title: "Giá trị", width: 140px }, { title: "Ngày", width: 130px }, { title: "Trạng thái" }
+            ];
+            rows: root.rows;
+            sort-ascending(column) => { root.sort-ascending(column); }
+            sort-descending(column) => { root.sort-descending(column); }
+        }
+        HorizontalLayout {
+            vertical-stretch: 0;
+            MonthlyBars { height: 110px; }
+            ProductPie { width: 100px; height: 100px; }
+        }
+    }
+}

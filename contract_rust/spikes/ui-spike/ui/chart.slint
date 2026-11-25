@@ -1,0 +1,20 @@
+export component MonthlyBars inherits Rectangle {
+    in property <[int]> values: [4, 8, 6, 10, 5, 9, 7, 11, 6, 8, 5, 10];
+    background: #f7f8fa;
+    HorizontalLayout {
+        alignment: LayoutAlignment.end;
+        spacing: 8px;
+        for value[i] in root.values: VerticalLayout {
+            alignment: LayoutAlignment.end;
+            Text { text: "T" + (i + 1) + "/26"; color: #455; font-size: 10px; }
+            Rectangle { height: max(4px, value * 7px); background: #4783d1; border-radius: 3px; }
+        }
+    }
+}
+
+export component ProductPie inherits Rectangle {
+    background: transparent;
+    Path { width: 100px; height: 100px; viewbox-x: 0; viewbox-y: 0; viewbox-width: 100; viewbox-height: 100; commands: "M 50 50 L 50 10 A 40 40 0 0 1 84.64 70 Z"; fill: #4783d1; }
+    Path { width: 100px; height: 100px; viewbox-x: 0; viewbox-y: 0; viewbox-width: 100; viewbox-height: 100; commands: "M 50 50 L 84.64 70 A 40 40 0 0 1 15.36 70 Z"; fill: #e9a23b; }
+    Path { width: 100px; height: 100px; viewbox-x: 0; viewbox-y: 0; viewbox-width: 100; viewbox-height: 100; commands: "M 50 50 L 15.36 70 A 40 40 0 0 1 50 10 Z"; fill: #52a675; }
+}
