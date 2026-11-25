@@ -7,7 +7,7 @@ Mọi file trong `crates/cf-db/`. Test dùng DB tạm (`tempfile`) tạo từ `f
 ---
 
 ### T3.01 — Lỗi và codec Decimal · S
-- [ ] Xong
+- [x] Xong
 - **Làm:** `pub enum DbError { Sqlite(rusqlite::Error), Schema(String), Codec(String), Locked }`.
   `codec::read_decimal(ValueRef) -> Result<Option<Decimal>>` (INTEGER/REAL/TEXT/NULL theo `02_DU_LIEU.md` §3);
   `codec::write_decimal(Option<Decimal>) -> rusqlite::types::Value` (TEXT chuẩn hóa).
@@ -18,7 +18,7 @@ Mọi file trong `crates/cf-db/`. Test dùng DB tạm (`tempfile`) tạo từ `f
 - **Phụ thuộc:** T0.03
 
 ### T3.02 — Codec ngày, giờ, bool · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** `read_date`/`write_date` (`YYYY-MM-DD`); `read_datetime` (có hoặc không `.ffffff`)/`write_datetime`
   (`%Y-%m-%d %H:%M:%S%.6f`); `read_bool` (0/1, `'0'/'1'`). `opt_text`: chuỗi trim rỗng → NULL.
 - **File:** `src/codec.rs`
@@ -27,7 +27,7 @@ Mọi file trong `crates/cf-db/`. Test dùng DB tạm (`tempfile`) tạo từ `f
 - **Phụ thuộc:** T3.01
 
 ### T3.03 — Đường dẫn dữ liệu · S
-- [ ] Xong
+- [x] Xong
 - **Làm:** `paths::resolve_data_root(env, localappdata, exe_dir) -> PathBuf` theo 4 bước `01_KIEN_TRUC.md` §4
   (tham số truyền vào để test được); `struct DataPaths` với mọi đường dẫn con; `ensure_dirs()`;
   `resolve_stored(&str) -> PathBuf` (KB-16).
@@ -38,7 +38,7 @@ Mọi file trong `crates/cf-db/`. Test dùng DB tạm (`tempfile`) tạo từ `f
 - **Phụ thuộc:** T3.01
 
 ### T3.04 — Khóa ghi một tiến trình · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** `lock::acquire(root) -> Result<WriterLock, DbError>` (fs4 `try_lock_exclusive` trên `.cf_writer.lock`);
   đang bị khóa → `DbError::Locked`. Khóa nhả khi `drop`.
 - **File:** `src/lock.rs`
@@ -47,7 +47,7 @@ Mọi file trong `crates/cf-db/`. Test dùng DB tạm (`tempfile`) tạo từ `f
 - **Phụ thuộc:** T3.01
 
 ### T3.05 — Mở DB và tạo DB mới · S
-- [ ] Xong
+- [x] Xong
 - **Làm:** `open(path) -> Result<Connection>`: `foreign_keys=ON`, `busy_timeout=5000`, không đổi journal_mode.
   File chưa có → chạy `include_str!("../../../fixtures/schema_baseline.sql")` trong transaction + seed sản phẩm
   theo `schema.json → seed_products` (chỉ khi bảng rỗng; `created_at`/`updated_at` = giờ UTC hiện tại).
@@ -58,7 +58,7 @@ Mọi file trong `crates/cf-db/`. Test dùng DB tạm (`tempfile`) tạo từ `f
 - **Phụ thuộc:** T3.02
 
 ### T3.06 — Kiểm schema DB có sẵn · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** `check_schema(conn) -> Result<(), DbError>` theo `schema.json → required_columns`; thiếu → `Schema` với câu
   `02_DU_LIEU.md` §5.1 + danh sách bảng.cột thiếu. Cột thừa → bỏ qua.
 - **File:** `src/schema.rs`
@@ -67,7 +67,7 @@ Mọi file trong `crates/cf-db/`. Test dùng DB tạm (`tempfile`) tạo từ `f
 - **Phụ thuộc:** T3.05
 
 ### T3.07 — Struct khách hàng · S
-- [ ] Xong
+- [x] Xong
 - **Làm:** `Customer`, `CustomerUnit`, `CustomerDocument` (mọi cột ở `required_columns`), `from_row(&Row)` đọc **theo tên cột**,
   `to_values()` cho insert/update. `Customer::to_view() -> cf_core::render_context::CustomerView`.
 - **File:** `src/model/customer.rs`, `src/model/mod.rs`
@@ -76,7 +76,7 @@ Mọi file trong `crates/cf-db/`. Test dùng DB tạm (`tempfile`) tạo từ `f
 - **Phụ thuộc:** T3.05, T1.35
 
 ### T3.08 — Struct sản phẩm và mẫu · S
-- [ ] Xong
+- [x] Xong
 - **Làm:** `Product` (`feature_list` JSON hỏng → `[]`), `ContractTemplate` (`detected_placeholders`, `field_mapping` JSON).
   `Product::to_rule() -> cf_core::pricing::ProductRule`, `ContractTemplate::to_info() -> TemplateInfo`.
 - **File:** `src/model/product.rs`, `src/model/template.rs`
@@ -85,7 +85,7 @@ Mọi file trong `crates/cf-db/`. Test dùng DB tạm (`tempfile`) tạo từ `f
 - **Phụ thuộc:** T3.07, T1.33, T1.41
 
 ### T3.09 — Struct hợp đồng, dòng, sự kiện · S
-- [ ] Xong
+- [x] Xong
 - **Làm:** `Contract` (status là `ContractStatus`, `render_data` giữ `serde_json::Value`, `selected_unit_names` JSON),
   `ContractItem`, `ContractEvent`. `Contract::to_view()`, `Contract::evidence()`.
 - **File:** `src/model/contract.rs`
@@ -94,7 +94,7 @@ Mọi file trong `crates/cf-db/`. Test dùng DB tạm (`tempfile`) tạo từ `f
 - **Phụ thuộc:** T3.07, T1.21
 
 ### T3.10 — Cài đặt và người phát hành báo giá · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** `AppSetting` (key, value); `QuotationIssuer`. `party_b(settings) -> PartyB` (13 khóa, rỗng → mặc định `""`);
   `get_setting(key, default)` theo luật `02_DU_LIEU.md` §6.
 - **Nguồn:** `ContractForge/app/services/settings_service.py`
@@ -104,7 +104,7 @@ Mọi file trong `crates/cf-db/`. Test dùng DB tạm (`tempfile`) tạo từ `f
 - **Phụ thuộc:** T3.07
 
 ### T3.11 — `Store::load` · S
-- [ ] Xong
+- [x] Xong
 - **Làm:** struct `Store` theo `01_KIEN_TRUC.md` §6; nạp mọi bảng vào `BTreeMap`; ghi nhận `PRAGMA data_version`.
 - **File:** `src/store/mod.rs`
 - **Test (unit):** DB tạm có 2 khách, 3 hợp đồng, 4 dòng → đếm đúng.
@@ -112,7 +112,7 @@ Mọi file trong `crates/cf-db/`. Test dùng DB tạm (`tempfile`) tạo từ `f
 - **Phụ thuộc:** T3.08, T3.09, T3.10
 
 ### T3.12 — Chỉ mục · S
-- [ ] Xong
+- [x] Xong
 - **Làm:** `Indexes` (danh sách §6) dựng từ Store; `search_key` dùng `cf_core::text::search_key` trên
   khách hàng: `code + legal_name + short_name`; hợp đồng: `contract_number + notes + tên khách`.
   Các hàm tra cứu: `contract_by_number`, `contracts_of_customer`, `children_of`, `renewals_of`, `items_of`
@@ -123,12 +123,13 @@ Mọi file trong `crates/cf-db/`. Test dùng DB tạm (`tempfile`) tạo từ `f
 - **Phụ thuộc:** T3.11, T1.02
 
 ### T3.13 — `Store::apply` (ghi transaction rồi mới cập nhật RAM) · M
-- [ ] Xong
+- [x] Xong
 - **Làm:** `enum Change { Insert{table, values}, Update{table, id, values}, Delete{table, id}, SetSetting{key, value} }`
-  (values = danh sách (cột, Value)); `apply(Vec<Change>) -> Result<Vec<i64 /*id mới*/>>`: một transaction;
+  (values dùng `ChangeValue::{Sql(rusqlite::types::Value), Ref(usize)}`; `Ref(i)` trỏ tới id được trả về bởi Insert thứ i trước đó);
+  `apply(Vec<Change>) -> Result<Vec<i64 /*id mới*/>>`: một transaction;
   thành công → **nạp lại toàn bộ Store** (vài ms ở quy mô này; tránh mọi lỗi lệch do CASCADE), dựng lại chỉ mục;
-  thất bại → RAM không đổi. `Insert` có thể tham chiếu id vừa tạo trong cùng lô bằng `Value::Ref(idx)`
-  (cần cho tạo hợp đồng + dòng + sự kiện).
+  thất bại → RAM không đổi. `Insert` có thể tham chiếu id vừa tạo trong cùng lô bằng `ChangeValue::Ref(idx)`
+  (cần cho tạo hợp đồng + dòng + sự kiện; đây là enum riêng, không phải biến thể rusqlite `Value`).
   **Lưu ý:** `contract_events.contract_id` **không** có ON DELETE CASCADE (Python xóa qua ORM) → nơi xóa hợp đồng
   phải tự thêm `Delete` các sự kiện trước. `contract_items`, `customer_units` thì có CASCADE.
 - **File:** `src/store/apply.rs`
@@ -139,7 +140,7 @@ Mọi file trong `crates/cf-db/`. Test dùng DB tạm (`tempfile`) tạo từ `f
 - **Phụ thuộc:** T3.12
 
 ### T3.14 — Phát hiện tiến trình khác ghi DB · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** trước mỗi `apply`: đọc `PRAGMA data_version`; khác → `reload()` toàn bộ, trả cờ `reloaded=true` để UI cảnh báo.
 - **File:** `src/store/mod.rs`
 - **Test (unit):** mở connection thứ hai, insert một khách → `apply` kế tiếp báo `reloaded` và RAM có khách đó.
@@ -147,7 +148,7 @@ Mọi file trong `crates/cf-db/`. Test dùng DB tạm (`tempfile`) tạo từ `f
 - **Phụ thuộc:** T3.13
 
 ### T3.15 — Đồng hồ (Clock) · XS
-- [ ] Xong
+- [x] Xong
 - **Làm:** `trait Clock { fn today(&self) -> NaiveDate; fn now_utc(&self) -> NaiveDateTime; fn now_local(&self) -> NaiveDateTime; }`
   + `SystemClock` + `FixedClock` (test). Đặt ở cf-db để cf-services dùng chung.
 - **File:** `src/clock.rs`
@@ -155,7 +156,7 @@ Mọi file trong `crates/cf-db/`. Test dùng DB tạm (`tempfile`) tạo từ `f
 - **Phụ thuộc:** T3.01
 
 ### T3.16 — Dữ liệu mẫu cho test ca sử dụng · S
-- [ ] Xong
+- [x] Xong
 - **Làm:** trong `cf-testkit`: `pub fn seeded_db(dir) -> PathBuf` tạo DB từ baseline + dữ liệu hư cấu:
   2 nhóm sản phẩm (G1: gói chính `G1-MAIN` 440909đ VAT 10, gói bổ sung `G1-ADD` 100000đ; G2: `G2-MAIN`),
   3 khách (một có 2 đơn vị con, một tạm ngưng, một đã xóa), 4 mẫu (hợp đồng G1, kèm theo G1 "Nghiệm thu",
@@ -166,7 +167,8 @@ Mọi file trong `crates/cf-db/`. Test dùng DB tạm (`tempfile`) tạo từ `f
 - **Phụ thuộc:** T3.13
 
 ### T3.17 — Kiểm tương thích hai chiều với Python · M
-- [ ] Xong
+- [x] Xong
+- **Ghi chú:** Đã sửa `codec::read_datetime` hỗ trợ ISO `T` (`2026-03-23T04:49:07.668700`) phát hiện trên bản sao DB thật, và sửa `compat_check.py` đóng connection SQLite + tìm `.venv` ở thư mục cha. Chạy trên bản sao `data\contract_manager.db` in `COMPAT OK`, SHA-256 DB nguồn không đổi. (Chờ chủ dự án xem kết quả ĐD3.)
 - **Làm:** `tools/compat_check.py` (chạy bằng `.venv\Scripts\python.exe -I`):
   1. sao DB thật bằng sqlite backup API vào thư mục tạm; **viết lại mọi cột đường dẫn** (`*_path`, `file_path`)
      sang thư mục tạm (copy file tương ứng nếu có); 2. chạy binary `cf-db-compat` (tạo trong task này ở
@@ -180,6 +182,6 @@ Mọi file trong `crates/cf-db/`. Test dùng DB tạm (`tempfile`) tạo từ `f
 ---
 
 ## Điểm kiểm Đợt 3
-- [ ] `cargo test -p cf-db` xanh
-- [ ] `compat_check.py` in `COMPAT OK`, hash DB thật không đổi
-- [ ] Không có `SELECT` nào ngoài `store/mod.rs` (`rg "SELECT" crates/cf-db/src` chỉ ra file đó và `schema.rs`)
+- [x] `cargo test -p cf-db` xanh
+- [x] `compat_check.py` in `COMPAT OK`, hash DB thật không đổi
+- [x] Không có `SELECT` nào ngoài `store/mod.rs` (`rg "SELECT" crates/cf-db/src` chỉ ra file đó và `schema.rs`)
