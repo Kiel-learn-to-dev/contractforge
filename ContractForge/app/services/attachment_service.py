@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.models.contract import Contract
 from app.models.contract_template import ContractTemplate
-from app.services.docx_renderer import build_render_context, build_render_lists, render_docx
+from app.services.docx_renderer import apply_template_mapping, build_render_context, build_render_lists, render_docx
 from app.utils.file_naming import make_output_filename
 
 #: Loại mẫu được phép sinh như văn bản kèm theo. Mẫu hợp đồng và báo giá không nằm ở đây.
@@ -42,7 +42,18 @@ def render_attachment(db: Session, contract_id: int, template_id: int) -> tuple[
         raise FileNotFoundError("File mẫu không tồn tại trên đĩa.")
 
     customer = contract.customer
-    ctx = build_render_context(contract, customer, template=template, db=db)
+    from app.services.template_analyzer import CANONICAL_MAP
+
+    canonical_fields = [CANONICAL_MAP.get(p, "") for p in template.detected_placeholders]
+    canonical_fields.extend(template.field_mapping.values())
+    if any(str(field or "").startswith("form08a.") for field in canonical_fields):
+        from app.services.form08a_service import build_08a_context
+
+        ctx = apply_template_mapping(
+            build_08a_context(db, contract, customer, contract.product), template,
+        )
+    else:
+        ctx = build_render_context(contract, customer, template=template, db=db)
     lists = build_render_lists(contract)
     data = render_docx(template.file_path, ctx, lists=lists)
     fname = make_output_filename(

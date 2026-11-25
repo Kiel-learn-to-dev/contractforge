@@ -56,6 +56,33 @@ CANONICAL_MAP: dict[str, str] = {
     "QUOTE_DATE_DAY":           "quotation.date_day",
     "QUOTE_DATE_MONTH":         "quotation.date_month",
     "QUOTE_DATE_YEAR":          "quotation.date_year",
+    "QUOTE_NUMBER":             "quotation.number",
+    "QUOTE_PLACE":              "quotation.place",
+    "QUOTE_SUBJECT":            "quotation.subject",
+    "QUOTE_VALID_UNTIL":        "quotation.valid_until",
+    "QUOTE_PAYMENT_TERMS":      "quotation.payment_terms",
+    "QUOTE_DELIVERY_TERMS":     "quotation.delivery_terms",
+    "QUOTE_SUPPORT_TERMS":      "quotation.support_terms",
+    "QUOTE_NOTE":               "quotation.note",
+    "QUOTE_ISSUER_NAME":        "quotation.issuer.name",
+    "QUOTE_ISSUER_ADDRESS":     "quotation.issuer.address",
+    "QUOTE_ISSUER_TAX_CODE":    "quotation.issuer.tax_code",
+    "QUOTE_ISSUER_REPRESENTATIVE": "quotation.issuer.representative",
+    "QUOTE_ISSUER_TITLE":       "quotation.issuer.title",
+    "QUOTE_ISSUER_PHONE":       "quotation.issuer.phone",
+    "QUOTE_ISSUER_EMAIL":       "quotation.issuer.email",
+
+    # Yêu cầu báo giá (văn bản gửi đối tác; cố ý không có khóa nào về tiền)
+    "REQUEST_DATE":             "request.date",
+    "REQUEST_DATE_DAY":         "request.date_day",
+    "REQUEST_DATE_MONTH":       "request.date_month",
+    "REQUEST_DATE_YEAR":        "request.date_year",
+    "REQUEST_DEADLINE":         "request.deadline",
+    "REQUEST_PLACE":            "request.place",
+    "REQUEST_ISSUER_NAME":      "request.issuer_name",
+    "REQUEST_ADDRESSEE":        "request.addressee",
+    "REQUEST_SUBJECT":          "request.subject",
+    "REQUEST_NOTE":             "request.note",
 
     # Sản phẩm
     "PRODUCT_CODE":             "product.code",
@@ -66,6 +93,13 @@ CANONICAL_MAP: dict[str, str] = {
     "ACCEPTANCE_DATE_DAY":      "contract.acceptance_date_day",
     "ACCEPTANCE_DATE_MONTH":    "contract.acceptance_date_month",
     "ACCEPTANCE_DATE_YEAR":     "contract.acceptance_date_year",
+
+    # Fields provided by the specialized acceptance-value form context.
+    "BUDGET_UNIT_NAME":         "form08a.budget_unit_name",
+    "BUDGET_UNIT_CODE":         "form08a.budget_unit_code",
+    "WORK_CONTENT":             "form08a.work_content",
+    "PARTY_A_TITLE_UPPER":      "form08a.party_a_title_upper",
+    "PARTY_B_TITLE_UPPER":      "form08a.party_b_title_upper",
 
     # Thanh lý
     "LIQUIDATION_DATE_DAY":     "contract.liquidation_date_day",

@@ -11,10 +11,17 @@
 
 <div class="page-intro mb-4">
   <div>
-    <h4 class="fw-bold mb-1" style="font-family:var(--font-heading);">Tạo báo giá</h4>
-    <p class="text-muted mb-0">Chọn sản phẩm và mẫu DOCX đã cấu hình để sinh báo giá.</p>
+    <h4 class="fw-bold mb-1" style="font-family:var(--font-heading);">Báo giá cũ theo sản phẩm</h4>
+    <p class="text-muted mb-0">Dùng mẫu và giá cấu hình hiện có của sản phẩm. Mẫu nhập riêng nằm ở lựa chọn 1–5.</p>
   </div>
 </div>
+
+<div class="card mb-4"><div class="card-body"><label for="quote-layout" class="form-label">Mẫu báo giá</label>
+<select class="form-select" id="quote-layout" data-native-select="true">
+  <option value="compact">1. Báo giá gọn</option><option value="formal">2. Báo giá trang trọng</option>
+  <option value="landscape">3. Báo giá bảng ngang</option><option value="features">4. Báo giá kèm chức năng</option>
+  <option value="terms">5. Báo giá kèm điều kiện cung cấp</option><option value="legacy" selected>6. Báo giá cũ — theo sản phẩm</option>
+</select></div></div>
 
 {% if not products or not quotation_templates %}
 <div class="alert alert-warning mb-4" role="alert">
@@ -117,6 +124,7 @@
             <button type="submit" class="btn btn-primary" id="btn-save" disabled>
               <i class="bi bi-download me-2"></i>Sinh và tải file báo giá
             </button>
+            <button type="button" class="btn btn-outline-secondary" id="download-legacy-template">Tải mẫu placeholder cũ</button>
             <a href="/quotation" class="btn btn-outline-secondary"><i class="bi bi-arrow-counterclockwise me-1"></i>Đặt lại</a>
           </div>
         </form>
@@ -143,11 +151,18 @@
 <script src="/static/js/contract_items.js"></script>
 <script>
 (function() {
+  document.getElementById('quote-layout').addEventListener('change', function(event) {
+    if (event.target.value !== 'legacy') window.location.href = '/quotation/manual?layout=' + encodeURIComponent(event.target.value);
+  });
   var productSelect = document.getElementById("sel-product");
   var templateSelect = document.getElementById("template_id");
   var customerSelect = document.getElementById("sel-customer");
   var monthInput = document.getElementById("inp-months-time");
   var unitsInput = document.getElementById("inp-units");
+  document.getElementById('download-legacy-template').addEventListener('click', function() {
+    if (!productSelect.reportValidity() || !templateSelect.reportValidity()) return;
+    window.location.href = '/quotation/legacy/template?' + new URLSearchParams({product_id:productSelect.value,template_id:templateSelect.value});
+  });
 
   // Ẩn mẫu của nhóm khác với gói đang chọn (mẫu dùng chung luôn hiện). Chọn mẫu mặc định
   // của gói nếu còn hiện, không thì mẫu hiện đầu tiên.

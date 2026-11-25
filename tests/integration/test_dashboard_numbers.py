@@ -150,6 +150,19 @@ def test_refresh_agrees_with_the_first_render(client, portfolio):
         )
 
 
+def test_dashboard_labels_distinguish_service_signed_and_historical_file_counts(
+    client, portfolio,
+):
+    page = client.get("/dashboard").text
+
+    assert "Đang cung cấp dịch vụ" in page
+    assert "Đã ký (chờ hóa đơn)" in page
+    assert "Giá trị HĐ trong vòng đời hiệu lực" in page
+    assert "HĐ đã ký (gồm chờ hóa đơn)" in page
+    assert "Đã từng sinh file" in page
+    assert "Chờ xuất hóa đơn" in page
+
+
 def test_money_refresh_agrees_with_the_first_render(client, portfolio):
     page = client.get("/dashboard").text
     shown = _rendered(page, "money")

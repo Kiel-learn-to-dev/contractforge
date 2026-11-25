@@ -3,6 +3,32 @@
 Định dạng theo [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 đánh phiên bản theo [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.2] — 24/11/2026
+
+### Thêm mới
+
+- **Lưu và dùng lại đơn vị báo giá:** nút lưu ngay trên form, chọn lại ở danh sách
+  "Đơn vị đã lưu" sau khi mở lại ứng dụng. Lưu tên, địa chỉ, MST, người đại diện,
+  chức vụ, điện thoại và email; không lưu đơn giá hay khách hàng cùng hồ sơ đơn vị.
+- Lưu thông tin giống hệt không tạo trùng. Thông tin thay đổi được lưu thành bản riêng,
+  giữ nguyên bản đã có. Sinh báo giá không tự cập nhật thông tin đơn vị đã lưu.
+- Tự thêm bảng lưu đơn vị khi mở DB cũ; không đổi thông tin tổ chức, hợp đồng hay giá.
+
+## [0.10.1] — 24/11/2026
+
+### Sửa hướng tính năng báo giá
+
+- Màn hình **Báo giá** có đúng 6 lựa chọn: 5 bố cục mới và báo giá cũ theo sản phẩm.
+  Hai mẫu cũ của hai nhóm sản phẩm vẫn dùng nguyên bản, trong cùng một lựa chọn.
+- Năm mẫu mới là **báo giá thực tế**, có bảng giá và tổng tiền: gọn, trang trọng,
+  bảng ngang, kèm chức năng, kèm điều kiện cung cấp. Tải được DOCX placeholder để tự điền.
+- Nhập riêng đơn vị báo giá, khách hàng, đơn giá, thuế, số lượng, số kỳ và điều kiện.
+  Chọn sản phẩm không tự lấy giá danh mục; tổng tiền do module tính giá chung xử lý.
+  Giữ phần thập phân của đơn giá trên Word để khớp với thành tiền.
+- Giữ dữ liệu khi nhập lỗi; có xem trước tổng tiền và tải DOCX hoàn chỉnh.
+- Gỡ menu yêu cầu báo giá gây nhầm; đường dẫn cũ chuyển đến Báo giá. Mẫu yêu cầu
+  đã lưu được giữ nguyên, không đổi nhãn thành báo giá hay ghi đè file người dùng.
+
 ## [0.10.0] — chưa phát hành
 
 Bộ văn bản riêng theo từng nhóm sản phẩm: mỗi nhóm có bộ hợp đồng, phụ lục, biên bản
@@ -18,9 +44,24 @@ và báo giá của riêng mình.
 - **Gói sản phẩm có danh sách chức năng** nhập từ form sản phẩm, để in bảng chức năng
   trong mẫu.
 - **Hợp đồng gia hạn bằng hợp đồng mới** tự lấy mẫu hợp đồng mặc định của gói.
+- **Yêu cầu báo giá cho đối tác** (menu "Yêu cầu báo giá"): sinh file Word để khách hàng
+  mua sắm trực tiếp gửi các đơn vị khác. Ứng dụng điền thông tin bên mời báo giá, hạng
+  mục, số lượng, danh sách chức năng, ngày và hạn nộp. Đối tác tự điền thông tin đơn vị
+  và đơn giá của họ rồi đóng dấu. Ứng dụng không điền, không tính, không gợi ý giá.
+  Có 3 mẫu có sẵn (thư mời, phiếu gọn, kèm yêu cầu chức năng), cài bằng một nút.
+  Mẫu loại mới "Yêu cầu báo giá" tách biệt với mẫu "Báo giá".
+- **Bổ sung mẫu yêu cầu báo giá mới nhất** ngay trên form: bản cập nhật được cài riêng,
+  giữ nguyên các mẫu đã có hoặc đã chỉnh sửa, không tạo trùng khi bấm lại.
 
 ### Sửa lỗi
 
+- **Yêu cầu báo giá:** từ chối số lượng không hữu hạn và kỳ tính số lượng không hợp lệ;
+  số lượng 0 của gói bổ sung gửi qua JSON không còn bị thay bằng số lượng mặc định.
+- **Giữ dữ liệu yêu cầu báo giá khi nhập lỗi**, kể cả số tháng sai định dạng và các gói
+  bổ sung. Người dùng sửa và gửi lại ngay trên form, không phải nhập lại từ đầu.
+- **Ẩn bảng chức năng rỗng** trong yêu cầu báo giá; giữ các bảng có nội dung hỗn hợp.
+  Ba mẫu đi kèm dùng A4, cải thiện độ rộng cột, lặp tiêu đề bảng và tránh tách dòng,
+  khối thông tin đối tác hoặc chữ ký sang trang riêng.
 - **Ngày kết thúc luôn là ngày cuối kỳ.** Hợp đồng từ 01/01 đủ 12 tháng hết hạn
   31/12. Trước đây trình duyệt ở múi giờ UTC+7 lùi ngày kết thúc (và ngày nghiệm thu)
   đi một ngày.

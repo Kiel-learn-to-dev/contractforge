@@ -82,6 +82,37 @@ def test_context_uses_selected_product_configuration(db_session, make_customer, 
     assert context["TOTAL_AMOUNT"] == "3.240.000"
 
 
+@pytest.mark.parametrize("vat_rate, expected", [(0, "0%"), (8, "8%"), (10, "10%"), (8.5, "8.5%")])
+@pytest.mark.parametrize("use_items", [False, True])
+def test_quotation_renders_readable_vat_rate(
+    db_session, make_customer, make_product, tmp_path, vat_rate, expected, use_items,
+):
+    import json
+
+    from app.routers.quotation import _build_context, _items_context_and_lists
+    from app.services.docx_renderer import render_docx
+
+    customer = make_customer()
+    product = make_product(default_price=123_000, default_vat_rate=vat_rate)
+    quote_date = date(2026, 7, 11)
+    if use_items:
+        context, lists = _items_context_and_lists(
+            db_session, customer, quote_date, 12,
+            json.dumps([{"product_id": product.id, "quantity": "1"}]),
+        )
+    else:
+        context = _build_context(customer, product, quote_date, 12)
+        lists = None
+
+    path = tmp_path / "quotation_vat.docx"
+    doc = Document()
+    doc.add_paragraph("Thuế suất GTGT: {{VAT_RATE}}")
+    doc.save(path)
+    rendered = Document(BytesIO(render_docx(path, context, lists=lists)))
+
+    assert rendered.paragraphs[0].text == f"Thuế suất GTGT: {expected}"
+
+
 def test_generate_uses_user_selected_product_and_template(
     db_session, make_customer, make_product, make_template, tmp_path, monkeypatch,
 ):

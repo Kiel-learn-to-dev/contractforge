@@ -138,3 +138,54 @@ thuộc nhóm nào thì gọi là "dùng chung" và hiện ở mọi nhóm.
   Gia hạn bắt đầu từ 01/01/2028. Hợp đồng cũ giữ nguyên ngày đã lưu.
 - **Sinh hàng loạt:** ô chọn mẫu hiện mọi mẫu đang bật. Dòng nào chọn mẫu khác nhóm
   với sản phẩm của dòng đó sẽ báo lỗi và không tạo hợp đồng.
+
+## Sáu mẫu báo giá (0.10.1)
+
+Vào **Báo giá** ở menu. Có đúng 6 lựa chọn:
+
+1. Báo giá gọn.
+2. Báo giá trang trọng.
+3. Báo giá bảng ngang.
+4. Báo giá kèm chức năng.
+5. Báo giá kèm điều kiện cung cấp.
+6. Báo giá cũ theo sản phẩm: giữ hai file cũ của hai sản phẩm, tự lọc đúng nhóm.
+
+**Năm mẫu mới nhập riêng thông tin và giá.** Không tự lấy tên đơn vị hay giá từ cấu
+hình bên mình. Mẫu có sẵn ngay trong ứng dụng, không cần cài thêm hoặc sửa DB.
+
+- Muốn tự điền trong Word: chọn bố cục rồi bấm **Tải mẫu placeholder**.
+- Muốn app điền: nhập tên/MST/địa chỉ/người đại diện của đơn vị báo giá; nhập khách hàng,
+  số/ngày báo giá và hiệu lực. Có thể chọn khách hàng đã lưu để lấy thông tin người nhận.
+- Nhập từng hạng mục, ĐVT, số lượng, số kỳ, đơn giá trước thuế và thuế suất. Chọn sản phẩm
+  chỉ lấy tên, ĐVT, chức năng; **đơn giá vẫn phải tự nhập**. Thêm dòng bằng **Thêm hạng mục**.
+- Thành tiền trước thuế = số lượng × số kỳ × đơn giá; làm tròn đến đồng rồi tính thuế.
+  Báo giá trọn gói dùng 1 kỳ; đơn giá theo tháng thì nhập số tháng vào số kỳ.
+  Giá có thể nhập `100000`, `100.000`, hoặc `100.000,5`; đơn giá lẻ vẫn được giữ khi in.
+- Kiểm tra tổng tiền, nhập chức năng/điều kiện nếu cần, bấm **Sinh và tải báo giá**.
+  Nhập sai thì form giữ dữ liệu để sửa rồi gửi lại. Thông tin đơn vị của lần trước
+  không tự điền vào lần lập mới.
+- Muốn dùng lại đơn vị ở lần sau: nhập thông tin bên báo giá rồi bấm **Lưu thông tin
+  đơn vị** ngay trong khối đó, không cần nhập xong khách hàng hoặc bảng giá. Lần sau
+  chọn **Đơn vị đã lưu** để điền lại tên, MST, địa chỉ, người đại diện/chức vụ,
+  điện thoại và email. Giá, khách hàng và các điều kiện của báo giá không bị thay đổi.
+  Chọn **Nhập đơn vị mới** để xóa các ô đơn vị và nhập bên khác.
+- Lưu cùng thông tin không tạo trùng; nếu sửa thông tin rồi bấm lưu sẽ có bản riêng,
+  không ghi đè bản cũ. Sửa thông tin để sinh một báo giá không tự cập nhật danh sách.
+  Chỉ những đơn vị đã bấm lưu mới có trong danh sách, không tự trích từ file Word cũ.
+- Chức năng nhập mỗi dòng theo dạng `Tên chức năng | Mô tả`. Để trống thì dùng chức năng
+  sản phẩm đã chọn. Mẫu kèm chức năng bỏ cả bảng riêng khi không có chức năng.
+
+**Báo giá cũ (lựa chọn 6)** tiếp tục dùng giá cấu hình và luồng sinh hiện có. Chọn sản
+phẩm rồi chọn file mẫu cũ thuộc nhóm đó. Có thể tải mẫu bằng **Tải mẫu placeholder cũ**.
+Không dùng ô mẫu hợp đồng mặc định của sản phẩm để sinh báo giá.
+
+Mẫu mới dùng các trường `{{QUOTE_ISSUER_...}}`, `{{PARTY_A_...}}`, `{{QUOTE_DATE}}`,
+`{{QUOTE_NUMBER}}`, `{{QUOTE_VALID_UNTIL}}`, `{{QUOTE_PAYMENT_TERMS}}`,
+`{{QUOTE_DELIVERY_TERMS}}`, `{{QUOTE_SUPPORT_TERMS}}`, `{{QUOTE_NOTE}}`,
+`{{TOTAL_PRE_VAT}}`, `{{TOTAL_VAT}}`, `{{TOTAL_AMOUNT}}`, `{{AMOUNT_TEXT}}`.
+Dòng lặp gồm `{{ITEM_NO}}`, `{{ITEM_NAME}}`, `{{ITEM_UNIT}}`, `{{ITEM_QTY}}`,
+`{{ITEM_PERIODS}}`, `{{ITEM_PRICE}}`, `{{ITEM_VAT_RATE}}`, `{{ITEM_AMOUNT_PRE_VAT}}`,
+`{{ITEM_VAT_AMOUNT}}`, `{{ITEM_AMOUNT_TOTAL}}`; chức năng dùng `{{FEATURE_...}}`.
+
+Menu thư mời/yêu cầu báo giá trước đây được thay bằng Báo giá. Mẫu đã lưu trước đó
+không bị xóa hoặc đổi nhãn; chúng không nằm trong sáu lựa chọn báo giá mới.

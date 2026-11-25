@@ -12,7 +12,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from urllib.parse import quote
 
 from fastapi import APIRouter, Request, Form
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, Response, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import joinedload
 
@@ -22,7 +22,7 @@ from app.models.product import Product
 from app.models.contract_template import ContractTemplate
 from app.paths import TEMPLATES_DIR
 from app.services import contract_service, pricing
-from app.services.docx_renderer import apply_template_mapping, lists_from_lines, render_docx, _fmt_number
+from app.services.docx_renderer import apply_template_mapping, lists_from_lines, render_docx, _fmt_number, _fmt_vat
 from app.services.template_service import QUOTATION_TYPE, ROLE_QUOTATION, check_template_for
 from app.utils.amount_to_words_vi import amount_to_words
 from app.utils.date_helpers import split_date_parts, parse_date_input
@@ -34,7 +34,7 @@ def list_quotation_products(db) -> list[Product]:
     """List active products that can provide quotation price and VAT data."""
     return (
         db.query(Product)
-        .filter(Product.is_active == True)
+        .filter(Product.is_active == True, Product.kind == "main")
         .order_by(Product.name, Product.code)
         .all()
     )
@@ -72,7 +72,7 @@ def resolve_quotation_selection(db, product_id: int, template_id: int):
     """Resolve an active product and active template selected by the user."""
     product = (
         db.query(Product)
-        .filter(Product.id == product_id, Product.is_active == True)
+        .filter(Product.id == product_id, Product.is_active == True, Product.kind == "main")
         .first()
     )
     if product is None:
@@ -124,7 +124,7 @@ def _build_context_from_lines(customer, main_product, quote_date, month_count, l
     ctx["PRODUCT_CODE"] = main_product.code or ""
     ctx["PRODUCT_NAME"] = main_product.name or ""
     ctx["UNIT_PRICE_PRE_VAT"] = _fmt_currency(main.unit_price_pre_vat)
-    ctx["VAT_RATE"] = f"{main.vat_rate.normalize()}%"
+    ctx["VAT_RATE"] = _fmt_vat(main.vat_rate.normalize())
     ctx["UNIT_PRICE_VAT"] = _fmt_currency(
         pricing.unit_price_with_vat(main.unit_price_pre_vat, main.vat_rate))
     ctx["QUANTITY"] = _fmt_number(main.quantity * main.period_count)
@@ -137,11 +137,14 @@ def _build_context_from_lines(customer, main_product, quote_date, month_count, l
     return ctx
 
 
-def _items_context_and_lists(db, customer, quote_date, month_count, raw_items: str):
+def _items_context_and_lists(db, customer, quote_date, month_count, raw_items: str,
+                             expected_product_id=None):
     """Đường báo giá nhiều dòng: cùng _build_lines và sum_lines với hợp đồng."""
     items = contract_service._parse_items_json(raw_items)
     lines = contract_service._build_lines(db, items, month_count)
     totals = pricing.sum_lines(lines)
+    if expected_product_id is not None and lines[0].product_id != expected_product_id:
+        raise ValueError("Gói chính trong dòng báo giá không khớp với sản phẩm đã chọn.")
     main_product = db.get(Product, lines[0].product_id)
     feature_lists = []
     for line in lines:
@@ -202,7 +205,7 @@ def _build_context(
     ctx["PRODUCT_CODE"] = product.code or ""
     ctx["PRODUCT_NAME"] = product.name or ""
     ctx["UNIT_PRICE_PRE_VAT"] = _fmt_currency(unit_price_pre_vat)
-    ctx["VAT_RATE"] = f"{vat_rate.normalize()}%"
+    ctx["VAT_RATE"] = _fmt_vat(vat_rate.normalize())
     ctx["UNIT_PRICE_VAT"] = _fmt_currency(unit_price_vat)
 
     # Tổng tiền
@@ -238,7 +241,12 @@ def _build_context(
 
 # ─── GET /quotation ─────────────────────────────────────────────────────────
 
-@router.get("", response_class=HTMLResponse)
+@router.get("")
+def quotation_workspace():
+    return RedirectResponse("/quotation/manual", status_code=303)
+
+
+@router.get("/legacy", response_class=HTMLResponse)
 def quotation_form(request: Request):
     db = SessionLocal()
     try:
@@ -257,7 +265,7 @@ def quotation_form(request: Request):
 
         return templates.TemplateResponse("quotation/form.html", {
             "request": request,
-            "page_title": "Hợp đồng báo giá",
+            "page_title": "Báo giá",
             "customers": customers,
             "customer_units": customer_units,
             "products": products,
@@ -268,6 +276,26 @@ def quotation_form(request: Request):
         })
     finally:
         db.close()
+
+
+@router.get("/legacy/template")
+def download_legacy_template(product_id: int, template_id: int):
+    with SessionLocal() as db:
+        product = db.query(Product).filter(Product.id == product_id, Product.is_active == True,
+                                            Product.kind == "main").first()
+        template = db.get(ContractTemplate, template_id)
+        try:
+            if product is None or template is None or not template.is_active:
+                raise ValueError("Chọn sản phẩm và mẫu báo giá đang sử dụng.")
+            check_template_for(template, product.group_code, ROLE_QUOTATION)
+            if not template.file_path:
+                raise ValueError("Mẫu chưa có file DOCX.")
+            from pathlib import Path
+            content = Path(template.file_path).read_bytes()
+            return Response(content, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                            headers={"Content-Disposition": _content_disposition("MauBaoGiaCu.docx")})
+        except (ValueError, OSError) as exc:
+            return _error_redirect(None, str(exc))
 
 
 # ─── POST /quotation/generate ────────────────────────────────────────────────
@@ -317,7 +345,9 @@ def quotation_generate(
         # Build context và render. items_json có dòng → báo giá nhiều dòng; không có → đường cũ.
         raw_items = items_json if isinstance(items_json, str) else ""
         if raw_items.strip():
-            ctx, lists = _items_context_and_lists(db, customer, qdate, month_count, raw_items)
+            ctx, lists = _items_context_and_lists(
+                db, customer, qdate, month_count, raw_items, expected_product_id=product.id,
+            )
             ctx = apply_template_mapping(ctx, template)
         else:
             ctx = apply_template_mapping(
@@ -345,6 +375,6 @@ def quotation_generate(
 def _error_redirect(request: Request, msg: str):
     from fastapi.responses import RedirectResponse
     return RedirectResponse(
-        f"/quotation?msg={msg}&msg_type=danger",
+        f"/quotation/legacy?msg={quote(str(msg))}&msg_type=danger",
         status_code=303,
     )

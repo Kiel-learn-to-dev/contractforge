@@ -56,7 +56,7 @@ def _repeat_group_of(tr):
     return None
 
 
-def _expand_repeat_rows(doc, lists: dict) -> None:
+def _expand_repeat_rows(doc, lists: dict, omit_empty_tables=()) -> None:
     """Nhân bản dòng mẫu theo từng phần tử; danh sách rỗng thì xóa dòng mẫu.
 
     Chỉ các placeholder có trong dòng dữ liệu mới được thay ở bước này. Placeholder
@@ -65,6 +65,14 @@ def _expand_repeat_rows(doc, lists: dict) -> None:
     from docx.table import _Row
 
     for table in doc.tables:
+        names = set().union(*(_row_placeholders(tr) for tr in table._tbl.findall(qn("w:tr"))))
+        # Chỉ bỏ bảng dành riêng cho một danh sách rỗng, khi nơi gọi yêu cầu.
+        # Giữ bảng hỗn hợp và bảng có placeholder khác để không mất dữ liệu.
+        if any(not lists.get(key) and names
+               and all(name.startswith(prefix) for name in names)
+               for prefix, key in REPEAT_GROUPS.items() if key in omit_empty_tables):
+            table._tbl.getparent().remove(table._tbl)
+            continue
         for tr in list(table._tbl.findall(qn("w:tr"))):
             key = _repeat_group_of(tr)
             if key is None:
@@ -219,6 +227,8 @@ def render_docx(
     template_source: Union[str, bytes],
     context: dict[str, str],
     lists: Optional[dict] = None,
+    *,
+    omit_empty_tables=(),
 ) -> bytes:
     """
     Thay thế tất cả {{PLACEHOLDER}} trong file .docx bằng giá trị trong context.
@@ -227,6 +237,8 @@ def render_docx(
         template_source: Đường dẫn file hoặc bytes nội dung .docx.
         context: Dict mapping placeholder_name → giá trị (đã là str).
                  VD: {"CONTRACT_NUMBER": "HĐ-001/2025", "PARTY_A_NAME": "..."}
+        omit_empty_tables: Tên danh sách rỗng cần bỏ cả bảng riêng (ví dụ "features").
+                           Mặc định chỉ xóa dòng mẫu; bảng hỗn hợp luôn được giữ.
 
     Returns:
         Bytes của file .docx đã render.
@@ -249,7 +261,7 @@ def render_docx(
     # Nhân dòng lặp (bảng giá trị, bảng chức năng) trước khi thay placeholder chung.
     # lists=None (báo giá, biểu 08a) thì không đụng bảng nào.
     if lists is not None:
-        _expand_repeat_rows(doc, lists)
+        _expand_repeat_rows(doc, lists, omit_empty_tables)
 
     # Chèn dòng tùy chọn vào bảng Bên A trước khi thay placeholder
     _insert_party_a_optional_rows(doc, ctx)

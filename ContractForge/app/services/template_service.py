@@ -36,6 +36,11 @@ ALLOWED_EXTENSIONS = {".docx"}
 # chung một hằng số thay vì mỗi chỗ viết lại chuỗi.
 QUOTATION_TYPE = "Báo giá"
 
+# Mẫu "Yêu cầu báo giá": văn bản khách hàng gửi đối tác để họ TỰ điền thông tin và đơn giá.
+# Khác hẳn mẫu "Báo giá" ở trên (báo giá của chính mình, có giá) nên là một nhãn riêng:
+# hai trang không được nhận lẫn mẫu của nhau.
+QUOTE_REQUEST_TYPE = "Yêu cầu báo giá"
+
 # Nhóm mẫu hợp đồng gợi ý trong form. Đây là nhãn phân loại tự do — người dùng
 # gõ giá trị khác cũng được; danh sách này chỉ để bấm cho nhanh.
 ADDON_TYPE = "Phụ lục bổ sung"
@@ -47,7 +52,7 @@ LEGACY_APPENDIX_TYPE = "Phụ lục"
 ATTACHMENT_TYPES = ("Nghiệm thu", "Bàn giao", "Thanh lý", "Khác")
 
 CONTRACT_TYPES = ["Hợp đồng", ADDON_TYPE, RENEWAL_TYPE, "Nghiệm thu", "Bàn giao", "Thanh lý",
-                  QUOTATION_TYPE, "Khác"]
+                  QUOTATION_TYPE, QUOTE_REQUEST_TYPE, "Khác"]
 
 # Vai trò của mẫu. Suy ra từ `contract_type`, không có cột riêng.
 ROLE_CONTRACT = "contract"
@@ -55,12 +60,14 @@ ROLE_ADDON = "addon"
 ROLE_RENEWAL = "renewal"
 ROLE_ATTACHMENT = "attachment"
 ROLE_QUOTATION = "quotation"
+ROLE_QUOTE_REQUEST = "quote_request"
 
 _ROLE_TYPES = {
     ROLE_ADDON: (ADDON_TYPE, LEGACY_APPENDIX_TYPE),
     ROLE_RENEWAL: (RENEWAL_TYPE, LEGACY_APPENDIX_TYPE),
     ROLE_ATTACHMENT: ATTACHMENT_TYPES,
     ROLE_QUOTATION: (QUOTATION_TYPE,),
+    ROLE_QUOTE_REQUEST: (QUOTE_REQUEST_TYPE,),
 }
 _NON_CONTRACT = {t for types in _ROLE_TYPES.values() for t in types}
 
@@ -416,6 +423,8 @@ def _template_kind(placeholders: list[str], heading: str = "") -> str:
             return "Bàn giao"
         if "NGHIỆM THU" in title:
             return "Nghiệm thu"
+    if any(field.startswith("REQUEST_DATE") for field in fields):
+        return QUOTE_REQUEST_TYPE
     if any(field.startswith("QUOTE_DATE") for field in fields):
         return QUOTATION_TYPE
     if any(field.startswith("ACCEPTANCE_DATE") for field in fields):

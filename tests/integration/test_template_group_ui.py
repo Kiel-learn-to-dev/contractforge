@@ -180,7 +180,7 @@ def test_renewal_form_offers_group_renewal_templates_and_selects_the_default(cli
 # ─── Báo giá ─────────────────────────────────────────────────────────────────
 
 def test_quotation_form_carries_group_attributes_for_products_and_templates(client, ui_world):
-    html = client.get("/quotation").text
+    html = client.get("/quotation/legacy").text
 
     assert 'data-group="GRP-A"' in html
     assert 'data-group="GRP-B"' in html

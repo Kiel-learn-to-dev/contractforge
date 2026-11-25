@@ -177,7 +177,14 @@ def get_dashboard_data(db: Session) -> dict:
 
     # ── 6. Thống kê tổng hợp ──────────────────────────────────────────────
     # Đã sinh file = tất cả HĐ đã từng generate (có output_file_path), không phân biệt trạng thái
-    count_generated_file = db.query(Contract).filter(Contract.output_file_path.isnot(None)).count()
+    count_generated_file = (
+        db.query(Contract)
+        .filter(
+            Contract.output_file_path.isnot(None),
+            func.trim(Contract.output_file_path) != "",
+        )
+        .count()
+    )
 
     # Số hợp đồng đang trong vòng đời hiệu lực. MỘT con số có thẩm quyền, thay cho
     # kiểu cộng tay `active + invoiced + expiring_soon` rải rác trong template —
@@ -347,12 +354,15 @@ def _contracts_by_product(db: Session) -> list[dict]:
         .all()
     )
 
-    # Hợp đồng không có sản phẩm
-    no_product_count = (
-        db.query(func.count(Contract.id))
+    # Hợp đồng không có sản phẩm. Cộng giá trị cùng truy vấn để phân bổ tiền
+    # theo sản phẩm cộng lại đúng bằng tổng giá trị vòng đời.
+    no_product_count, no_product_value = (
+        db.query(
+            func.count(Contract.id),
+            func.sum(Contract.total_amount),
+        )
         .filter(Contract.status.in_(active_set), Contract.product_id.is_(None))
-        .scalar()
-        or 0
+        .one()
     )
 
     result = [
@@ -370,7 +380,7 @@ def _contracts_by_product(db: Session) -> list[dict]:
             "name":        "Không phân loại",
             "code":        "",
             "count":       no_product_count,
-            "total_value": Decimal("0"),
+            "total_value": Decimal(str(no_product_value or 0)),
         })
 
     return result
@@ -381,46 +391,53 @@ def get_monthly_stats(db: Session) -> dict:
     Thống kê hoạt động trong tháng hiện tại và so sánh với tháng trước.
     Dùng UTC (nhất quán với trường created_at).
     """
-    import calendar as _cal
-
     today = date.today()
     y, m = today.year, today.month
 
-    # Biên tháng này (datetime để so với created_at)
+    # Dùng khoảng nửa mở [đầu tháng, đầu tháng kế) để không bỏ sót timestamp
+    # có microsecond ở giây cuối cùng của tháng.
     first_this = _datetime(y, m, 1)
-    last_day   = _cal.monthrange(y, m)[1]
-    last_this  = _datetime(y, m, last_day, 23, 59, 59)
+    next_m = 1 if m == 12 else m + 1
+    next_y = y + 1 if m == 12 else y
+    first_next = _datetime(next_y, next_m, 1)
 
     # Biên tháng trước
     prev_m = 12 if m == 1 else m - 1
     prev_y = y - 1 if m == 1 else y
-    prev_last_day = _cal.monthrange(prev_y, prev_m)[1]
     first_prev = _datetime(prev_y, prev_m, 1)
-    last_prev  = _datetime(prev_y, prev_m, prev_last_day, 23, 59, 59)
 
-    def _n_created(start, end):
+    def _n_created(start, end_exclusive):
         return db.query(func.count(Contract.id)).filter(
-            Contract.created_at >= start, Contract.created_at <= end,
+            Contract.created_at >= start, Contract.created_at < end_exclusive,
         ).scalar() or 0
 
-    def _n_signed(start_d, end_d):
+    signed_statuses = (*ACTIVE_LIFECYCLE_STATUSES,
+                       ContractStatus.Expired, ContractStatus.Terminated)
+
+    def _n_signed(start_d, end_d_exclusive):
         return db.query(func.count(Contract.id)).filter(
-            Contract.sign_date >= start_d, Contract.sign_date <= end_d,
+            Contract.status.in_(signed_statuses),
+            Contract.sign_date >= start_d, Contract.sign_date < end_d_exclusive,
+            Contract.sign_date <= today,
         ).scalar() or 0
 
-    this_new     = _n_created(first_this, last_this)
-    this_signed  = _n_signed(date(y, m, 1), date(y, m, last_day))
+    this_new     = _n_created(first_this, first_next)
+    this_signed  = _n_signed(date(y, m, 1), date(next_y, next_m, 1))
     this_expired = db.query(func.count(Contract.id)).filter(
+        Contract.status == ContractStatus.Expired,
         Contract.end_date >= date(y, m, 1),
-        Contract.end_date <= date(y, m, last_day),
+        Contract.end_date < date(next_y, next_m, 1),
+        Contract.end_date <= today,
     ).scalar() or 0
 
-    prev_new    = _n_created(first_prev, last_prev)
-    prev_signed = _n_signed(date(prev_y, prev_m, 1), date(prev_y, prev_m, prev_last_day))
+    prev_next_m = 1 if prev_m == 12 else prev_m + 1
+    prev_next_y = prev_y + 1 if prev_m == 12 else prev_y
+    prev_new    = _n_created(first_prev, first_this)
+    prev_signed = _n_signed(date(prev_y, prev_m, 1), date(prev_next_y, prev_next_m, 1))
 
     new_value_raw = db.query(func.sum(Contract.total_amount)).filter(
         Contract.created_at >= first_this,
-        Contract.created_at <= last_this,
+        Contract.created_at < first_next,
         Contract.total_amount.isnot(None),
     ).scalar()
     new_value = Decimal(str(new_value_raw or 0))
@@ -469,7 +486,7 @@ def get_top_customers(db: Session, limit: int = 5) -> list[dict]:
 
 def get_monthly_expiry_forecast(db: Session, months: int = 12) -> list[dict]:
     """
-    Đếm HĐ sắp hết hạn theo từng tháng trong `months` tháng tới.
+    Đếm HĐ sắp hết hạn theo từng tháng lịch, tính từ tháng hiện tại.
     Trả về list đủ `months` phần tử (kể cả tháng count=0) để chart hiển thị đầy đủ.
     """
     import calendar as _cal
@@ -481,7 +498,8 @@ def get_monthly_expiry_forecast(db: Session, months: int = 12) -> list[dict]:
         return date(y, m, min(d.day, _cal.monthrange(y, m)[1]))
 
     today = date.today()
-    cutoff = _add_months(today, months)
+    first_month = date(today.year, today.month, 1)
+    cutoff = _add_months(first_month, months)
 
     active_set = ACTIVE_LIFECYCLE_STATUSES
 
@@ -494,7 +512,7 @@ def get_monthly_expiry_forecast(db: Session, months: int = 12) -> list[dict]:
             Contract.status.in_(active_set),
             Contract.end_date.isnot(None),
             Contract.end_date > today,
-            Contract.end_date <= cutoff,
+            Contract.end_date < cutoff,
             _not_renewed_filter(),
             _not_addon_appendix_filter(),
         )
@@ -506,8 +524,8 @@ def get_monthly_expiry_forecast(db: Session, months: int = 12) -> list[dict]:
     counts = {row.ym: row.cnt for row in rows}
 
     result = []
-    for i in range(1, months + 1):
-        d = _add_months(today, i)
+    for i in range(months):
+        d = _add_months(first_month, i)
         ym = f"{d.year}-{d.month:02d}"
         result.append({
             "month": ym,

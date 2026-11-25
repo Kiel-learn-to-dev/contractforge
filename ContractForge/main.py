@@ -23,6 +23,8 @@ from app.routers.dashboard  import router as dashboard_router
 from app.routers.products   import router as products_router
 from app.routers.settings   import router as settings_router
 from app.routers.quotation  import router as quotation_router
+from app.routers.quote_request import router as quote_request_router
+from app.routers.manual_quotation import router as manual_quotation_router
 from app.utils.safe_console import safe_print
 
 ensure_runtime_dirs()
@@ -77,6 +79,8 @@ app.include_router(batch_router)
 app.include_router(products_router)
 app.include_router(settings_router)
 app.include_router(quotation_router)
+app.include_router(quote_request_router)
+app.include_router(manual_quotation_router)
 
 
 @app.get("/")

@@ -216,11 +216,22 @@ def _build_contract_query(
     elif alert_filter == "expiring_60":
         today = _date.today()
         d60 = today + timedelta(days=lifecycle.EXPIRING_WARN_DAYS)
+        from app.services.dashboard_service import (
+            _not_addon_appendix_filter, _not_renewed_filter,
+        )
         query = query.filter(
             Contract.status.in_(lifecycle.ACTIVE_LIFECYCLE_STATUSES),
             Contract.end_date.isnot(None),
-            Contract.end_date >= today,
+            Contract.end_date > today,
             Contract.end_date <= d60,
+            _not_renewed_filter(),
+            _not_addon_appendix_filter(),
+        )
+    elif alert_filter == "generated":
+        from sqlalchemy import func
+        query = query.filter(
+            Contract.output_file_path.isnot(None),
+            func.trim(Contract.output_file_path) != "",
         )
     elif alert_filter == "all_active":
         # Tất cả hợp đồng đang thực sự hiệu lực (không bao gồm Signed chờ kích hoạt)
@@ -345,6 +356,8 @@ def _build_lines(db: Session, raw_items: list[dict], month_count: int,
             product = None
         if product is None:
             raise ValueError(f"Dòng {idx}: gói {raw_pid} không tồn tại.")
+        if not product.is_active:
+            raise ValueError(f"Dòng {idx}: gói '{product.name}' đã ngừng bán.")
 
         if require_main and idx == 1:
             if product.kind != "main":
@@ -464,7 +477,7 @@ def product_options(db: Session, product_id: int, customer_id: int, unit_count: 
     """
     product = db.get(Product, product_id) if product_id else None
     customer = db.get(Customer, customer_id) if customer_id else None
-    if product is None:
+    if product is None or not product.is_active or product.kind != "main":
         return {"main": None, "addons": [],
                 "templates": {"contract": [], "attachments": [], "default_id": None}}
 
@@ -651,7 +664,7 @@ def create_draft(db: Session, form_data: dict, *, require_main: bool = True,
 
     # Số tiền bằng chữ
     amount_text = (form_data.get("amount_text") or "").strip()
-    if not amount_text and total_amount:
+    if not amount_text and total_amount and items_lines is None:
         try:
             amount_text = amount_to_words(total_amount)
         except Exception:
@@ -801,21 +814,22 @@ def generate_docx(db: Session, contract_id: int, attachment_ids=(),
         customer_code=customer.code,
         contract_type=template.contract_type,
     )
-    fpath = os.path.join(OUTPUT_DIR, fname)
+    # A second generation within the same second must not overwrite the file
+    # still referenced by the committed record, including if this commit fails.
+    try:
+        fpath, fname = _write_unique_file(OUTPUT_DIR, fname, rendered_bytes)
+    except OSError as exc:
+        raise ValueError(f"Không ghi được file hợp đồng: {exc}") from exc
     if bundle is not None:
         bundle.append((fname, rendered_bytes))
         bundle.extend(attachments)
-
-    # Ghi file mới TRƯỚC khi cập nhật DB — nếu write fail thì DB không đổi (safe)
-    with open(fpath, "wb") as f:
-        f.write(rendered_bytes)
 
     # ZIP văn bản kèm theo cũng ghi trước commit, để lượt sinh có ZIP khớp với file .docx mới
     new_bundle = None
     if bundle is not None:
         try:
             new_bundle = _write_bundle(contract.id, fname, bundle)
-        except OSError as exc:
+        except Exception as exc:
             _remove_quietly(fpath)
             raise ValueError(f"Không ghi được file ZIP văn bản kèm theo: {exc}")
 
@@ -824,7 +838,8 @@ def generate_docx(db: Session, contract_id: int, attachment_ids=(),
 
     contract.output_file_path = fpath
     contract.output_file_name = fname
-    contract.status = ContractStatus.Generated
+    if contract.status == ContractStatus.Draft:
+        contract.status = lifecycle.validate_transition(contract, ContractStatus.Generated)
     # Áp dụng auto-generated pricing_description nếu có (không commit sớm trước đó)
     if auto_pricing_desc:
         contract.pricing_description = auto_pricing_desc
@@ -938,10 +953,29 @@ def _write_bundle(contract_id: int, docx_name: str, items) -> str:
     folder = _bundle_dir(contract_id)
     os.makedirs(folder, exist_ok=True)
     stem = docx_name.rsplit(".", 1)[0]
-    path = os.path.join(folder, f"{stem}_kem_theo.zip")
-    with open(path, "wb") as f:
-        f.write(build_bundle_zip(items))
+    path, _ = _write_unique_file(folder, f"{stem}_kem_theo.zip", build_bundle_zip(items))
     return path
+
+
+def _write_unique_file(folder: str, filename: str, content: bytes) -> tuple[str, str]:
+    """Create a new output exclusively; rollback can safely remove only this file."""
+    stem, ext = os.path.splitext(filename)
+    suffix = 1
+    while True:
+        name = filename if suffix == 1 else f"{stem}_{suffix}{ext}"
+        path = os.path.join(folder, name)
+        try:
+            stream = open(path, "xb")
+        except FileExistsError:
+            suffix += 1
+            continue
+        try:
+            with stream:
+                stream.write(content)
+        except BaseException:
+            _remove_quietly(path)
+            raise
+        return path, name
 
 
 def _clear_bundles(contract_id: int, keep: Optional[str] = None) -> None:

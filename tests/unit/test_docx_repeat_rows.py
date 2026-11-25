@@ -150,3 +150,36 @@ def test_document_without_repeat_rows_renders_the_same_with_or_without_lists():
         return [p.text for p in doc.paragraphs] + [c.text for r in doc.tables[0].rows for c in r.cells]
 
     assert text(render_docx(src, ctx)) == text(render_docx(src, ctx, lists={"items": _items(3)}))
+
+
+def test_empty_feature_table_removal_is_opt_in_and_preserves_mixed_tables():
+    def build(doc):
+        dedicated = doc.add_table(rows=2, cols=1)
+        dedicated.cell(0, 0).text = "Chức năng"
+        dedicated.cell(1, 0).text = "{{FEATURE_NAME}}"
+        mixed = doc.add_table(rows=3, cols=1)
+        mixed.cell(0, 0).text = "Hạng mục và chức năng"
+        mixed.cell(1, 0).text = "{{ITEM_NAME}}"
+        mixed.cell(2, 0).text = "{{FEATURE_NAME}}"
+        other = doc.add_table(rows=2, cols=1)
+        other.cell(0, 0).text = "{{PARTY_A_NAME}}"
+        other.cell(1, 0).text = "{{FEATURE_NAME}}"
+        doc.add_table(rows=1, cols=1).cell(0, 0).text = "Chữ ký"
+
+    src = _bytes(build)
+    lists = {"items": _items(1), "features": []}
+    default = Document(io.BytesIO(render_docx(src, {}, lists=lists)))
+    assert len(default.tables) == 4
+    rendered = Document(io.BytesIO(render_docx(src, {}, lists=lists, omit_empty_tables={"features"})))
+    assert len(rendered.tables) == 3
+    assert "Dịch vụ 1" in rendered.tables[0].cell(1, 0).text
+    assert "{{PARTY_A_NAME}}" in rendered.tables[1].cell(0, 0).text
+    assert rendered.tables[2].cell(0, 0).text == "Chữ ký"
+
+
+def test_nonempty_feature_table_is_kept_when_omission_is_enabled():
+    src = _bytes(lambda doc: setattr(doc.add_table(rows=1, cols=1).cell(0, 0), "text",
+                                    "{{FEATURE_NAME}}"))
+    rendered = render_docx(src, {}, lists={"features": [{"FEATURE_NAME": "Chức năng A"}]},
+                           omit_empty_tables={"features"})
+    assert _rows(rendered) == [["Chức năng A"]]

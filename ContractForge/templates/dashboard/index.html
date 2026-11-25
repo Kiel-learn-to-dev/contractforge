@@ -39,12 +39,12 @@
 <!-- ── Row 1: Stat cards ─────────────────────────────────────────────────── -->
 <div class="row g-3 mb-3">
   {% set cards = [
-    ("bi-journal-check",     "#16a34a", "Đang hiệu lực",      summary.in_service, "/contracts?alert_filter=all_active",  "active"),
-    ("bi-pen-check",         "#0d9488", "Đã ký (chờ HĐ)",     summary.signed,                  "/contracts?status=Signed",      "signed"),
+    ("bi-journal-check",     "#16a34a", "Đang cung cấp dịch vụ", summary.in_service, "/contracts?alert_filter=all_active",  "active"),
+    ("bi-pen-check",         "#0d9488", "Đã ký (chờ hóa đơn)", summary.signed,              "/contracts?status=Signed",      "signed"),
     ("bi-alarm",             "#f59e0b", "Sắp hết hạn (≤30d)", summary.expiring_soon,           "/dashboard/expiring?days=30",   "expiring_soon"),
     ("bi-x-circle",          "#dc2626", "Đã hết hạn",          summary.expired,                "/contracts?status=Expired",     "expired"),
     ("bi-building",          "#3b82f6", "Khách hàng",          summary.total_customers,         "/customers",                    "customers"),
-    ("bi-file-earmark-text", "#6366f1", "Đã sinh file",        summary.generated,              "/contracts",                    "generated"),
+    ("bi-file-earmark-text", "#6366f1", "Đã từng sinh file",   summary.generated,              "/contracts?alert_filter=generated", "generated"),
   ] %}
   {% for icon, color, label, value, link, key in cards %}
   <div class="col-6 col-md-4 col-lg-2">
@@ -116,14 +116,14 @@
         <div class="mb-2">
           <div class="d-flex align-items-baseline gap-2 flex-wrap">
             <span style="font-size:.72rem;color:var(--c-text-2);font-weight:600;letter-spacing:.04em;text-transform:uppercase;">
-              <i class="bi bi-currency-dollar me-1"></i>Tổng giá trị đang hiệu lực
+              <i class="bi bi-currency-dollar me-1"></i>Giá trị HĐ trong vòng đời hiệu lực
             </span>
           </div>
           <div class="fw-bold mt-1" style="font-size:1.35rem;line-height:1.15;color:var(--c-primary);word-break:break-all;">
             <span data-money="total_value_fmt">{{ summary.total_value_fmt }}</span><span class="ms-1" style="font-size:.8rem;font-weight:500;color:var(--c-text-2);">VNĐ</span>
           </div>
           <div style="font-size:.72rem;color:var(--c-text-3);margin-top:2px;">
-            <span data-money="in_force">{{ summary.in_force }}</span> hợp đồng đang hiệu lực
+            <span data-money="in_force">{{ summary.in_force }}</span> HĐ đã ký (gồm chờ hóa đơn)
           </div>
         </div>
 
@@ -159,7 +159,7 @@
           <div class="d-flex align-items-center justify-content-between gap-2">
             <div class="d-flex align-items-center gap-2 flex-shrink-0">
               <span style="width:8px;height:8px;border-radius:50%;background:#f59e0b;flex-shrink:0;display:inline-block;"></span>
-              <span style="font-size:.78rem;color:var(--c-text-2);">Chưa thanh toán</span>
+              <span title="Nhóm trạng thái Signed và dữ liệu Active/ExpiringSoon cũ chưa được xuất hóa đơn theo trạng thái hệ thống." style="font-size:.78rem;color:var(--c-text-2);">Chờ xuất hóa đơn</span>
             </div>
             <span class="fw-semibold text-end" style="font-size:.82rem;color:#f59e0b;word-break:break-all;">
               <span data-money="value_unpaid_fmt">{{ summary.value_unpaid_fmt }}</span>&thinsp;<span style="font-size:.68rem;font-weight:400;color:var(--c-text-3);">VNĐ</span>
@@ -187,6 +187,7 @@
           ("Generated",    "Đã sinh file", "#6366f1"),
           ("Expired",      "Hết hạn",      "#dc2626"),
           ("Terminated",   "Thanh lý",     "#6b7280"),
+          ("ExpiringSoon", "Sắp hết hạn(cũ)", "#f59e0b"),
           ("Draft",        "Nháp",         "#9ca3af"),
           ("Sent",         "Đã gửi",       "#3b82f6"),
           ("Active",       "Hiệu lực(cũ)", "#86efac"),
@@ -218,9 +219,9 @@
     <div class="card border-0 shadow-sm">
       <div class="card-header border-0 pt-3 pb-1 d-flex justify-content-between align-items-center">
         <h6 class="fw-bold mb-0" style="font-size:.85rem;">
-          <i class="bi bi-bar-chart-steps me-2 text-primary"></i>Dự báo hợp đồng hết hạn — 12 tháng tới
+          <i class="bi bi-bar-chart-steps me-2 text-primary"></i>Dự báo hợp đồng hết hạn — 12 tháng tính từ tháng này
         </h6>
-        <a href="/dashboard/expiring?days=365" class="text-muted text-decoration-none" style="font-size:.75rem;">Xem danh sách →</a>
+        <a href="/dashboard/expiring?days={{ forecast_days }}" class="text-muted text-decoration-none" style="font-size:.75rem;">Xem danh sách →</a>
       </div>
       <div class="card-body pt-2 pb-3" style="height:170px;">
         <canvas id="expiryChart"></canvas>
@@ -298,7 +299,7 @@
     <div class="card border-0 shadow-sm mb-3">
       <div class="card-header border-0 pt-3 pb-1">
         <h6 class="fw-bold mb-0" style="font-size:.85rem;">
-          <i class="bi bi-pie-chart me-2 text-primary"></i>Theo sản phẩm (đang hiệu lực)
+          <i class="bi bi-pie-chart me-2 text-primary"></i>Theo sản phẩm (vòng đời hiệu lực, gồm đã ký chờ hóa đơn)
         </h6>
       </div>
       <div class="card-body pt-1 pb-2">
@@ -474,41 +475,14 @@
 (function () {
   'use strict';
 
-  /* ── F4: AJAX stat-card refresh ──────────────────────────────────────── */
+  /* ── Refresh the full dashboard from one consistent data snapshot ────── */
   function refreshStats() {
-    return fetch('/api/stats')
-      .then(function (r) {
-        if (!r.ok) throw new Error('/api/stats ' + r.status);
-        return r.json();
-      })
-      .then(function (data) {
-        var cards = data.cards || {};
-        Object.keys(cards).forEach(function (key) {
-          var el = document.querySelector('[data-stat="' + key + '"]');
-          if (el) el.textContent = cards[key];
-        });
-        // Phần tiền cũng làm mới — đây là con số được nhìn nhiều nhất.
-        var money = data.money || {};
-        Object.keys(money).forEach(function (key) {
-          var el = document.querySelector('[data-money="' + key + '"]');
-          if (el) el.textContent = money[key];
-        });
-        var ts = document.getElementById('stat-refresh-time');
-        if (ts) ts.textContent = ' · ' + new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-      })
-      .catch(function (err) {
-        // KHÔNG nuốt lỗi. Endpoint này trả 500 suốt một thời gian dài vì
-        // Decimal không mã hoá được sang JSON, và vì lỗi bị nuốt nên trang cứ
-        // đứng yên mà không ai biết. Thà nói ra còn hơn im lặng sai.
-        console.error('Làm mới số liệu thất bại:', err);
-        var ts = document.getElementById('stat-refresh-time');
-        if (ts) ts.textContent = ' · không làm mới được, hãy tải lại trang';
-      });
+    window.location.reload();
+    return Promise.resolve();
   }
   setInterval(refreshStats, 5 * 60 * 1000);
 
-  // Bấm để làm mới ngay, khỏi đợi hết 5 phút — và đây cũng là cách kiểm tra
-  // việc làm mới có thật sự chạy hay không.
+  // Tải lại toàn trang để số liệu, biểu đồ và danh sách cùng một thời điểm.
   var refreshBtn = document.getElementById('stat-refresh-now');
   if (refreshBtn) {
     refreshBtn.addEventListener('click', function () {

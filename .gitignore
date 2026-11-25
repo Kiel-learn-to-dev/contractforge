@@ -123,3 +123,6 @@ desktop.ini
 *.tmp
 *.temp
 tmp/
+
+# ── Windows shortcuts (contain machine name, user SID and absolute paths) ────
+*.lnk

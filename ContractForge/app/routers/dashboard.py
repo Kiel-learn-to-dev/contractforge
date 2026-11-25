@@ -65,6 +65,11 @@ def dashboard(request: Request):
     monthly_forecast_data = [
         {"label": m["label"], "count": m["count"]} for m in monthly_forecast
     ]
+    last_forecast_month = monthly_forecast[-1]["month"]
+    forecast_year, forecast_month = map(int, last_forecast_month.split("-"))
+    next_month = 1 if forecast_month == 12 else forecast_month + 1
+    next_year = forecast_year + 1 if forecast_month == 12 else forecast_year
+    forecast_days = (date(next_year, next_month, 1) - data["today"]).days - 1
     by_product_data = [
         {"name": p["name"][:30], "count": p["count"]} for p in data["by_product"]
     ]
@@ -91,6 +96,7 @@ def dashboard(request: Request):
         "page_title":            "Dashboard",
         "action_items":          action_items,
         "monthly_forecast_data": monthly_forecast_data,
+        "forecast_days":         forecast_days,
         "by_product_data":       by_product_data,
         "monthly_stats":         monthly_stats,
         "top_customers":         top_customers,
