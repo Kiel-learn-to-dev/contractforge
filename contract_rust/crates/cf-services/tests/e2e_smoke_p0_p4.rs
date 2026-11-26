@@ -73,8 +73,6 @@ fn project_assets_templates() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("..")
         .join("..")
-        .join("..")
-        .join("ContractForge")
         .join("assets")
         .join("default_templates")
 }

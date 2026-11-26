@@ -740,8 +740,6 @@ fn seed_bundled_templates(ctx: &mut Ctx) {
             Path::new(env!("CARGO_MANIFEST_DIR"))
                 .join("..")
                 .join("..")
-                .join("..")
-                .join("ContractForge")
                 .join("assets")
                 .join("default_templates"),
         );

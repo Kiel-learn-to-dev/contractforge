@@ -21,7 +21,7 @@ fn template_bytes_for(file_name: &str) -> Vec<u8> {
     } else {
         fs::read(
             repo_root()
-                .join("ContractForge/assets/default_templates")
+                .join("contract_rust/assets/default_templates")
                 .join(file_name),
         )
         .unwrap()
@@ -136,7 +136,7 @@ fn render_samples_and_manual_quotation_match_fixture() {
         let layout = mq["values"]["layout"].as_str().unwrap();
         let bytes = fs::read(
             repo_root()
-                .join("ContractForge/assets/default_templates")
+                .join("contract_rust/assets/default_templates")
                 .join(format!("sample_quote_{layout}.docx")),
         )
         .unwrap();

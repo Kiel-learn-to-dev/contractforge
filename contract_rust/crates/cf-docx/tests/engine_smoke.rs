@@ -66,7 +66,7 @@ fn docx_samples() -> Vec<PathBuf> {
         .join("..")
         .join("..")
         .join("..");
-    let sample_dir = repository.join("ContractForge/assets/default_templates");
+    let sample_dir = repository.join("contract_rust/assets/default_templates");
     files.extend(
         fs::read_dir(sample_dir)
             .expect("sample templates")

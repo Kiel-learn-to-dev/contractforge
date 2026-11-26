@@ -1,10 +1,10 @@
-//! Dữ liệu địa chính 2 cấp (Tỉnh/TP → Xã/Phường/Đặc khu) nhúng từ `ContractForge/static/dia_chinh.json`.
+//! Dữ liệu địa chính 2 cấp (Tỉnh/TP → Xã/Phường/Đặc khu) nhúng từ `assets/dia_chinh.json`.
 
 use std::{collections::BTreeMap, sync::OnceLock};
 
 use serde_json::Value;
 
-const RAW_JSON: &str = include_str!("../../../../ContractForge/static/dia_chinh.json");
+const RAW_JSON: &str = include_str!("../../../assets/dia_chinh.json");
 
 struct DiaChinh {
     provinces: Vec<String>,

@@ -1,7 +1,7 @@
 fn main() {
     println!("cargo:rerun-if-changed=ui");
     println!("cargo:rerun-if-changed=contractforge.rc");
-    println!("cargo:rerun-if-changed=../../../cf_icon.ico");
+    println!("cargo:rerun-if-changed=../../assets/cf_icon.ico");
     if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows") {
         embed_resource::compile("contractforge.rc", embed_resource::NONE)
             .manifest_optional()

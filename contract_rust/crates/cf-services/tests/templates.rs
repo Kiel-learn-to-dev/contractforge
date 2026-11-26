@@ -30,8 +30,6 @@ fn default_template_path(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("..")
         .join("..")
-        .join("..")
-        .join("ContractForge")
         .join("assets")
         .join("default_templates")
         .join(name)

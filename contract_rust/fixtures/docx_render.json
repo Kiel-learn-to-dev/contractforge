@@ -437,7 +437,7 @@
  ],
  "samples": [
   {
-   "template": "ContractForge/assets/default_templates/sample_service_contract.docx",
+   "template": "contract_rust/assets/default_templates/sample_service_contract.docx",
    "context": {
     "PARTY_A_NAME": "Trạm Y tế xã Sông Xanh",
     "PARTY_A_ADDRESS": "Ấp 1, xã Sông Xanh, Tỉnh Mẫu",
@@ -596,7 +596,7 @@
    ]
   },
   {
-   "template": "ContractForge/assets/default_templates/sample_form_08a.docx",
+   "template": "contract_rust/assets/default_templates/sample_form_08a.docx",
    "context": {
     "PARTY_A_NAME": "Trạm Y tế xã Sông Xanh",
     "PARTY_A_ADDRESS": "Ấp 1, xã Sông Xanh, Tỉnh Mẫu",

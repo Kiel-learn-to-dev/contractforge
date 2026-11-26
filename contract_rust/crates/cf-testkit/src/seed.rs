@@ -16,8 +16,6 @@ pub fn seeded_db(directory: impl AsRef<Path>) -> Result<PathBuf, Box<dyn std::er
     let source = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("..")
         .join("..")
-        .join("..")
-        .join("ContractForge")
         .join("assets")
         .join("default_templates")
         .join("sample_service_contract.docx");

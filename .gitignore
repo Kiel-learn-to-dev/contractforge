@@ -126,3 +126,7 @@ tmp/
 
 # ── Windows shortcuts (contain machine name, user SID and absolute paths) ────
 *.lnk
+
+# ── Rust app: private bundled templates (local only; samples stay tracked) ───
+contract_rust/assets/default_templates/*.docx
+!contract_rust/assets/default_templates/sample_*.docx

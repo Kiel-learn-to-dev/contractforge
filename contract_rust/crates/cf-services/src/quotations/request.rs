@@ -20,27 +20,21 @@ const SAMPLE_REQUEST_TEMPLATES: &[(&str, &str, &str, &str, &[u8])] = &[
         "SAMPLE-RFQ-LETTER",
         "Thư mời báo giá (mẫu)",
         "Thư mời chính thức: quốc hiệu, kính gửi, bảng hạng mục và khối thông tin đối tác.",
-        include_bytes!(
-            "../../../../../ContractForge/assets/default_templates/sample_request_letter.docx"
-        ),
+        include_bytes!("../../../../assets/default_templates/sample_request_letter.docx"),
     ),
     (
         "sample_request_form.docx",
         "SAMPLE-RFQ-FORM",
         "Phiếu khảo sát giá gọn (mẫu)",
         "Một trang: bảng hạng mục và khối thông tin đối tác, hợp để in nhanh.",
-        include_bytes!(
-            "../../../../../ContractForge/assets/default_templates/sample_request_form.docx"
-        ),
+        include_bytes!("../../../../assets/default_templates/sample_request_form.docx"),
     ),
     (
         "sample_request_detailed.docx",
         "SAMPLE-RFQ-DETAILED",
         "Yêu cầu báo giá kèm yêu cầu chức năng (mẫu)",
         "Thư mời kèm bảng yêu cầu chức năng, điều kiện báo giá và khối thông tin đối tác.",
-        include_bytes!(
-            "../../../../../ContractForge/assets/default_templates/sample_request_detailed.docx"
-        ),
+        include_bytes!("../../../../assets/default_templates/sample_request_detailed.docx"),
     ),
 ];
 

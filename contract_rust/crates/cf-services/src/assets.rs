@@ -2,29 +2,26 @@
 
 use std::fs;
 
-const SAMPLE_CONTRACT: &[u8] = include_bytes!(
-    "../../../../ContractForge/assets/default_templates/sample_service_contract.docx"
-);
+const SAMPLE_CONTRACT: &[u8] =
+    include_bytes!("../../../assets/default_templates/sample_service_contract.docx");
 const SAMPLE_FORM_08A: &[u8] =
-    include_bytes!("../../../../ContractForge/assets/default_templates/sample_form_08a.docx");
+    include_bytes!("../../../assets/default_templates/sample_form_08a.docx");
 const SAMPLE_REQUEST_LETTER: &[u8] =
-    include_bytes!("../../../../ContractForge/assets/default_templates/sample_request_letter.docx");
+    include_bytes!("../../../assets/default_templates/sample_request_letter.docx");
 const SAMPLE_REQUEST_FORM: &[u8] =
-    include_bytes!("../../../../ContractForge/assets/default_templates/sample_request_form.docx");
-const SAMPLE_REQUEST_DETAILED: &[u8] = include_bytes!(
-    "../../../../ContractForge/assets/default_templates/sample_request_detailed.docx"
-);
+    include_bytes!("../../../assets/default_templates/sample_request_form.docx");
+const SAMPLE_REQUEST_DETAILED: &[u8] =
+    include_bytes!("../../../assets/default_templates/sample_request_detailed.docx");
 const SAMPLE_QUOTE_COMPACT: &[u8] =
-    include_bytes!("../../../../ContractForge/assets/default_templates/sample_quote_compact.docx");
+    include_bytes!("../../../assets/default_templates/sample_quote_compact.docx");
 const SAMPLE_QUOTE_FORMAL: &[u8] =
-    include_bytes!("../../../../ContractForge/assets/default_templates/sample_quote_formal.docx");
-const SAMPLE_QUOTE_LANDSCAPE: &[u8] = include_bytes!(
-    "../../../../ContractForge/assets/default_templates/sample_quote_landscape.docx"
-);
+    include_bytes!("../../../assets/default_templates/sample_quote_formal.docx");
+const SAMPLE_QUOTE_LANDSCAPE: &[u8] =
+    include_bytes!("../../../assets/default_templates/sample_quote_landscape.docx");
 const SAMPLE_QUOTE_FEATURES: &[u8] =
-    include_bytes!("../../../../ContractForge/assets/default_templates/sample_quote_features.docx");
+    include_bytes!("../../../assets/default_templates/sample_quote_features.docx");
 const SAMPLE_QUOTE_TERMS: &[u8] =
-    include_bytes!("../../../../ContractForge/assets/default_templates/sample_quote_terms.docx");
+    include_bytes!("../../../assets/default_templates/sample_quote_terms.docx");
 
 /// Resolve a default document from `<exe>/assets/default_templates` or the embedded copy.
 pub fn default_template_bytes(filename: &str) -> Option<Vec<u8>> {
