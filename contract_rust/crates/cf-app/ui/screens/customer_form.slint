@@ -1,0 +1,247 @@
+import { CheckBox, ComboBox, LineEdit, ScrollView } from "std-widgets.slint";
+import { Theme } from "../theme.slint";
+import { Card, CfButton, StatusBadge } from "../components/common.slint";
+import { CustomerFormData, CustomerUnitRowData } from "../types.slint";
+import { CustomerHub } from "../globals.slint";
+
+component FieldLbl inherits Text {
+    in property <string> label;
+    text: root.label;
+    color: Theme.text-muted;
+    font-size: Theme.font-xs;
+    font-weight: 700;
+}
+
+// S04 — form tạo / sửa khách hàng + đơn vị con + cơ sở tính phí.
+export component CustomerFormScreen inherits VerticalLayout {
+    in property <string> form-title: "Thêm khách hàng";
+    in-out property <CustomerFormData> data;
+    in property <[string]> customer-types;
+    in property <[string]> province-options;
+    in property <[string]> ward-options;
+    in property <[CustomerUnitRowData]> units;
+    in property <string> error-text;
+
+    callback province-changed(string);
+    callback add-unit();
+    callback remove-unit(int);
+    callback update-unit(int, string, string, string, string);
+    callback save(CustomerFormData);
+    callback cancel();
+
+    spacing: 12px;
+
+    HorizontalLayout {
+        height: 36px;
+        spacing: Theme.gap;
+        CfButton { text: "‹ Quay lại"; clicked => { root.cancel(); } }
+        Text { text: root.form-title; font-size: Theme.font-title; font-weight: 700; color: Theme.text; vertical-alignment: center; }
+        Rectangle { horizontal-stretch: 1; }
+        CfButton { text: "Hủy"; clicked => { root.cancel(); } }
+        CfButton { text: "Lưu khách hàng"; variant: "primary"; clicked => { root.save(root.data); } }
+    }
+
+    if root.error-text != "" : Card {
+        border-color: Theme.danger-fg;
+        background: Theme.danger-bg;
+        HorizontalLayout {
+            padding: 10px;
+            Text { text: root.error-text; color: Theme.danger-fg; wrap: word-wrap; }
+        }
+    }
+
+    ScrollView {
+        vertical-stretch: 1;
+        VerticalLayout {
+            padding-right: 6px;
+            spacing: 12px;
+
+            Card {
+                VerticalLayout {
+                    padding: Theme.pad;
+                    spacing: 8px;
+                    Text { text: "1. THÔNG TIN NHẬN DIỆN"; font-size: Theme.font-small; font-weight: 700; color: Theme.primary; }
+                    Rectangle { height: 1px; background: Theme.border; }
+                    HorizontalLayout {
+                        spacing: 10px;
+                        VerticalLayout {
+                            width: 180px; spacing: 4px;
+                            FieldLbl { label: "MÃ KH (TRỐNG = TỰ SINH)"; }
+                            LineEdit { height: 32px; text <=> root.data.code; placeholder-text: "Tự sinh KH-NNN"; }
+                        }
+                        VerticalLayout {
+                            horizontal-stretch: 1; spacing: 4px;
+                            FieldLbl { label: "TÊN PHÁP LÝ *"; }
+                            LineEdit { height: 32px; text <=> root.data.legal-name; }
+                        }
+                    }
+                    HorizontalLayout {
+                        spacing: 10px;
+                        VerticalLayout {
+                            horizontal-stretch: 1; spacing: 4px;
+                            FieldLbl { label: "TÊN NGẮN"; }
+                            LineEdit { height: 32px; text <=> root.data.short-name; }
+                        }
+                        VerticalLayout {
+                            width: 240px; spacing: 4px;
+                            FieldLbl { label: "LOẠI ĐƠN VỊ *"; }
+                            ComboBox {
+                                height: 32px;
+                                model: root.customer-types;
+                                current-value: root.data.customer-type;
+                                selected(v) => { root.data.customer-type = v; }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Card {
+                VerticalLayout {
+                    padding: Theme.pad;
+                    spacing: 8px;
+                    Text { text: "2. ĐỊA CHỈ (2 CẤP)"; font-size: Theme.font-small; font-weight: 700; color: Theme.primary; }
+                    Rectangle { height: 1px; background: Theme.border; }
+                    FieldLbl { label: "ĐỊA CHỈ CHI TIẾT"; }
+                    LineEdit { height: 32px; text <=> root.data.address; placeholder-text: "Số nhà, đường, ấp, khu phố…"; }
+                    HorizontalLayout {
+                        spacing: 10px;
+                        VerticalLayout {
+                            horizontal-stretch: 1; spacing: 4px;
+                            FieldLbl { label: "TỈNH / THÀNH PHỐ"; }
+                            ComboBox {
+                                height: 32px;
+                                model: root.province-options;
+                                current-value: root.data.province;
+                                selected(v) => {
+                                    root.data.province = v;
+                                    root.data.ward = "";
+                                    root.province-changed(v);
+                                }
+                            }
+                        }
+                        VerticalLayout {
+                            horizontal-stretch: 1; spacing: 4px;
+                            FieldLbl { label: "XÃ / PHƯỜNG / ĐẶC KHU"; }
+                            ComboBox {
+                                height: 32px;
+                                model: root.ward-options;
+                                current-value: root.data.ward;
+                                selected(v) => { root.data.ward = v; }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Card {
+                VerticalLayout {
+                    padding: Theme.pad;
+                    spacing: 8px;
+                    Text { text: "3. PHÁP LÝ, ĐẠI DIỆN, LIÊN HỆ & NGÂN HÀNG"; font-size: Theme.font-small; font-weight: 700; color: Theme.primary; }
+                    Rectangle { height: 1px; background: Theme.border; }
+                    HorizontalLayout {
+                        spacing: 10px;
+                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; FieldLbl { label: "MÃ SỐ THUẾ"; } LineEdit { height: 32px; text <=> root.data.tax-code; } }
+                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; FieldLbl { label: "MÃ QHNS"; } LineEdit { height: 32px; text <=> root.data.budget-relation-code; placeholder-text: "VD: 1073573"; } }
+                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; FieldLbl { label: "MÃ KCB BHYT"; } LineEdit { height: 32px; text <=> root.data.kcb-code; placeholder-text: "VD: 7502345"; } }
+                    }
+                    HorizontalLayout {
+                        spacing: 10px;
+                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; FieldLbl { label: "SỐ QĐ THÀNH LẬP"; } LineEdit { height: 32px; text <=> root.data.establishment-decision; placeholder-text: "VD: 1234/QĐ-UBND"; } }
+                        VerticalLayout { width: 200px; spacing: 4px; FieldLbl { label: "NGÀY THÀNH LẬP (DD/MM/YYYY)"; } LineEdit { height: 32px; text <=> root.data.establishment-date; } }
+                    }
+                    HorizontalLayout {
+                        spacing: 10px;
+                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; FieldLbl { label: "ĐẠI DIỆN PHÁP LÝ"; } LineEdit { height: 32px; text <=> root.data.representative-name; } }
+                        VerticalLayout {
+                            width: 150px; spacing: 4px;
+                            FieldLbl { label: "GIỚI TÍNH"; }
+                            ComboBox {
+                                height: 32px;
+                                model: ["(Chưa chọn)", "Nam (Ông)", "Nữ (Bà)"];
+                                current-value: root.data.representative-gender == "Nam" ? "Nam (Ông)" : (root.data.representative-gender == "Nữ" ? "Nữ (Bà)" : "(Chưa chọn)");
+                                selected(v) => { root.data.representative-gender = v == "Nam (Ông)" ? "Nam" : (v == "Nữ (Bà)" ? "Nữ" : ""); }
+                            }
+                        }
+                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; FieldLbl { label: "CHỨC VỤ"; } LineEdit { height: 32px; text <=> root.data.representative-title; } }
+                    }
+                    Rectangle { height: 1px; background: Theme.border; }
+                    HorizontalLayout {
+                        spacing: 10px;
+                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; FieldLbl { label: "ĐẦU MỐI LIÊN HỆ"; } LineEdit { height: 32px; text <=> root.data.contact-name; } }
+                        VerticalLayout { width: 180px; spacing: 4px; FieldLbl { label: "ĐIỆN THOẠI"; } LineEdit { height: 32px; text <=> root.data.phone; } }
+                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; FieldLbl { label: "EMAIL"; } LineEdit { height: 32px; text <=> root.data.email; } }
+                    }
+                    Rectangle { height: 1px; background: Theme.border; }
+                    HorizontalLayout {
+                        spacing: 10px;
+                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; FieldLbl { label: "SỐ TÀI KHOẢN"; } LineEdit { height: 32px; text <=> root.data.bank-account; } }
+                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; FieldLbl { label: "NGÂN HÀNG"; } LineEdit { height: 32px; text <=> root.data.bank-name; } }
+                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; FieldLbl { label: "TÊN THỤ HƯỞNG"; } LineEdit { height: 32px; text <=> root.data.beneficiary-name; } }
+                    }
+                    FieldLbl { label: "GHI CHÚ"; }
+                    LineEdit { height: 32px; text <=> root.data.notes; }
+                }
+            }
+
+            Card {
+                VerticalLayout {
+                    padding: Theme.pad;
+                    spacing: 8px;
+                    HorizontalLayout {
+                        spacing: 8px;
+                        Text { text: "4. ĐƠN VỊ CON / ĐIỂM TRẠM & CƠ SỞ TÍNH PHÍ"; font-size: Theme.font-small; font-weight: 700; color: Theme.primary; vertical-alignment: center; }
+                        StatusBadge { y: (parent.height - self.height) / 2; label: CustomerHub.form-billed-badge; variant: "info"; }
+                        Rectangle { horizontal-stretch: 1; }
+                        CfButton { text: "+ Thêm điểm trạm"; variant: "outline-primary"; clicked => { root.add-unit(); } }
+                    }
+                    Rectangle { height: 1px; background: Theme.border; }
+                    CheckBox {
+                        text: "Tính phí trạm chính (bỏ chọn nếu chỉ tính cho các điểm trạm con)";
+                        checked: root.data.bill-main-station;
+                        toggled => {
+                            root.data.bill-main-station = self.checked;
+                            CustomerHub.form-toggle-bill-main(self.checked);
+                        }
+                    }
+                    if root.units.length == 0 : Text {
+                        text: "Chưa có điểm trạm. Nhấn '+ Thêm điểm trạm' để bắt đầu.";
+                        color: Theme.text-muted;
+                        font-size: Theme.font-small;
+                    }
+                    for unit[idx] in root.units : HorizontalLayout {
+                        spacing: 6px;
+                        LineEdit {
+                            horizontal-stretch: 1;
+                            height: 32px;
+                            placeholder-text: "Tên điểm trạm";
+                            text: unit.name;
+                            edited(t) => { root.update-unit(idx, t, unit.unit-type, unit.address, unit.notes); }
+                        }
+                        ComboBox {
+                            width: 140px;
+                            height: 32px;
+                            model: CustomerHub.unit-types;
+                            current-value: unit.unit-type;
+                            selected(t) => { root.update-unit(idx, unit.name, t, unit.address, unit.notes); }
+                        }
+                        LineEdit {
+                            horizontal-stretch: 1;
+                            height: 32px;
+                            placeholder-text: "Địa chỉ";
+                            text: unit.address;
+                            edited(t) => { root.update-unit(idx, unit.name, unit.unit-type, t, unit.notes); }
+                        }
+                        CheckBox {
+                            text: "Tính phí";
+                            checked: unit.checked;
+                            toggled => { CustomerHub.form-toggle-unit-billing(idx); }
+                        }
+                        CfButton { text: "Xóa"; variant: "danger"; clicked => { root.remove-unit(idx); } }
+                    }
+                }
+            }
+        }
+    }
+}

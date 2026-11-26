@@ -1,0 +1,221 @@
+// Kiểu dữ liệu dùng chung giữa các màn hình. Rust điền sẵn mọi chuỗi đã định dạng.
+export struct CustomerRowData {
+    id: int,
+    code: string,
+    name: string,
+    ward: string,
+    customer-type: string,
+    representative: string,
+    units: int,
+    contracts: int,
+    selected: bool,
+    status-label: string,
+    status-variant: string,
+}
+
+export struct CustomerFormData {
+    code: string,
+    legal-name: string,
+    short-name: string,
+    customer-type: string,
+    address: string,
+    province: string,
+    ward: string,
+    tax-code: string,
+    budget-relation-code: string,
+    kcb-code: string,
+    establishment-decision: string,
+    establishment-date: string,
+    representative-name: string,
+    representative-gender: string,
+    representative-title: string,
+    bank-account: string,
+    bank-name: string,
+    beneficiary-name: string,
+    contact-name: string,
+    phone: string,
+    email: string,
+    notes: string,
+    bill-main-station: bool,
+}
+
+export struct CustomerDetailDocSlot {
+    has-file: bool,
+    doc-id: int,
+    file-name: string,
+    uploaded-at: string,
+    is-pdf: bool,
+}
+
+export struct CustomerDetailProfile {
+    code: string,
+    legal-name: string,
+    short-name: string,
+    customer-type: string,
+    status-label: string,
+    status-variant: string,
+    is-active: bool,
+    doc-count-text: string,
+    tax-code: string,
+    budget-relation-code: string,
+    kcb-code: string,
+    decision-number: string,
+    decision-date: string,
+    representative-name: string,
+    representative-title: string,
+    representative-gender: string,
+    address: string,
+    ward: string,
+    province: string,
+    full-address-preview: string,
+    contact-name: string,
+    phone: string,
+    email: string,
+    bank-account: string,
+    bank-name: string,
+    beneficiary-name: string,
+    notes: string,
+    created-at: string,
+    updated-at: string,
+    billed-units-badge: string,
+    main-station-label: string,
+}
+
+export struct DossierContractRowData {
+    id: int,
+    number: string,
+    product: string,
+    status-label: string,
+    status-variant: string,
+    has-scan: bool,
+}
+
+export struct CustomerUnitRowData {
+    id: int,
+    name: string,
+    unit-type: string,
+    address: string,
+    notes: string,
+    checked: bool,
+    active: bool,
+}
+
+export struct CustomerDocRowData {
+    id: int,
+    doc-type: string,
+    label: string,
+    file-name: string,
+    uploaded-at: string,
+    is-pdf: bool,
+}
+
+export struct CustomerContractRowData {
+    id: int,
+    number: string,
+    product: string,
+    sign-date: string,
+    end-date: string,
+    total: string,
+    status-label: string,
+    status-variant: string,
+}
+
+export struct CustomerTrashRowData {
+    id: int,
+    code: string,
+    name: string,
+    customer-type: string,
+    deleted-at: string,
+}
+
+export struct CustomerImportRowData {
+    row: int,
+    message: string,
+    is-warning: bool,
+}
+
+export struct DossierSlotRowData {
+    order: int,
+    label: string,
+    source: string,
+    dest-name: string,
+    size-text: string,
+    ok: bool,
+    required: bool,
+    note: string,
+}
+
+export struct ProductRowData {
+    id: int,
+    code: string,
+    name: string,
+    group-title: string,
+    show-group: bool,
+    kind: string,
+    product-type: string,
+    unit-label: string,
+    price: string,
+    vat: string,
+    duration: string,
+    active: bool,
+    in-service-count: int,
+}
+
+export struct ProductFormData {
+    code: string, name: string, product-type: string, group-code: string, kind: string,
+    unit-label: string, default-price: string, default-vat-rate: string,
+    price-period-months: string, default-duration-months: string, sort-order: string,
+    quantity-source: string, min-quantity: string, quantity-step: string, account-limit: string,
+    default-template-id: string, contract-number-format: string, replaced-by-id: string,
+    feature-text: string,
+}
+
+export struct ProductImportRowData { row: int, action: string, code: string, name: string, error: string }
+export struct TemplateRowData { id: int, code: string, name: string, kind: string, group: string, status: string, placeholders: int, mapped: int }
+export struct TemplateFormData { id: string, code: string, name: string, kind: string, group: string, description: string, filename: string }
+export struct TemplateMappingRowData { placeholder: string, field: string, custom: bool }
+
+export struct ContractPriceLineRow {
+    name: string,
+    unit: string,
+    qty: string,
+    price: string,
+    vat-rate: string,
+    pre-vat: string,
+    vat-amount: string,
+    total: string,
+}
+
+export struct ContractItemViewRow {
+    idx: int,
+    description: string,
+    unit: string,
+    quantity: string,
+    periods: string,
+    unit-price: string,
+    pre-vat: string,
+    vat-rate: string,
+    vat-amount: string,
+    total: string,
+}
+
+export struct ContractEvidenceSlot {
+    has-file: bool,
+    file-name: string,
+    date-label: string,
+    uploaded-at: string,
+    is-pdf: bool,
+}
+
+export struct RenewLineRow {
+    idx: int,
+    old-label: string,
+    selected-index: int,
+}
+
+export struct BatchImportPreviewRow {
+    customer-code: string,
+    contract-number: string,
+    sign-date: string,
+    total-amount: string,
+}

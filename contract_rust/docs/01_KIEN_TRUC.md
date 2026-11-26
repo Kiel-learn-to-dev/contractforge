@@ -55,6 +55,7 @@ Khai báo ở `[workspace.dependencies]`, crate con dùng `x = { workspace = tru
 | `tracing` / `tracing-subscriber` | `0.1.44` / `0.3.23` | app, services | log ra `logs/cf-rust.log` |
 | `anyhow` | `1.0` | **chỉ** cf-app `main.rs` | |
 | `tempfile` | `3.27` | dev-dependency | thư mục tạm cho test |
+| `embed-resource` | `3.0.12` | app build script | biên dịch resource `.rc` để nhúng icon Windows vào exe |
 
 Không thêm thư viện ngoài danh sách khi chưa ghi lý do vào file này.
 

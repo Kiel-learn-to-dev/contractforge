@@ -1,0 +1,65 @@
+import { ScrollView } from "std-widgets.slint";
+import { Theme } from "../theme.slint";
+import { Card, CfButton, EmptyState, StatusBadge } from "../components/common.slint";
+import { CustomerTrashRowData } from "../types.slint";
+
+// Thùng rác khách hàng (khôi phục khách hàng đã xóa mềm).
+export component CustomersTrashScreen inherits VerticalLayout {
+    in property <[CustomerTrashRowData]> rows;
+
+    callback back();
+    callback restore(int);
+
+    spacing: 12px;
+
+    HorizontalLayout {
+        height: 36px;
+        spacing: Theme.gap;
+        CfButton { text: "‹ Quay lại"; clicked => { root.back(); } }
+        Text { text: "Thùng rác khách hàng"; font-size: Theme.font-title; font-weight: 700; color: Theme.text; vertical-alignment: center; }
+        StatusBadge { y: (parent.height - self.height) / 2; label: root.rows.length + " đã xóa"; variant: "secondary"; }
+        Rectangle { horizontal-stretch: 1; }
+    }
+
+    Rectangle {
+        height: 34px;
+        background: Theme.surface-2;
+        border-color: Theme.border;
+        border-width: 1px;
+        border-radius: Theme.radius-sm;
+        HorizontalLayout {
+            padding-left: 12px; padding-right: 12px; spacing: 8px;
+            Text { width: 100px; text: "MÃ KH"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
+            Text { horizontal-stretch: 1; text: "TÊN KHÁCH HÀNG"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
+            Text { width: 140px; text: "LOẠI"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
+            Text { width: 140px; text: "NGÀY XÓA"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
+            Text { width: 110px; text: ""; }
+        }
+    }
+
+    if root.rows.length == 0 : EmptyState {
+        vertical-stretch: 1;
+        message: "Thùng rác trống.";
+    }
+    if root.rows.length > 0 : Card {
+        vertical-stretch: 1;
+        clip: true;
+        ScrollView {
+            VerticalLayout {
+                for row in root.rows : Rectangle {
+                    height: 44px;
+                    background: Theme.surface;
+                    Rectangle { x: 0px; y: parent.height - 1px; width: parent.width; height: 1px; background: Theme.border; }
+                    HorizontalLayout {
+                        padding-left: 12px; padding-right: 12px; spacing: 8px;
+                        Text { width: 100px; text: row.code; color: Theme.primary; font-weight: 600; vertical-alignment: center; }
+                        Text { horizontal-stretch: 1; text: row.name; color: Theme.text; vertical-alignment: center; overflow: elide; }
+                        Text { width: 140px; text: row.customer-type; color: Theme.text-muted; font-size: Theme.font-small; vertical-alignment: center; }
+                        Text { width: 140px; text: row.deleted-at; color: Theme.text-muted; font-size: Theme.font-small; vertical-alignment: center; }
+                        CfButton { y: (parent.height - self.height) / 2; text: "Khôi phục"; variant: "outline-primary"; clicked => { root.restore(row.id); } }
+                    }
+                }
+            }
+        }
+    }
+}

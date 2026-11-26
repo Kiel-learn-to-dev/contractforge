@@ -1,0 +1,177 @@
+import { Theme } from "theme.slint";
+
+component NavItemRow inherits Rectangle {
+    in property <string> label;
+    in property <bool> active: false;
+    callback clicked();
+
+    height: 34px;
+    border-radius: Theme.radius-sm;
+    background: root.active ? Theme.primary : (ta.has-hover ? Theme.primary-tint : transparent);
+
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+
+    Text {
+        x: 12px;
+        width: parent.width - 20px;
+        text: root.label;
+        color: root.active ? white : (ta.has-hover ? Theme.primary : Theme.text-2);
+        font-size: Theme.font-body;
+        font-weight: root.active ? 600 : 500;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+}
+
+component NavSectionLabel inherits Text {
+    in property <string> title;
+    text: root.title;
+    color: Theme.text-faint;
+    font-size: Theme.font-xs;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    height: 22px;
+    vertical-alignment: bottom;
+}
+
+// Thanh bên trắng phân 4 nhóm đúng như giao diện Python base.html.
+export component Sidebar inherits Rectangle {
+    in property <[string]> items;
+    in property <int> current: 0;
+    in property <string> version;
+    callback navigate(int);
+
+    width: 232px;
+    background: Theme.surface;
+
+    // Đường viền phải mảnh
+    Rectangle {
+        x: parent.width - 1px;
+        y: 0px;
+        width: 1px;
+        height: parent.height;
+        background: Theme.border;
+    }
+
+    VerticalLayout {
+        // Brand header
+        Rectangle {
+            height: 64px;
+            Rectangle {
+                x: 0px;
+                y: parent.height - 1px;
+                width: parent.width;
+                height: 1px;
+                background: Theme.border;
+            }
+            HorizontalLayout {
+                padding-left: 16px;
+                padding-right: 16px;
+                spacing: 10px;
+                alignment: start;
+
+                Rectangle {
+                    width: 32px;
+                    height: 32px;
+                    y: (parent.height - self.height) / 2;
+                    border-radius: 8px;
+                    background: Theme.primary;
+                    Text {
+                        text: "CF";
+                        color: white;
+                        font-size: 13px;
+                        font-weight: 700;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+                VerticalLayout {
+                    alignment: center;
+                    spacing: 1px;
+                    Text {
+                        text: "ContractForge";
+                        color: Theme.text;
+                        font-size: 15px;
+                        font-weight: 700;
+                    }
+                    Text {
+                        text: "QUẢN LÝ HỢP ĐỒNG";
+                        color: Theme.text-muted;
+                        font-size: 9.5px;
+                        letter-spacing: 0.6px;
+                    }
+                }
+            }
+        }
+
+        // Nhóm điều hướng
+        VerticalLayout {
+            padding-left: 10px;
+            padding-right: 10px;
+            padding-top: 8px;
+            spacing: 2px;
+
+            NavSectionLabel { title: "  TỔNG QUAN"; }
+            NavItemRow { label: root.items.length > 0 ? root.items[0] : "Tổng quan"; active: root.current == 0; clicked => { root.navigate(0); } }
+
+            NavSectionLabel { title: "  DANH MỤC"; }
+            NavItemRow { label: root.items.length > 1 ? root.items[1] : "Khách hàng"; active: root.current == 1; clicked => { root.navigate(1); } }
+            NavItemRow { label: root.items.length > 2 ? root.items[2] : "Sản phẩm"; active: root.current == 2; clicked => { root.navigate(2); } }
+            NavItemRow { label: root.items.length > 3 ? root.items[3] : "Mẫu hợp đồng"; active: root.current == 3; clicked => { root.navigate(3); } }
+
+            NavSectionLabel { title: "  NGHIỆP VỤ"; }
+            NavItemRow { label: root.items.length > 4 ? root.items[4] : "Danh sách hợp đồng"; active: root.current == 4; clicked => { root.navigate(4); } }
+            NavItemRow { label: root.items.length > 5 ? root.items[5] : "Sinh hợp đồng"; active: root.current == 5; clicked => { root.navigate(5); } }
+            NavItemRow { label: root.items.length > 6 ? root.items[6] : "Sinh hàng loạt"; active: root.current == 6; clicked => { root.navigate(6); } }
+            NavItemRow { label: root.items.length > 7 ? root.items[7] : "Báo giá"; active: root.current == 7; clicked => { root.navigate(7); } }
+
+            NavSectionLabel { title: "  HỆ THỐNG"; }
+            NavItemRow { label: root.items.length > 8 ? root.items[8] : "Cài đặt"; active: root.current == 8; clicked => { root.navigate(8); } }
+        }
+
+        Rectangle { vertical-stretch: 1; }
+
+        // Chân sidebar
+        Rectangle {
+            height: 52px;
+            Rectangle {
+                x: 0px;
+                y: 0px;
+                width: parent.width;
+                height: 1px;
+                background: Theme.border;
+            }
+            HorizontalLayout {
+                padding-left: 14px;
+                padding-right: 14px;
+                padding-top: 10px;
+                padding-bottom: 10px;
+                Rectangle {
+                    border-radius: Theme.radius-sm;
+                    background: Theme.surface-2;
+                    HorizontalLayout {
+                        padding-left: 10px;
+                        padding-right: 10px;
+                        spacing: 7px;
+                        Rectangle {
+                            width: 7px;
+                            height: 7px;
+                            border-radius: 3.5px;
+                            background: Theme.success-fg;
+                            y: (parent.height - self.height) / 2;
+                        }
+                        Text {
+                            text: "Cục bộ · SQLite · v" + root.version;
+                            color: Theme.text-muted;
+                            font-size: Theme.font-small;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

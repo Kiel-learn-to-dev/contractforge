@@ -1,0 +1,77 @@
+import { Theme } from "../theme.slint";
+import { Card } from "common.slint";
+import { ProductPieItem } from "../globals.slint";
+
+// Biểu đồ tròn phân bổ hợp đồng đang hiệu lực theo gói sản phẩm (S01).
+export component PieChart inherits Card {
+    in property <[ProductPieItem]> items;
+
+    VerticalLayout {
+        padding: 14px;
+        spacing: 8px;
+
+        Text {
+            text: "Cơ cấu theo gói dịch vụ";
+            font-size: Theme.font-body;
+            font-weight: 600;
+            color: Theme.text;
+        }
+
+        if root.items.length == 0 : Text {
+            text: "Chưa có hợp đồng đang hiệu lực.";
+            color: Theme.text-muted;
+            font-size: Theme.font-small;
+        }
+
+        if root.items.length > 0 : HorizontalLayout {
+            vertical-stretch: 1;
+            spacing: 14px;
+            Rectangle {
+                width: 108px;
+                height: 108px;
+                y: (parent.height - self.height) / 2;
+                background: transparent;
+                for item in root.items : Path {
+                    width: 108px;
+                    height: 108px;
+                    viewbox-x: 0;
+                    viewbox-y: 0;
+                    viewbox-width: 100;
+                    viewbox-height: 100;
+                    commands: item.commands;
+                    fill: item.fill;
+                }
+            }
+            VerticalLayout {
+                horizontal-stretch: 1;
+                spacing: 5px;
+                alignment: center;
+                for item in root.items : HorizontalLayout {
+                    spacing: 7px;
+                    Rectangle {
+                        width: 9px;
+                        height: 9px;
+                        border-radius: 4.5px;
+                        background: item.fill;
+                        y: (parent.height - self.height) / 2;
+                    }
+                    Text {
+                        horizontal-stretch: 1;
+                        text: item.name;
+                        color: Theme.text-2;
+                        font-size: Theme.font-small;
+                        overflow: elide;
+                        vertical-alignment: center;
+                    }
+                    Text {
+                        text: item.count + " HĐ";
+                        color: Theme.text;
+                        font-size: Theme.font-small;
+                        font-weight: 600;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+        }
+    }
+}

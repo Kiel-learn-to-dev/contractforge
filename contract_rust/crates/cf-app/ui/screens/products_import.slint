@@ -1,0 +1,72 @@
+import { ScrollView } from "std-widgets.slint";
+import { Theme } from "../theme.slint";
+import { Card, CfButton, EmptyState, StatusBadge } from "../components/common.slint";
+import { ProductImportRowData } from "../types.slint";
+
+export component ProductsImportScreen inherits VerticalLayout {
+    in property <[ProductImportRowData]> rows;
+    in property <string> summary;
+    in property <bool> busy: false;
+    in property <bool> can-apply: false;
+    callback choose-file(); callback download-template(); callback export-catalog(); callback apply(); callback close();
+    spacing: 10px;
+
+    HorizontalLayout {
+        height: 36px;
+        spacing: Theme.gap;
+        CfButton { text: "‹ Quay lại"; enabled: !root.busy; clicked => { root.close(); } }
+        Text { text: "Nhập / Xuất danh mục sản phẩm"; color: Theme.text; font-size: Theme.font-title; font-weight: 700; vertical-alignment: center; }
+        Rectangle { horizontal-stretch: 1; }
+        CfButton { text: "Tải file mẫu"; variant: "outline-primary"; enabled: !root.busy; clicked => { root.download-template(); } }
+        CfButton { text: "Xuất danh mục"; variant: "outline-primary"; enabled: !root.busy; clicked => { root.export-catalog(); } }
+    }
+    Card {
+        HorizontalLayout {
+            padding: 10px;
+            spacing: 10px;
+            CfButton { text: "Chọn file Excel (.xlsx)"; variant: "outline-primary"; enabled: !root.busy; clicked => { root.choose-file(); } }
+            Text { horizontal-stretch: 1; text: root.summary; color: Theme.text-muted; vertical-alignment: center; }
+            CfButton { text: root.busy ? "Đang xử lý…" : "Áp dụng bản xem trước"; variant: "primary"; enabled: root.can-apply && !root.busy; clicked => { root.apply(); } }
+        }
+    }
+    Rectangle {
+        height: 34px;
+        background: Theme.surface-2;
+        border-color: Theme.border;
+        border-width: 1px;
+        border-radius: Theme.radius-sm;
+        HorizontalLayout {
+            padding-left: 10px; padding-right: 10px; spacing: 8px;
+            Text { width: 55px; text: "DÒNG"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; vertical-alignment: center; }
+            Text { width: 105px; text: "KẾT QUẢ"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; vertical-alignment: center; }
+            Text { width: 120px; text: "MÃ"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; vertical-alignment: center; }
+            Text { width: 220px; text: "TÊN SẢN PHẨM"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; vertical-alignment: center; }
+            Text { horizontal-stretch: 1; text: "CHI TIẾT / LỖI"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; vertical-alignment: center; }
+        }
+    }
+    if root.rows.length == 0 : EmptyState { vertical-stretch: 1; message: "Chọn file Excel (.xlsx) để xem trước danh mục."; }
+    if root.rows.length > 0 : Card {
+        vertical-stretch: 1;
+        clip: true;
+        ScrollView {
+            VerticalLayout {
+                for row in root.rows : Rectangle {
+                    height: 38px;
+                    background: row.action == "Lỗi" ? Theme.danger-bg : Theme.surface;
+                    Rectangle { x: 0px; y: parent.height - 1px; width: parent.width; height: 1px; background: Theme.border; }
+                    HorizontalLayout {
+                        padding-left: 10px; padding-right: 10px; spacing: 8px;
+                        Text { width: 55px; text: row.row; color: Theme.text-muted; vertical-alignment: center; }
+                        HorizontalLayout {
+                            width: 105px; alignment: start;
+                            StatusBadge { y: (parent.height - self.height) / 2; label: row.action; variant: row.action == "Lỗi" ? "danger" : (row.action == "Tạo" ? "success" : "info"); }
+                        }
+                        Text { width: 120px; text: row.code; color: Theme.primary; font-weight: 600; vertical-alignment: center; overflow: elide; }
+                        Text { width: 220px; text: row.name; color: Theme.text; vertical-alignment: center; overflow: elide; }
+                        Text { horizontal-stretch: 1; text: row.error; color: Theme.danger-fg; vertical-alignment: center; overflow: elide; }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -32,18 +32,29 @@ fn has_anchor(table: &Node) -> bool {
         .is_some_and(|cell| collect_text(cell).contains("PARTY_A_NAME"))
 }
 
-fn top_level_target(node: &Node, in_table: bool) -> Option<Vec<usize>> {
-    for (index, child) in node.children().iter().enumerate() {
-        if child.name() == Some("w:tbl") && !in_table && has_anchor(child) {
-            return Some(vec![index]);
-        }
-        let mut path = top_level_target(child, in_table || child.name() == Some("w:tbl"));
-        if let Some(path) = path.as_mut() {
-            path.insert(0, index);
-            return path.clone().into();
+fn top_level_targets(node: &Node) -> Vec<Vec<usize>> {
+    fn collect(node: &Node, in_table: bool, path: &mut Vec<usize>, targets: &mut Vec<Vec<usize>>) {
+        for (index, child) in node.children().iter().enumerate() {
+            path.push(index);
+            if child.name() == Some("w:tbl") && !in_table {
+                if has_anchor(child) {
+                    targets.push(path.clone());
+                }
+            } else {
+                collect(
+                    child,
+                    in_table || child.name() == Some("w:tbl"),
+                    path,
+                    targets,
+                );
+            }
+            path.pop();
         }
     }
-    None
+
+    let mut targets = Vec::new();
+    collect(node, false, &mut Vec::new(), &mut targets);
+    targets
 }
 
 fn node_at_mut<'a>(node: &'a mut Node, path: &[usize]) -> Option<&'a mut Node> {
@@ -150,12 +161,17 @@ pub fn insert_rows(
     if fields.is_empty() {
         return Ok(());
     }
-    let Some(path) = top_level_target(document, false) else {
-        return Ok(());
-    };
-    let Some(table) = node_at_mut(document, &path) else {
-        return Ok(());
-    };
+    let mut targets = top_level_targets(document);
+    targets.reverse();
+    for path in targets {
+        if let Some(table) = node_at_mut(document, &path) {
+            insert_rows_in_table(table, &fields)?;
+        }
+    }
+    Ok(())
+}
+
+fn insert_rows_in_table(table: &mut Node, fields: &[(&str, &str)]) -> Result<(), DocxError> {
     let row_indices = direct_children(table, "w:tr");
     if row_indices.is_empty() {
         return Ok(());
@@ -221,4 +237,47 @@ pub fn insert_rows(
     let insert_after = anchor_index.unwrap_or(insertion_index);
     children.splice(insert_after + 1..insert_after + 1, rows);
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::insert_rows;
+    use crate::{inspect::paragraph_texts, xml};
+    use std::collections::BTreeMap;
+
+    #[test]
+    fn inserts_optional_party_a_fields_in_each_top_level_party_table() {
+        let source = r#"<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>
+                <w:tbl>
+                    <w:tr><w:tc><w:p><w:r><w:t>{{PARTY_A_NAME}}</w:t></w:r></w:p></w:tc></w:tr>
+                    <w:tr><w:tc><w:p><w:r><w:t>Đại diện</w:t></w:r></w:p></w:tc><w:tc><w:p/></w:tc><w:tc><w:p/></w:tc></w:tr>
+                    <w:tr><w:tc><w:p><w:r><w:t>Chức vụ</w:t></w:r></w:p></w:tc><w:tc><w:p/></w:tc><w:tc><w:p/></w:tc></w:tr>
+                </w:tbl>
+                <w:tbl>
+                    <w:tr><w:tc><w:p><w:r><w:t>{{PARTY_A_NAME}}</w:t></w:r></w:p></w:tc></w:tr>
+                    <w:tr><w:tc><w:p><w:r><w:t>Đại diện</w:t></w:r></w:p></w:tc><w:tc><w:p/></w:tc><w:tc><w:p/></w:tc></w:tr>
+                    <w:tr><w:tc><w:p><w:r><w:t>Chức vụ</w:t></w:r></w:p></w:tc><w:tc><w:p/></w:tc><w:tc><w:p/></w:tc></w:tr>
+                </w:tbl>
+            </w:body></w:document>"#;
+        let mut document = xml::parse(source.as_bytes()).expect("parse synthetic document");
+        let values = BTreeMap::from([("PARTY_A_TAX_CODE".into(), "12345".into())]);
+
+        insert_rows(&mut document, &values).expect("insert optional rows");
+
+        let paragraphs = paragraph_texts(&document);
+        assert_eq!(
+            paragraphs
+                .iter()
+                .filter(|text| text.as_str() == "Mã số thuế")
+                .count(),
+            2
+        );
+        assert_eq!(
+            paragraphs
+                .iter()
+                .filter(|text| text.as_str() == "12345")
+                .count(),
+            2
+        );
+    }
 }

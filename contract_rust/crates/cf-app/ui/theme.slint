@@ -1,0 +1,50 @@
+// Màu, khoảng cách và cỡ chữ dùng chung — đồng bộ bảng màu & tỷ lệ bản web Python.
+export global Theme {
+    out property <color> surface: #ffffff;
+    out property <color> surface-2: #eceef0;
+    out property <color> surface-3: #e4e6e9;
+    out property <color> background: #f2f4f6;
+    out property <color> border: #e2e5ea;
+    out property <color> border-strong: #cdd2db;
+
+    out property <color> text: #191c1e;
+    out property <color> text-2: #434654;
+    out property <color> text-muted: #737686;
+    out property <color> text-faint: #9ea1b3;
+
+    out property <color> primary: #003fb1;
+    out property <color> primary-hover: #0035a0;
+    out property <color> primary-tint: #eff3ff;
+    out property <color> primary-light: #dbe1ff;
+
+    out property <color> teal-fg: #0d9488;
+    out property <color> indigo-fg: #4f46e5;
+    out property <color> cyan-fg: #0891b2;
+
+    // Bảy biến thể trạng thái (khớp tên màu của cf-core lifecycle::status_color):
+    // secondary, info, primary, success, warning, danger, dark.
+    out property <color> secondary-bg: #f1f5f9;
+    out property <color> secondary-fg: #64748b;
+    out property <color> info-bg: #dbeafe;
+    out property <color> info-fg: #2563eb;
+    out property <color> primary-bg: #dbe1ff;
+    out property <color> primary-fg: #003fb1;
+    out property <color> success-bg: #dcfce7;
+    out property <color> success-fg: #16a34a;
+    out property <color> warning-bg: #fef3c7;
+    out property <color> warning-fg: #d97706;
+    out property <color> danger-bg: #fee2e2;
+    out property <color> danger-fg: #dc2626;
+    out property <color> dark-bg: #191c1e;
+    out property <color> dark-fg: #ffffff;
+
+    out property <length> gap: 10px;
+    out property <length> pad: 16px;
+    out property <length> radius: 8px;
+    out property <length> radius-sm: 6px;
+
+    out property <length> font-xs: 10px;
+    out property <length> font-small: 11px;
+    out property <length> font-body: 13px;
+    out property <length> font-title: 18px;
+}

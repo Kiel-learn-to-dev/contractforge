@@ -1,0 +1,427 @@
+import { CheckBox, ComboBox, LineEdit, ScrollView } from "std-widgets.slint";
+import { Theme } from "../theme.slint";
+import { Card, CfButton, TabPill } from "../components/common.slint";
+import { QuotationHub } from "../globals.slint";
+
+component FieldLabel inherits Text {
+    in property <string> text-label;
+    text: root.text-label;
+    font-size: Theme.font-xs;
+    font-weight: 700;
+    color: Theme.text-muted;
+    letter-spacing: 0.4px;
+}
+
+// S19 — Báo giá (3 tab: Theo danh mục / Tự nhập / Yêu cầu báo giá).
+export component QuotationScreen inherits VerticalLayout {
+    spacing: 12px;
+
+    // Thanh chọn tab cố định chiều cao gọn giống nav-pills Python
+    Card {
+        height: 44px;
+        HorizontalLayout {
+            padding-left: 10px;
+            padding-right: 10px;
+            spacing: 6px;
+            TabPill {
+                y: (parent.height - self.height) / 2;
+                text: "Theo danh mục";
+                active: QuotationHub.active-tab == "catalog";
+                clicked => { QuotationHub.active-tab = "catalog"; }
+            }
+            TabPill {
+                y: (parent.height - self.height) / 2;
+                text: "Báo giá tự nhập (5 mẫu)";
+                active: QuotationHub.active-tab == "manual";
+                clicked => { QuotationHub.active-tab = "manual"; }
+            }
+            TabPill {
+                y: (parent.height - self.height) / 2;
+                text: "Yêu cầu báo giá";
+                active: QuotationHub.active-tab == "request";
+                clicked => { QuotationHub.active-tab = "request"; }
+            }
+            Rectangle { horizontal-stretch: 1; }
+        }
+    }
+
+    // TAB 1: Theo danh mục
+    if QuotationHub.active-tab == "catalog" : ScrollView {
+        vertical-stretch: 1;
+        VerticalLayout {
+            padding-right: 6px;
+            spacing: 12px;
+
+            Card {
+                VerticalLayout {
+                    padding: Theme.pad;
+                    spacing: 12px;
+                    HorizontalLayout {
+                        Text { text: "BÁO GIÁ THEO DANH MỤC SẢN PHẨM"; font-size: Theme.font-small; font-weight: 700; color: Theme.primary; letter-spacing: 0.4px; vertical-alignment: center; }
+                        Rectangle { horizontal-stretch: 1; }
+                        CfButton { text: "Đặt lại"; clicked => { QuotationHub.catalog-reset(); } }
+                    }
+                    Rectangle { height: 1px; background: Theme.border; }
+
+                    HorizontalLayout {
+                        spacing: 12px;
+                        VerticalLayout {
+                            horizontal-stretch: 1;
+                            spacing: 4px;
+                            FieldLabel { text-label: "SẢN PHẨM / DỊCH VỤ *"; }
+                            ComboBox {
+                                height: 32px;
+                                model: QuotationHub.product-names;
+                                current-index <=> QuotationHub.product-index;
+                                selected(v) => { QuotationHub.catalog-product-changed(self.current-index); }
+                            }
+                        }
+                        VerticalLayout {
+                            horizontal-stretch: 1;
+                            spacing: 4px;
+                            FieldLabel { text-label: "MẪU BÁO GIÁ (.DOCX) *"; }
+                            ComboBox {
+                                height: 32px;
+                                model: QuotationHub.catalog-templates;
+                                current-index <=> QuotationHub.catalog-template-index;
+                                selected(v) => { QuotationHub.catalog-template-changed(self.current-index); }
+                            }
+                        }
+                    }
+
+                    VerticalLayout {
+                        spacing: 4px;
+                        FieldLabel { text-label: "KHÁCH HÀNG *"; }
+                        ComboBox {
+                            height: 32px;
+                            model: QuotationHub.customer-names;
+                            current-index <=> QuotationHub.customer-index;
+                            selected(v) => { QuotationHub.catalog-customer-changed(self.current-index); }
+                        }
+                    }
+
+                    HorizontalLayout {
+                        spacing: 12px;
+                        VerticalLayout {
+                            width: 180px;
+                            spacing: 4px;
+                            FieldLabel { text-label: "NGÀY BÁO GIÁ *"; }
+                            LineEdit {
+                                height: 32px;
+                                text <=> QuotationHub.catalog-quote-date;
+                                placeholder-text: "dd/mm/yyyy";
+                                edited(t) => { QuotationHub.catalog-params-changed(t, QuotationHub.catalog-months); }
+                            }
+                        }
+                        VerticalLayout {
+                            width: 120px;
+                            spacing: 4px;
+                            FieldLabel { text-label: "SỐ THÁNG *"; }
+                            LineEdit {
+                                height: 32px;
+                                text <=> QuotationHub.catalog-months;
+                                edited(t) => { QuotationHub.catalog-params-changed(QuotationHub.catalog-quote-date, t); }
+                            }
+                        }
+                        Rectangle { horizontal-stretch: 1; }
+                    }
+
+                    if QuotationHub.catalog-addons.length > 0 : VerticalLayout {
+                        spacing: 4px;
+                        FieldLabel { text-label: "GÓI BỔ SUNG CÙNG NHÓM (TÙY CHỌN)"; }
+                        for ad[idx] in QuotationHub.catalog-addons : CheckBox {
+                            text: ad.label;
+                            checked: ad.checked;
+                            toggled => { QuotationHub.catalog-toggle-addon(idx); }
+                        }
+                    }
+
+                    if QuotationHub.catalog-summary != "" : Rectangle {
+                        border-radius: Theme.radius-sm;
+                        background: Theme.primary-tint;
+                        border-color: Theme.primary-light;
+                        border-width: 1px;
+                        HorizontalLayout {
+                            padding: 10px;
+                            Text { text: QuotationHub.catalog-summary; color: Theme.primary; font-size: Theme.font-body; font-weight: 600; wrap: word-wrap; }
+                        }
+                    }
+
+                    HorizontalLayout {
+                        alignment: end;
+                        CfButton {
+                            text: "Sinh file báo giá (.docx)";
+                            variant: "primary";
+                            clicked => {
+                                QuotationHub.catalog-generate(
+                                    QuotationHub.customer-index,
+                                    QuotationHub.product-index,
+                                    QuotationHub.catalog-template-index,
+                                    QuotationHub.catalog-quote-date,
+                                    QuotationHub.catalog-months
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // TAB 2: Tự nhập
+    if QuotationHub.active-tab == "manual" : ScrollView {
+        vertical-stretch: 1;
+        VerticalLayout {
+            padding-right: 6px;
+            spacing: 12px;
+
+            Card {
+                VerticalLayout {
+                    padding: Theme.pad;
+                    spacing: 8px;
+                    FieldLabel { text-label: "CHỌN BỐ CỤC MẪU BÁO GIÁ"; }
+                    HorizontalLayout {
+                        spacing: 10px;
+                        ComboBox { height: 32px; horizontal-stretch: 1; model: QuotationHub.layout-names; current-index <=> QuotationHub.layout-index; }
+                        CfButton { text: "Tải mẫu trống"; variant: "outline-primary"; clicked => { QuotationHub.manual-download-blank(QuotationHub.layout-index); } }
+                    }
+                }
+            }
+
+            Card {
+                VerticalLayout {
+                    padding: Theme.pad;
+                    spacing: 8px;
+                    HorizontalLayout {
+                        spacing: 10px;
+                        Text { text: "ĐƠN VỊ PHÁT HÀNH BÁO GIÁ"; font-size: Theme.font-small; font-weight: 700; color: Theme.primary; vertical-alignment: center; }
+                        Rectangle { horizontal-stretch: 1; }
+                        ComboBox {
+                            width: 240px;
+                            height: 32px;
+                            model: QuotationHub.issuer-names;
+                            current-index <=> QuotationHub.issuer-index;
+                            selected(v) => { QuotationHub.manual-select-issuer(self.current-index); }
+                        }
+                        CfButton { text: "Lưu hồ sơ phát hành"; clicked => { QuotationHub.manual-save-issuer(); } }
+                    }
+                    Rectangle { height: 1px; background: Theme.border; }
+                    HorizontalLayout {
+                        spacing: 10px;
+                        LineEdit { height: 32px; horizontal-stretch: 1; placeholder-text: "Tên đơn vị phát hành *"; text <=> QuotationHub.issuer-name; }
+                        LineEdit { height: 32px; width: 180px; placeholder-text: "Mã số thuế"; text <=> QuotationHub.issuer-tax-code; }
+                    }
+                    LineEdit { height: 32px; placeholder-text: "Địa chỉ đơn vị phát hành"; text <=> QuotationHub.issuer-address; }
+                    HorizontalLayout {
+                        spacing: 10px;
+                        LineEdit { height: 32px; horizontal-stretch: 1; placeholder-text: "Người đại diện"; text <=> QuotationHub.issuer-rep; }
+                        LineEdit { height: 32px; horizontal-stretch: 1; placeholder-text: "Chức vụ"; text <=> QuotationHub.issuer-title; }
+                        LineEdit { height: 32px; width: 140px; placeholder-text: "Điện thoại"; text <=> QuotationHub.issuer-phone; }
+                        LineEdit { height: 32px; width: 180px; placeholder-text: "Email"; text <=> QuotationHub.issuer-email; }
+                    }
+                }
+            }
+
+            Card {
+                VerticalLayout {
+                    padding: Theme.pad;
+                    spacing: 8px;
+                    HorizontalLayout {
+                        spacing: 8px;
+                        Text { text: "NGƯỜI NHẬN & THỜI HẠN"; font-size: Theme.font-small; font-weight: 700; color: Theme.primary; vertical-alignment: center; }
+                        Rectangle { horizontal-stretch: 1; }
+                        Text { text: "Điền nhanh từ KH:"; font-size: Theme.font-xs; color: Theme.text-muted; vertical-alignment: center; }
+                        ComboBox {
+                            width: 240px;
+                            height: 30px;
+                            model: QuotationHub.customer-names;
+                            selected(v) => { QuotationHub.manual-fill-customer(self.current-index); }
+                        }
+                    }
+                    Rectangle { height: 1px; background: Theme.border; }
+                    HorizontalLayout {
+                        spacing: 10px;
+                        LineEdit { height: 32px; horizontal-stretch: 1; placeholder-text: "Tên khách hàng nhận báo giá *"; text <=> QuotationHub.recipient-name; }
+                        LineEdit { height: 32px; width: 180px; placeholder-text: "MST người nhận"; text <=> QuotationHub.recipient-tax-code; }
+                    }
+                    HorizontalLayout {
+                        spacing: 10px;
+                        LineEdit { height: 32px; horizontal-stretch: 1; placeholder-text: "Địa chỉ người nhận"; text <=> QuotationHub.recipient-address; }
+                        LineEdit { height: 32px; width: 200px; placeholder-text: "Người liên hệ"; text <=> QuotationHub.recipient-contact; }
+                    }
+                    HorizontalLayout {
+                        spacing: 10px;
+                        LineEdit { height: 32px; width: 140px; placeholder-text: "Số báo giá"; text <=> QuotationHub.manual-quote-number; }
+                        LineEdit { height: 32px; width: 150px; placeholder-text: "Ngày (dd/mm/yyyy) *"; text <=> QuotationHub.manual-quote-date; }
+                        LineEdit { height: 32px; width: 150px; placeholder-text: "Hiệu lực đến"; text <=> QuotationHub.manual-valid-until; }
+                        LineEdit { height: 32px; horizontal-stretch: 1; placeholder-text: "Ghi chú"; text <=> QuotationHub.manual-note; }
+                    }
+                }
+            }
+
+            Card {
+                VerticalLayout {
+                    padding: Theme.pad;
+                    spacing: 8px;
+                    HorizontalLayout {
+                        spacing: 8px;
+                        Text { text: "HẠNG MỤC BÁO GIÁ"; font-size: Theme.font-small; font-weight: 700; color: Theme.primary; vertical-alignment: center; }
+                        Rectangle { horizontal-stretch: 1; }
+                        Text { text: "Thêm nhanh từ SP:"; font-size: Theme.font-xs; color: Theme.text-muted; vertical-alignment: center; }
+                        ComboBox {
+                            width: 220px;
+                            height: 30px;
+                            model: QuotationHub.product-names;
+                            selected(v) => { QuotationHub.manual-add-from-product(self.current-index); }
+                        }
+                        CfButton { text: "+ Thêm dòng trống"; variant: "outline-primary"; clicked => { QuotationHub.manual-add-item(); } }
+                    }
+                    Rectangle { height: 1px; background: Theme.border; }
+                    for row[idx] in QuotationHub.manual-items : HorizontalLayout {
+                        spacing: 6px;
+                        LineEdit { height: 32px; horizontal-stretch: 1; placeholder-text: "Tên hạng mục *"; text: row.name; edited(t) => { QuotationHub.manual-update-item(idx, t, row.unit, row.quantity, row.periods, row.price, row.vat); } }
+                        LineEdit { height: 32px; width: 80px; placeholder-text: "ĐVT"; text: row.unit; edited(t) => { QuotationHub.manual-update-item(idx, row.name, t, row.quantity, row.periods, row.price, row.vat); } }
+                        LineEdit { height: 32px; width: 65px; placeholder-text: "SL"; text: row.quantity; edited(t) => { QuotationHub.manual-update-item(idx, row.name, row.unit, t, row.periods, row.price, row.vat); } }
+                        LineEdit { height: 32px; width: 55px; placeholder-text: "Kỳ"; text: row.periods; edited(t) => { QuotationHub.manual-update-item(idx, row.name, row.unit, row.quantity, t, row.price, row.vat); } }
+                        LineEdit { height: 32px; width: 120px; placeholder-text: "Đơn giá"; text: row.price; edited(t) => { QuotationHub.manual-update-item(idx, row.name, row.unit, row.quantity, row.periods, t, row.vat); } }
+                        LineEdit { height: 32px; width: 58px; placeholder-text: "VAT%"; text: row.vat; edited(t) => { QuotationHub.manual-update-item(idx, row.name, row.unit, row.quantity, row.periods, row.price, t); } }
+                        CfButton { text: "Xóa"; variant: "danger"; clicked => { QuotationHub.manual-remove-item(idx); } }
+                    }
+                    if QuotationHub.manual-totals-text != "" : Rectangle {
+                        border-radius: Theme.radius-sm;
+                        background: Theme.success-bg;
+                        HorizontalLayout {
+                            padding: 8px;
+                            Text { text: QuotationHub.manual-totals-text; color: Theme.success-fg; font-weight: 700; font-size: Theme.font-small; }
+                        }
+                    }
+                }
+            }
+
+            HorizontalLayout {
+                alignment: end;
+                CfButton { text: "Sinh báo giá tự nhập (.docx)"; variant: "primary"; clicked => { QuotationHub.manual-generate(QuotationHub.layout-index); } }
+            }
+        }
+    }
+
+    // TAB 3: Yêu cầu báo giá
+    if QuotationHub.active-tab == "request" : ScrollView {
+        vertical-stretch: 1;
+        VerticalLayout {
+            padding-right: 6px;
+            spacing: 12px;
+            Card {
+                VerticalLayout {
+                    padding: Theme.pad;
+                    spacing: 10px;
+                    HorizontalLayout {
+                        Text { text: "YÊU CẦU BÁO GIÁ (KHÔNG LỘ THÔNG TIN GIÁ)"; font-size: Theme.font-small; font-weight: 700; color: Theme.primary; vertical-alignment: center; }
+                        Rectangle { horizontal-stretch: 1; }
+                        CfButton { text: "Cài mẫu yêu cầu có sẵn"; variant: "outline-primary"; clicked => { QuotationHub.request-install-samples(); } }
+                    }
+                    Rectangle { height: 1px; background: Theme.border; }
+                    HorizontalLayout {
+                        spacing: 12px;
+                        VerticalLayout {
+                            horizontal-stretch: 1; spacing: 4px;
+                            FieldLabel { text-label: "KHÁCH HÀNG *"; }
+                            ComboBox { height: 32px; model: QuotationHub.customer-names; current-index <=> QuotationHub.customer-index; }
+                        }
+                        VerticalLayout {
+                            horizontal-stretch: 1; spacing: 4px;
+                            FieldLabel { text-label: "GÓI CHÍNH *"; }
+                            ComboBox {
+                                height: 32px;
+                                model: QuotationHub.product-names;
+                                current-index <=> QuotationHub.product-index;
+                                selected(v) => { QuotationHub.request-product-changed(self.current-index); }
+                            }
+                        }
+                    }
+                    VerticalLayout {
+                        spacing: 4px;
+                        FieldLabel { text-label: "MẪU YÊU CẦU *"; }
+                        ComboBox { height: 32px; model: QuotationHub.request-templates; current-index <=> QuotationHub.request-template-index; }
+                    }
+                    HorizontalLayout {
+                        spacing: 12px;
+                        VerticalLayout {
+                            horizontal-stretch: 2; spacing: 4px;
+                            FieldLabel { text-label: "TÊN HẠNG MỤC CHÍNH (TÙY CHỈNH)"; }
+                            LineEdit { height: 32px; placeholder-text: "Để trống = theo tên sản phẩm"; text <=> QuotationHub.request-main-name; }
+                        }
+                        VerticalLayout {
+                            width: 110px; spacing: 4px;
+                            FieldLabel { text-label: "SỐ LƯỢNG"; }
+                            LineEdit { height: 32px; text <=> QuotationHub.request-main-qty; }
+                        }
+                    }
+                    if QuotationHub.request-addons.length > 0 : VerticalLayout {
+                        spacing: 4px;
+                        FieldLabel { text-label: "GÓI BỔ SUNG CÙNG NHÓM"; }
+                        for ad[idx] in QuotationHub.request-addons : CheckBox {
+                            text: ad.label;
+                            checked: ad.checked;
+                            toggled => { QuotationHub.request-toggle-addon(idx); }
+                        }
+                    }
+                    HorizontalLayout {
+                        spacing: 12px;
+                        VerticalLayout {
+                            width: 160px; spacing: 4px;
+                            FieldLabel { text-label: "NGÀY YÊU CẦU *"; }
+                            LineEdit { height: 32px; text <=> QuotationHub.request-date; placeholder-text: "dd/mm/yyyy"; }
+                        }
+                        VerticalLayout {
+                            width: 160px; spacing: 4px;
+                            FieldLabel { text-label: "HẠN PHẢN HỒI *"; }
+                            LineEdit { height: 32px; text <=> QuotationHub.request-deadline; placeholder-text: "dd/mm/yyyy"; }
+                        }
+                        VerticalLayout {
+                            width: 100px; spacing: 4px;
+                            FieldLabel { text-label: "SỐ THÁNG"; }
+                            LineEdit { height: 32px; text <=> QuotationHub.request-months; }
+                        }
+                        Rectangle { horizontal-stretch: 1; }
+                    }
+                    VerticalLayout {
+                        spacing: 4px;
+                        FieldLabel { text-label: "KÍNH GỬI (TRỐNG = …)"; }
+                        LineEdit { height: 32px; text <=> QuotationHub.request-addressee; }
+                    }
+                    VerticalLayout {
+                        spacing: 4px;
+                        FieldLabel { text-label: "TIÊU ĐỀ / NỘI DUNG"; }
+                        LineEdit { height: 32px; text <=> QuotationHub.request-subject; }
+                    }
+                    VerticalLayout {
+                        spacing: 4px;
+                        FieldLabel { text-label: "GHI CHÚ"; }
+                        LineEdit { height: 32px; text <=> QuotationHub.request-note; }
+                    }
+                    HorizontalLayout {
+                        alignment: end;
+                        CfButton {
+                            text: "Sinh yêu cầu báo giá (.docx)";
+                            variant: "primary";
+                            clicked => {
+                                QuotationHub.request-generate(
+                                    QuotationHub.customer-index,
+                                    QuotationHub.product-index,
+                                    QuotationHub.request-template-index,
+                                    QuotationHub.request-date,
+                                    QuotationHub.request-deadline,
+                                    QuotationHub.request-months,
+                                    QuotationHub.request-addressee,
+                                    QuotationHub.request-subject,
+                                    QuotationHub.request-note
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -5,7 +5,7 @@ edition.workspace = true
 build = "build.rs"
 
 [dependencies]
-slint = { workspace = true }
+slint = { workspace = true, features = ["renderer-skia"] }
 
 [build-dependencies]
 slint-build = { workspace = true }

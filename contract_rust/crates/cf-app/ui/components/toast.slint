@@ -1,0 +1,51 @@
+import { Theme } from "../theme.slint";
+
+// Thông báo nổi ở góc dưới. Rust quyết định hiện/ẩn và thời gian tự ẩn (danger không tự ẩn).
+// `kind`: success | warning | danger.
+export component Toast inherits Rectangle {
+    in property <bool> shown: false;
+    in property <string> kind: "success";
+    in property <string> message;
+    in property <length> available-width: 1000px;
+    callback closed();
+
+    property <color> accent: kind == "danger" ? Theme.danger-fg
+        : kind == "warning" ? Theme.warning-fg
+        : Theme.success-fg;
+
+    visible: shown;
+    background: Theme.surface;
+    border-color: accent;
+    border-width: 2px;
+    border-radius: Theme.radius;
+    drop-shadow-blur: 8px;
+    drop-shadow-color: #00000033;
+    width: min(available-width - 48px, 420px);
+    height: max(48px, message-text.preferred-height + 2 * Theme.gap + 4px);
+
+    HorizontalLayout {
+        padding: Theme.gap;
+        spacing: Theme.gap;
+        message-text := Text {
+            // Long filenames have a large intrinsic width. Keep them within the
+            // space left after the close button so word-wrap can take effect.
+            min-width: 0px;
+            preferred-width: root.width - 3 * Theme.gap - 28px;
+            text: root.message;
+            color: Theme.text;
+            font-size: Theme.font-body;
+            wrap: word-wrap;
+            vertical-alignment: center;
+        }
+        TouchArea {
+            width: 24px;
+            clicked => { root.closed(); }
+            Text {
+                text: "✕";
+                color: Theme.text-muted;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+    }
+}

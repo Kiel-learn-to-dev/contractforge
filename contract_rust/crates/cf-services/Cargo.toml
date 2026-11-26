@@ -1,0 +1,24 @@
+[package]
+name = "cf-services"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+cf-core = { path = "../cf-core" }
+cf-db = { path = "../cf-db" }
+cf-docx = { path = "../cf-docx" }
+chrono = { workspace = true }
+rusqlite = { workspace = true }
+serde_json = { workspace = true }
+rust_decimal = { workspace = true }
+thiserror = { workspace = true }
+uuid = { workspace = true }
+sha2 = { workspace = true }
+zip = { workspace = true }
+calamine = { workspace = true }
+rust_xlsxwriter = { workspace = true }
+open = { workspace = true }
+
+[dev-dependencies]
+cf-testkit = { path = "../cf-testkit", features = ["db", "docx"] }
+tempfile = { workspace = true }

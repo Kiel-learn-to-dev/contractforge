@@ -1,0 +1,71 @@
+import { ComboBox, LineEdit, ScrollView, TextEdit } from "std-widgets.slint";
+import { Theme } from "../theme.slint";
+import { Card, CfButton } from "../components/common.slint";
+import { TemplateFormData } from "../types.slint";
+
+export component TemplateFormScreen inherits VerticalLayout {
+    in-out property <TemplateFormData> data;
+    in property <[string]> type-suggestions;
+    in property <string> selected-file;
+    in property <string> error;
+    callback pick-file(); callback save(); callback cancel();
+    spacing: 10px;
+
+    HorizontalLayout {
+        height: 36px;
+        spacing: 8px;
+        CfButton { text: "‹ Quay lại"; clicked => { root.cancel(); } }
+        Text { text: root.data.id == "" ? "Tạo mẫu hợp đồng mới" : "Sửa thông tin mẫu"; color: Theme.text; font-size: Theme.font-title; font-weight: 700; vertical-alignment: center; }
+        Rectangle { horizontal-stretch: 1; }
+        CfButton { text: "Hủy"; clicked => { root.cancel(); } }
+        CfButton { text: "Lưu mẫu"; variant: "primary"; clicked => { root.save(); } }
+    }
+    if root.error != "" : Card {
+        border-color: Theme.danger-fg;
+        background: Theme.danger-bg;
+        HorizontalLayout { padding: 10px; Text { text: root.error; color: Theme.danger-fg; wrap: word-wrap; } }
+    }
+    ScrollView {
+        vertical-stretch: 1;
+        VerticalLayout {
+            padding-right: 6px;
+            spacing: Theme.gap;
+            Card {
+                VerticalLayout {
+                    padding: Theme.pad;
+                    spacing: 8px;
+                    Text { text: "THÔNG TIN MẪU (.DOCX)"; font-size: Theme.font-small; font-weight: 700; color: Theme.primary; }
+                    Rectangle { height: 1px; background: Theme.border; }
+                    HorizontalLayout {
+                        spacing: 12px;
+                        VerticalLayout {
+                            horizontal-stretch: 1; spacing: 4px;
+                            Text { text: "MÃ TEMPLATE (TRỐNG = TỰ TẠO)"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
+                            LineEdit { height: 32px; text <=> root.data.code; enabled: root.data.id == ""; }
+                        }
+                        VerticalLayout {
+                            horizontal-stretch: 2; spacing: 4px;
+                            Text { text: "TÊN MẪU *"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
+                            LineEdit { height: 32px; text <=> root.data.name; }
+                        }
+                    }
+                    Text { text: "LOẠI VĂN BẢN (CHỌN HOẶC GÕ TỰ DO)"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
+                    HorizontalLayout {
+                        spacing: 8px;
+                        LineEdit { height: 32px; text <=> root.data.kind; horizontal-stretch: 1; }
+                        ComboBox { width: 220px; height: 32px; model: root.type-suggestions; selected(value) => { root.data.kind = value; } }
+                    }
+                    Text { text: "NHÓM SẢN PHẨM (ĐỂ TRỐNG = MẪU CHUNG MỌI NHÓM)"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
+                    LineEdit { height: 32px; text <=> root.data.group; placeholder-text: "VD: HIS, EMR, CA..."; }
+                    Text { text: "MÔ TẢ"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
+                    TextEdit { text <=> root.data.description; height: 90px; }
+                    if root.data.id == "" : HorizontalLayout {
+                        spacing: 8px;
+                        CfButton { text: "Chọn file .docx"; variant: "outline-primary"; clicked => { root.pick-file(); } }
+                        Text { text: root.selected-file == "" ? "Chưa chọn file" : root.selected-file; color: Theme.text-muted; vertical-alignment: center; overflow: elide; }
+                    }
+                }
+            }
+        }
+    }
+}

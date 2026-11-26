@@ -1,0 +1,68 @@
+import { LineEdit } from "std-widgets.slint";
+import { Theme } from "../theme.slint";
+import { SearchHub } from "../globals.slint";
+
+// Ô tìm kiếm nhanh toàn cục trên thanh tiêu đề (kiểu #gsearch-wrap Python).
+export component GlobalSearch inherits HorizontalLayout {
+    spacing: 4px;
+    LineEdit {
+        width: 280px;
+        height: 30px;
+        font-size: 12px;
+        placeholder-text: "Tìm hợp đồng, khách hàng…";
+        text <=> SearchHub.query;
+        edited(t) => { SearchHub.search-changed(t); }
+        accepted => { SearchHub.submit-first(); }
+    }
+}
+
+// Danh sách gợi ý thả xuống đặt nổi trong MainWindow.
+export component GlobalSearchPopup inherits Rectangle {
+    width: 360px;
+    background: Theme.surface;
+    border-color: Theme.border-strong;
+    border-width: 1px;
+    border-radius: Theme.radius;
+    drop-shadow-blur: 14px;
+    drop-shadow-offset-y: 4px;
+    drop-shadow-color: #0000001e;
+
+    VerticalLayout {
+        padding: 6px;
+        spacing: 2px;
+
+        if SearchHub.results.length == 0 : Text {
+            text: "Không có kết quả phù hợp.";
+            color: Theme.text-muted;
+            font-size: Theme.font-small;
+        }
+
+        for item in SearchHub.results : Rectangle {
+            height: 44px;
+            border-radius: Theme.radius-sm;
+            background: ta.has-hover ? Theme.primary-tint : transparent;
+            ta := TouchArea {
+                mouse-cursor: pointer;
+                clicked => { SearchHub.pick-result(item.kind, item.id); }
+            }
+            HorizontalLayout {
+                padding-left: 8px;
+                padding-right: 8px;
+                spacing: 8px;
+                VerticalLayout {
+                    horizontal-stretch: 1;
+                    alignment: center;
+                    Text { text: item.label; font-size: Theme.font-body; font-weight: 600; color: Theme.text; overflow: elide; }
+                    Text { text: item.sub; font-size: Theme.font-small; color: Theme.text-muted; overflow: elide; }
+                }
+                Text {
+                    text: item.kind == "contract" ? item.status : "Khách hàng";
+                    font-size: Theme.font-small;
+                    font-weight: 600;
+                    color: Theme.primary;
+                    vertical-alignment: center;
+                }
+            }
+        }
+    }
+}

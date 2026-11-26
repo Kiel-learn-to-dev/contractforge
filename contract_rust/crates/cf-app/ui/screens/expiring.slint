@@ -1,0 +1,133 @@
+import { ScrollView } from "std-widgets.slint";
+import { Theme } from "../theme.slint";
+import { Card, CfButton, EmptyState, StatusBadge, TabPill } from "../components/common.slint";
+import { ExpiringHub } from "../globals.slint";
+
+// S02 — Hợp đồng sắp hết hạn (lọc 7/14/30/60/90 ngày, màu mức độ khẩn, click KH, xuất CSV).
+export component ExpiringScreen inherits VerticalLayout {
+    spacing: Theme.gap;
+
+    HorizontalLayout {
+        height: 36px;
+        spacing: Theme.gap;
+        CfButton { text: "‹ Tổng quan"; clicked => { ExpiringHub.back(); } }
+        Text {
+            text: "Hợp đồng sắp hết hạn";
+            font-size: Theme.font-title;
+            font-weight: 700;
+            color: Theme.text;
+            vertical-alignment: center;
+        }
+        Rectangle { horizontal-stretch: 1; }
+        for d in [7, 14, 30, 60, 90] : TabPill {
+            y: (parent.height - self.height) / 2;
+            text: d + " ngày";
+            active: ExpiringHub.days == d;
+            clicked => { ExpiringHub.load-days(d); }
+        }
+        CfButton { text: "Xuất CSV"; variant: "outline-primary"; clicked => { ExpiringHub.export-csv(); } }
+    }
+
+    if ExpiringHub.summary-text != "" : Text {
+        text: ExpiringHub.summary-text;
+        color: Theme.text-muted;
+        font-size: Theme.font-small;
+    }
+
+    // Tiêu đề bảng
+    Rectangle {
+        height: 34px;
+        background: Theme.surface-2;
+        border-color: Theme.border;
+        border-width: 1px;
+        border-radius: Theme.radius-sm;
+        HorizontalLayout {
+            padding-left: 12px;
+            padding-right: 12px;
+            spacing: 12px;
+            Text { width: 165px; text: "SỐ HỢP ĐỒNG"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
+            Text { horizontal-stretch: 1; text: "KHÁCH HÀNG"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
+            Text { width: 100px; text: "HẾT HẠN"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
+            Text { width: 110px; text: "CÒN LẠI"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; horizontal-alignment: center; vertical-alignment: center; }
+            Text { width: 130px; text: "TRẠNG THÁI"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
+            Text { width: 120px; text: "GIÁ TRỊ"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; horizontal-alignment: right; vertical-alignment: center; }
+        }
+    }
+
+    if ExpiringHub.rows.length == 0 : EmptyState {
+        vertical-stretch: 1;
+        message: "Không có hợp đồng nào hết hạn trong " + ExpiringHub.days + " ngày tới.";
+    }
+
+    if ExpiringHub.rows.length > 0 : Card {
+        vertical-stretch: 1;
+        clip: true;
+        ScrollView {
+            VerticalLayout {
+                for row in ExpiringHub.rows : Rectangle {
+                    height: 44px;
+                    background: row.urgency == "critical" || row.urgency == "expired" ? Theme.danger-bg
+                        : (row.urgency == "warning" ? Theme.warning-bg : Theme.surface);
+                    Rectangle { x: 0px; y: parent.height - 1px; width: parent.width; height: 1px; background: Theme.border; }
+                    HorizontalLayout {
+                        padding-left: 12px;
+                        padding-right: 12px;
+                        spacing: 12px;
+                        Rectangle {
+                            width: 165px;
+                            TouchArea { mouse-cursor: pointer; clicked => { ExpiringHub.open-contract(row.contract-id); } }
+                            Text {
+                                text: row.contract-number;
+                                font-weight: 700;
+                                color: Theme.primary;
+                                vertical-alignment: center;
+                                overflow: elide;
+                            }
+                        }
+                        Rectangle {
+                            horizontal-stretch: 1;
+                            TouchArea { mouse-cursor: pointer; clicked => { ExpiringHub.open-customer(row.customer-id); } }
+                            Text {
+                                text: row.customer-name;
+                                color: Theme.text;
+                                vertical-alignment: center;
+                                overflow: elide;
+                            }
+                        }
+                        Text {
+                            width: 100px;
+                            text: row.end-date;
+                            color: Theme.text;
+                            vertical-alignment: center;
+                        }
+                        HorizontalLayout {
+                            width: 110px;
+                            alignment: center;
+                            StatusBadge {
+                                y: (parent.height - self.height) / 2;
+                                label: "Còn " + row.days-left + " ngày";
+                                variant: row.urgency == "critical" || row.urgency == "expired" ? "danger"
+                                    : (row.urgency == "warning" ? "warning" : "info");
+                            }
+                        }
+                        Text {
+                            width: 130px;
+                            text: row.status-label;
+                            color: Theme.text-muted;
+                            vertical-alignment: center;
+                            overflow: elide;
+                        }
+                        Text {
+                            width: 120px;
+                            text: row.total-text;
+                            color: Theme.text;
+                            font-weight: 600;
+                            horizontal-alignment: right;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

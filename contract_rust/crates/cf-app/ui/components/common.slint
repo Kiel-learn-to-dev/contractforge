@@ -1,0 +1,156 @@
+import { Theme } from "../theme.slint";
+
+// Nhãn trạng thái. `variant` là một trong: secondary, info, primary, success, warning, danger, dark.
+export component StatusBadge inherits Rectangle {
+    in property <string> label;
+    in property <string> variant: "secondary";
+
+    property <color> bg: variant == "info" ? Theme.info-bg
+        : variant == "primary" ? Theme.primary-bg
+        : variant == "success" ? Theme.success-bg
+        : variant == "warning" ? Theme.warning-bg
+        : variant == "danger" ? Theme.danger-bg
+        : variant == "dark" ? Theme.dark-bg
+        : Theme.secondary-bg;
+    property <color> fg: variant == "info" ? Theme.info-fg
+        : variant == "primary" ? Theme.primary-fg
+        : variant == "success" ? Theme.success-fg
+        : variant == "warning" ? Theme.warning-fg
+        : variant == "danger" ? Theme.danger-fg
+        : variant == "dark" ? Theme.dark-fg
+        : Theme.secondary-fg;
+
+    background: bg;
+    border-radius: 11px;
+    height: 22px;
+    width: label-text.preferred-width + 16px;
+
+    label-text := Text {
+        text: root.label;
+        color: root.fg;
+        font-size: Theme.font-small;
+        font-weight: 600;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
+
+// Số tiền đã định dạng, căn phải.
+export component MoneyText inherits Text {
+    in property <string> amount;
+    text: amount;
+    horizontal-alignment: right;
+    font-size: Theme.font-body;
+    color: Theme.text;
+}
+
+// Khung trắng có viền, bo góc gọn nhẹ (tránh drop-shadow-blur gây tốn FBO/RAM trên FemtoVG).
+export component Card inherits Rectangle {
+    background: Theme.surface;
+    border-color: Theme.border;
+    border-width: 1px;
+    border-radius: Theme.radius;
+}
+
+// Khung trắng có viền nhấn màu ở cạnh trái (giống .acc-p / .acc-a).
+export component AccentCard inherits Card {
+    in property <color> accent: Theme.primary;
+    clip: true;
+
+    Rectangle {
+        x: 0px;
+        y: 0px;
+        width: 3px;
+        height: parent.height;
+        background: root.accent;
+    }
+}
+
+// Tiêu đề màn hình trên thanh công cụ.
+export component PageHeader inherits HorizontalLayout {
+    in property <string> title;
+    spacing: Theme.gap;
+    Text {
+        text: root.title;
+        font-size: Theme.font-title;
+        font-weight: 700;
+        color: Theme.text;
+        vertical-alignment: center;
+    }
+}
+
+// Trạng thái rỗng: thông báo ngắn ở giữa vùng nội dung.
+export component EmptyState inherits VerticalLayout {
+    in property <string> message;
+    alignment: center;
+    spacing: Theme.gap;
+    Text {
+        text: root.message;
+        color: Theme.text-muted;
+        font-size: Theme.font-body;
+        horizontal-alignment: center;
+        wrap: word-wrap;
+    }
+}
+
+// Nút bấm gọn chuẩn desktop (chiều cao cố định 32px, không bị kéo giãn trong layout).
+export component CfButton inherits Rectangle {
+    in property <string> text;
+    in property <string> variant: "secondary"; // "primary" | "secondary" | "outline-primary" | "danger" | "success"
+    in property <bool> enabled: true;
+    callback clicked();
+
+    height: 32px;
+    width: btn-lbl.preferred-width + 24px;
+    border-radius: Theme.radius-sm;
+    opacity: root.enabled ? 1.0 : 0.45;
+    border-width: (variant == "secondary" || variant == "outline-primary") ? 1px : 0px;
+    border-color: variant == "outline-primary" ? Theme.primary : Theme.border-strong;
+    background: variant == "primary" ? (ta.has-hover && root.enabled ? Theme.primary-hover : Theme.primary)
+        : variant == "danger" ? (ta.has-hover && root.enabled ? #b91c1c : Theme.danger-fg)
+        : variant == "success" ? (ta.has-hover && root.enabled ? #15803d : Theme.success-fg)
+        : variant == "outline-primary" ? (ta.has-hover && root.enabled ? Theme.primary-tint : Theme.surface)
+        : (ta.has-hover && root.enabled ? Theme.surface-2 : Theme.surface);
+
+    ta := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: root.enabled ? pointer : default;
+        clicked => { if (root.enabled) { root.clicked(); } }
+    }
+
+    btn-lbl := Text {
+        text: root.text;
+        font-size: Theme.font-body;
+        font-weight: 600;
+        color: (variant == "primary" || variant == "danger" || variant == "success") ? white
+            : (variant == "outline-primary" ? Theme.primary : Theme.text-2);
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
+
+// Nút tab dạng pill gọn trong thanh chọn tab.
+export component TabPill inherits Rectangle {
+    in property <string> text;
+    in property <bool> active: false;
+    callback clicked();
+
+    height: 30px;
+    width: tab-lbl.preferred-width + 26px;
+    border-radius: Theme.radius-sm;
+    background: root.active ? Theme.primary : (ta.has-hover ? Theme.primary-tint : transparent);
+
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+
+    tab-lbl := Text {
+        text: root.text;
+        font-size: Theme.font-body;
+        font-weight: 600;
+        color: root.active ? white : (ta.has-hover ? Theme.primary : Theme.text-2);
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}

@@ -1,0 +1,98 @@
+import { ComboBox, LineEdit, ScrollView } from "std-widgets.slint";
+import { Theme } from "../theme.slint";
+import { Card, CfButton, EmptyState } from "../components/common.slint";
+import { TemplateMappingRowData } from "../types.slint";
+
+export component TemplateDetailScreen inherits VerticalLayout {
+    in property <string> code;
+    in property <string> name;
+    in property <string> summary;
+    in property <string> flags;
+    in property <bool> legacy: false;
+    in property <[TemplateMappingRowData]> mapping-rows;
+    in property <[string]> canonical-fields;
+    callback mapping-changed(string, string);
+    callback mapping-custom(string, string);
+    callback save-mapping();
+    callback reanalyze();
+    callback back();
+    callback edit();
+    callback download();
+    spacing: 10px;
+
+    HorizontalLayout {
+        height: 36px;
+        spacing: 8px;
+        CfButton { text: "‹ Quay lại"; clicked => { root.back(); } }
+        Text { text: root.code + " — " + root.name; color: Theme.text; font-size: Theme.font-title; font-weight: 700; vertical-alignment: center; overflow: elide; }
+        Rectangle { horizontal-stretch: 1; }
+        CfButton { text: "Tải file"; variant: "outline-primary"; clicked => { root.download(); } }
+        CfButton { text: "Sửa thông tin"; variant: "outline-primary"; clicked => { root.edit(); } }
+        CfButton { text: "Phân tích lại"; clicked => { root.reanalyze(); } }
+        CfButton { text: "Lưu mapping"; variant: "primary"; clicked => { root.save-mapping(); } }
+    }
+    Card {
+        VerticalLayout {
+            padding: 10px;
+            spacing: 4px;
+            Text { text: root.summary; color: Theme.text; font-weight: 600; wrap: word-wrap; }
+            if root.flags != "" : Text { text: root.flags; color: Theme.text-muted; font-size: Theme.font-small; wrap: word-wrap; }
+        }
+    }
+    if root.legacy : Card {
+        border-color: Theme.warning-fg;
+        background: Theme.warning-bg;
+        VerticalLayout {
+            padding: 10px;
+            Text {
+                text: "Mẫu dùng cấu trúc Bên A cũ. Hãy thay các trường cố định bằng placeholder tùy chọn: {{?PARTY_A_TAX_CODE}}, {{?PARTY_A_BANK_ACCOUNT}}, {{?PARTY_A_BANK_NAME}}, {{?PARTY_A_BENEFICIARY}}, {{?PARTY_A_BUDGET_CODE}}.";
+                color: Theme.warning-fg;
+                font-size: Theme.font-small;
+                wrap: word-wrap;
+            }
+        }
+    }
+    Rectangle {
+        height: 32px;
+        background: Theme.surface-2;
+        border-color: Theme.border;
+        border-width: 1px;
+        border-radius: Theme.radius-sm;
+        HorizontalLayout {
+            padding-left: 10px; padding-right: 10px; spacing: 8px;
+            Text { width: 225px; text: "PLACEHOLDER"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; vertical-alignment: center; }
+            Text { width: 245px; text: "TRƯỜNG DỮ LIỆU CHUẨN"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; vertical-alignment: center; }
+            Text { horizontal-stretch: 1; text: "GIÁ TRỊ TÙY CHỈNH / ĐÃ ÁNH XẠ"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; vertical-alignment: center; }
+        }
+    }
+    if root.mapping-rows.length == 0 : EmptyState { vertical-stretch: 1; message: "Mẫu chưa có placeholder."; }
+    if root.mapping-rows.length > 0 : Card {
+        vertical-stretch: 1;
+        clip: true;
+        ScrollView {
+            VerticalLayout {
+                for row in root.mapping-rows : Rectangle {
+                    height: 44px;
+                    background: row.field == "" ? Theme.warning-bg : Theme.surface;
+                    Rectangle { x: 0px; y: parent.height - 1px; width: parent.width; height: 1px; background: Theme.border; }
+                    HorizontalLayout {
+                        padding-left: 10px; padding-right: 10px; spacing: 8px;
+                        Text { width: 225px; text: "{{" + row.placeholder + "}}"; color: row.field == "" ? Theme.warning-fg : Theme.primary; font-weight: 600; vertical-alignment: center; overflow: elide; }
+                        ComboBox {
+                            width: 245px; height: 32px;
+                            model: root.canonical-fields;
+                            current-value: row.field == "" ? "— chưa map —" : (row.custom ? "Tự nhập" : row.field);
+                            selected(value) => { root.mapping-changed(row.placeholder, value); }
+                        }
+                        LineEdit {
+                            horizontal-stretch: 1; height: 32px;
+                            text: row.field;
+                            placeholder-text: "Chọn ở cột trái hoặc nhập tên trường...";
+                            edited => { root.mapping-custom(row.placeholder, self.text); }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

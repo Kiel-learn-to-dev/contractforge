@@ -1,0 +1,362 @@
+import { CheckBox, LineEdit, ScrollView } from "std-widgets.slint";
+import { Theme } from "../theme.slint";
+import { AccentCard, Card, CfButton, StatusBadge } from "../components/common.slint";
+import {
+    CustomerContractRowData, CustomerDetailDocSlot, CustomerDetailProfile,
+    CustomerDocRowData, CustomerUnitRowData,
+} from "../types.slint";
+
+component KvRow inherits VerticalLayout {
+    in property <string> label;
+    in property <string> value;
+    spacing: 2px;
+    Text { text: root.label; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; }
+    Text { text: root.value == "" ? "—" : root.value; color: Theme.text; font-size: Theme.font-body; wrap: word-wrap; }
+}
+
+component FixedDocSlotRow inherits Rectangle {
+    in property <string> title;
+    in property <CustomerDetailDocSlot> slot;
+    callback upload();
+    callback open-doc(int);
+    callback download-doc(int);
+    callback delete-doc(int);
+
+    height: 46px;
+    HorizontalLayout {
+        spacing: 8px;
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: center;
+            spacing: 2px;
+            Text { text: root.title; font-size: Theme.font-body; font-weight: 600; color: Theme.text; }
+            if root.slot.has-file : Text {
+                text: (root.slot.is-pdf ? "[PDF] " : "[Ảnh] ") + root.slot.file-name + " · " + root.slot.uploaded-at;
+                color: Theme.text-muted;
+                font-size: Theme.font-small;
+                overflow: elide;
+            }
+            if !root.slot.has-file : Text {
+                text: "Chưa có file";
+                color: Theme.text-faint;
+                font-size: Theme.font-small;
+            }
+        }
+        if root.slot.has-file : CfButton { y: (parent.height - self.height) / 2; text: "Xem"; variant: "outline-primary"; clicked => { root.open-doc(root.slot.doc-id); } }
+        if root.slot.has-file : CfButton { y: (parent.height - self.height) / 2; text: "Tải xuống"; clicked => { root.download-doc(root.slot.doc-id); } }
+        if root.slot.has-file : CfButton { y: (parent.height - self.height) / 2; text: "Thay file"; clicked => { root.upload(); } }
+        if root.slot.has-file : CfButton { y: (parent.height - self.height) / 2; text: "Xóa"; variant: "danger"; clicked => { root.delete-doc(root.slot.doc-id); } }
+        if !root.slot.has-file : CfButton { y: (parent.height - self.height) / 2; text: "Tải lên"; variant: "outline-primary"; clicked => { root.upload(); } }
+    }
+}
+
+// S05 — chi tiết khách hàng: bố cục Bento 2 cột khớp Python detail.html.
+export component CustomerDetailScreen inherits VerticalLayout {
+    in property <CustomerDetailProfile> profile;
+    in property <CustomerDetailDocSlot> slot-cccd-front;
+    in property <CustomerDetailDocSlot> slot-cccd-back;
+    in property <CustomerDetailDocSlot> slot-establishment;
+    in-out property <bool> bill-main-station: true;
+    in property <[CustomerUnitRowData]> billing-units;
+    in property <[CustomerDocRowData]> docs;
+    in property <[CustomerContractRowData]> contracts;
+    in-out property <string> other-doc-label;
+
+    callback back();
+    callback edit-customer();
+    callback toggle-active();
+    callback create-contract();
+    callback open-dossier();
+    callback export-info();
+    callback download-bundle();
+    callback toggle-bill-main(bool);
+    callback toggle-billing-unit(int);
+    callback save-billing();
+    callback upload-doc(string, string);
+    callback open-doc(int);
+    callback download-doc(int);
+    callback delete-doc(int);
+    callback open-contract(int);
+
+    spacing: 12px;
+
+    // ── Hero Header Card (kiểu .card-hero Python) ──────────────────────────
+    AccentCard {
+        accent: Theme.primary;
+        VerticalLayout {
+            padding: 14px;
+            spacing: 10px;
+            HorizontalLayout {
+                spacing: 8px;
+                CfButton { y: (parent.height - self.height) / 2; text: "‹ Quay lại"; clicked => { root.back(); } }
+                Rectangle {
+                    y: (parent.height - self.height) / 2;
+                    height: 22px;
+                    width: code-txt.preferred-width + 16px;
+                    border-radius: 4px;
+                    background: Theme.surface-2;
+                    code-txt := Text { text: root.profile.code; color: Theme.text-2; font-size: Theme.font-small; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
+                }
+                if root.profile.customer-type != "" : StatusBadge { y: (parent.height - self.height) / 2; label: root.profile.customer-type; variant: "primary"; }
+                StatusBadge { y: (parent.height - self.height) / 2; label: root.profile.status-label; variant: root.profile.status-variant; }
+                if root.profile.doc-count-text != "" : StatusBadge { y: (parent.height - self.height) / 2; label: root.profile.doc-count-text; variant: "info"; }
+                Rectangle { horizontal-stretch: 1; }
+                CfButton { y: (parent.height - self.height) / 2; text: "Tạo hợp đồng"; variant: "primary"; clicked => { root.create-contract(); } }
+                CfButton { y: (parent.height - self.height) / 2; text: "Sửa"; variant: "outline-primary"; clicked => { root.edit-customer(); } }
+                CfButton { y: (parent.height - self.height) / 2; text: root.profile.is-active ? "Tạm ngưng" : "Kích hoạt"; clicked => { root.toggle-active(); } }
+                CfButton { y: (parent.height - self.height) / 2; text: "Hồ sơ đấu nối"; variant: "outline-primary"; clicked => { root.open-dossier(); } }
+                CfButton { y: (parent.height - self.height) / 2; text: "Xuất thông tin"; clicked => { root.export-info(); } }
+                CfButton { y: (parent.height - self.height) / 2; text: "Tải tất cả"; clicked => { root.download-bundle(); } }
+            }
+            VerticalLayout {
+                spacing: 2px;
+                Text { text: root.profile.legal-name; font-size: Theme.font-title; font-weight: 700; color: Theme.text; wrap: word-wrap; }
+                if root.profile.short-name != "" : Text { text: "Tên ngắn: " + root.profile.short-name; font-size: Theme.font-small; color: Theme.text-muted; }
+            }
+        }
+    }
+
+    // ── Nội dung 2 cột (trái 8/12, phải 4/12) ────────────────────────────────
+    ScrollView {
+        vertical-stretch: 1;
+        HorizontalLayout {
+            padding-right: 6px;
+            spacing: 12px;
+            alignment: stretch;
+
+            // CỘT TRÁI (chính)
+            VerticalLayout {
+                horizontal-stretch: 2;
+                spacing: 12px;
+
+                // 1. Địa chỉ & Pháp lý
+                Card {
+                    VerticalLayout {
+                        padding: Theme.pad;
+                        spacing: 10px;
+                        Text { text: "ĐỊA CHỈ & PHÁP LÝ"; font-size: Theme.font-small; font-weight: 700; color: Theme.primary; }
+                        Rectangle { height: 1px; background: Theme.border; }
+                        HorizontalLayout {
+                            spacing: 12px;
+                            KvRow { horizontal-stretch: 1; label: "MÃ SỐ THUẾ"; value: root.profile.tax-code; }
+                            KvRow { horizontal-stretch: 1; label: "MÃ QHNS"; value: root.profile.budget-relation-code; }
+                            KvRow { horizontal-stretch: 1; label: "MÃ KCB BHYT"; value: root.profile.kcb-code; }
+                        }
+                        HorizontalLayout {
+                            spacing: 12px;
+                            KvRow { horizontal-stretch: 1; label: "SỐ QĐ THÀNH LẬP"; value: root.profile.decision-number; }
+                            KvRow { horizontal-stretch: 1; label: "NGÀY THÀNH LẬP"; value: root.profile.decision-date; }
+                        }
+                        HorizontalLayout {
+                            spacing: 12px;
+                            KvRow { horizontal-stretch: 1; label: "ĐẠI DIỆN PHÁP LÝ"; value: root.profile.representative-name; }
+                            KvRow { horizontal-stretch: 1; label: "CHỨC VỤ"; value: root.profile.representative-title; }
+                            KvRow { width: 90px; label: "XƯNG HÔ"; value: root.profile.representative-gender; }
+                        }
+                        HorizontalLayout {
+                            spacing: 12px;
+                            KvRow { horizontal-stretch: 2; label: "ĐỊA CHỈ"; value: root.profile.address; }
+                            KvRow { horizontal-stretch: 1; label: "XÃ / PHƯỜNG"; value: root.profile.ward; }
+                            KvRow { horizontal-stretch: 1; label: "TỈNH / TP"; value: root.profile.province; }
+                        }
+                        if root.profile.full-address-preview != "" : Rectangle {
+                            border-radius: Theme.radius-sm;
+                            background: Theme.primary-tint;
+                            border-color: Theme.primary-light;
+                            border-width: 1px;
+                            HorizontalLayout {
+                                padding: 8px;
+                                Text {
+                                    text: "Địa chỉ render vào hợp đồng: " + root.profile.full-address-preview;
+                                    color: Theme.primary;
+                                    font-size: Theme.font-small;
+                                    font-weight: 600;
+                                    wrap: word-wrap;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 2. Hồ sơ giấy tờ (3 slot cố định + Giấy tờ khác)
+                Card {
+                    VerticalLayout {
+                        padding: Theme.pad;
+                        spacing: 8px;
+                        HorizontalLayout {
+                            Text { text: "HỒ SƠ GIẤY TỜ (PDF/JPG/PNG ≤ 5 MB)"; font-size: Theme.font-small; font-weight: 700; color: Theme.primary; vertical-alignment: center; }
+                            Rectangle { horizontal-stretch: 1; }
+                            StatusBadge { label: root.profile.doc-count-text; variant: "secondary"; }
+                        }
+                        Rectangle { height: 1px; background: Theme.border; }
+
+                        FixedDocSlotRow {
+                            title: "CCCD mặt trước (người đại diện)";
+                            slot: root.slot-cccd-front;
+                            upload => { root.upload-doc("cccd_front", ""); }
+                            open-doc(id) => { root.open-doc(id); }
+                            download-doc(id) => { root.download-doc(id); }
+                            delete-doc(id) => { root.delete-doc(id); }
+                        }
+                        Rectangle { height: 1px; background: Theme.border; }
+                        FixedDocSlotRow {
+                            title: "CCCD mặt sau (người đại diện)";
+                            slot: root.slot-cccd-back;
+                            upload => { root.upload-doc("cccd_back", ""); }
+                            open-doc(id) => { root.open-doc(id); }
+                            download-doc(id) => { root.download-doc(id); }
+                            delete-doc(id) => { root.delete-doc(id); }
+                        }
+                        Rectangle { height: 1px; background: Theme.border; }
+                        FixedDocSlotRow {
+                            title: "Quyết định thành lập";
+                            slot: root.slot-establishment;
+                            upload => { root.upload-doc("establishment", ""); }
+                            open-doc(id) => { root.open-doc(id); }
+                            download-doc(id) => { root.download-doc(id); }
+                            delete-doc(id) => { root.delete-doc(id); }
+                        }
+                        Rectangle { height: 1px; background: Theme.border-strong; }
+
+                        Text { text: "GIẤY TỜ KHÁC"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
+                        if root.docs.length == 0 : Text { text: "Chưa có giấy tờ khác."; color: Theme.text-muted; font-size: Theme.font-small; }
+                        for doc in root.docs : HorizontalLayout {
+                            height: 36px;
+                            spacing: 8px;
+                            Text {
+                                horizontal-stretch: 1;
+                                text: (doc.is-pdf ? "[PDF] " : "[Ảnh] ") + doc.label + " — " + doc.file-name + " (" + doc.uploaded-at + ")";
+                                color: Theme.text;
+                                font-size: Theme.font-small;
+                                vertical-alignment: center;
+                                overflow: elide;
+                            }
+                            CfButton { y: (parent.height - self.height) / 2; text: "Xem"; variant: "outline-primary"; clicked => { root.open-doc(doc.id); } }
+                            CfButton { y: (parent.height - self.height) / 2; text: "Tải xuống"; clicked => { root.download-doc(doc.id); } }
+                            CfButton { y: (parent.height - self.height) / 2; text: "Xóa"; variant: "danger"; clicked => { root.delete-doc(doc.id); } }
+                        }
+                        HorizontalLayout {
+                            spacing: 8px;
+                            LineEdit {
+                                horizontal-stretch: 1;
+                                height: 32px;
+                                placeholder-text: "Nhập tên giấy tờ khác (bắt buộc)...";
+                                text <=> root.other-doc-label;
+                            }
+                            CfButton { text: "Upload giấy tờ khác"; variant: "outline-primary"; clicked => { root.upload-doc("other", root.other-doc-label); } }
+                        }
+                    }
+                }
+
+                // 3. Hợp đồng liên quan
+                Card {
+                    VerticalLayout {
+                        padding: Theme.pad;
+                        spacing: 8px;
+                        HorizontalLayout {
+                            Text { text: "HỢP ĐỒNG LIÊN QUAN (" + root.contracts.length + ")"; font-size: Theme.font-small; font-weight: 700; color: Theme.primary; vertical-alignment: center; }
+                            Rectangle { horizontal-stretch: 1; }
+                            CfButton { text: "+ Tạo hợp đồng ngay"; variant: "outline-primary"; clicked => { root.create-contract(); } }
+                        }
+                        Rectangle { height: 1px; background: Theme.border; }
+                        if root.contracts.length == 0 : Text { text: "Khách hàng chưa có hợp đồng nào."; color: Theme.text-muted; font-size: Theme.font-small; }
+                        for contract in root.contracts : Rectangle {
+                            height: 36px;
+                            border-radius: Theme.radius-sm;
+                            background: hta.has-hover ? Theme.primary-tint : Theme.background;
+                            hta := TouchArea { mouse-cursor: pointer; clicked => { root.open-contract(contract.id); } }
+                            HorizontalLayout {
+                                padding-left: 10px; padding-right: 10px; spacing: 8px;
+                                Text { width: 145px; text: contract.number; color: Theme.primary; font-weight: 600; vertical-alignment: center; overflow: elide; }
+                                Text { horizontal-stretch: 1; text: contract.product; color: Theme.text; vertical-alignment: center; overflow: elide; }
+                                Text { width: 160px; text: contract.sign-date + " → " + contract.end-date; color: Theme.text-muted; font-size: Theme.font-small; vertical-alignment: center; }
+                                Text { width: 115px; text: contract.total; color: Theme.text; font-weight: 600; horizontal-alignment: right; vertical-alignment: center; }
+                                HorizontalLayout { width: 120px; alignment: start; StatusBadge { y: (parent.height - self.height) / 2; label: contract.status-label; variant: contract.status-variant; } }
+                            }
+                        }
+                    }
+                }
+
+                // 4. Cơ sở tính phí
+                Card {
+                    VerticalLayout {
+                        padding: Theme.pad;
+                        spacing: 8px;
+                        HorizontalLayout {
+                            Text { text: "CƠ SỞ TÍNH PHÍ"; font-size: Theme.font-small; font-weight: 700; color: Theme.primary; vertical-alignment: center; }
+                            Rectangle { horizontal-stretch: 1; }
+                            StatusBadge { label: root.profile.billed-units-badge; variant: "info"; }
+                            Rectangle { width: 8px; }
+                            CfButton { text: "Lưu cơ sở tính phí"; variant: "primary"; clicked => { root.save-billing(); } }
+                        }
+                        Rectangle { height: 1px; background: Theme.border; }
+                        Text {
+                            text: "Bỏ chọn trạm chính nếu hợp đồng chỉ tính cho các điểm trạm con. Thay đổi áp dụng cho hợp đồng tạo mới.";
+                            color: Theme.text-muted;
+                            font-size: Theme.font-small;
+                            wrap: word-wrap;
+                        }
+                        CheckBox {
+                            text: root.profile.main-station-label;
+                            checked: root.bill-main-station;
+                            toggled => { root.toggle-bill-main(self.checked); }
+                        }
+                        if root.billing-units.length == 0 : Text {
+                            text: "Không có điểm trạm con.";
+                            color: Theme.text-muted;
+                            font-size: Theme.font-small;
+                        }
+                        for unit[idx] in root.billing-units : CheckBox {
+                            text: unit.name + " (" + unit.unit-type + ")";
+                            checked: unit.checked;
+                            toggled => { root.toggle-billing-unit(idx); }
+                        }
+                    }
+                }
+            }
+
+            // CỘT PHẢI (sidebar)
+            VerticalLayout {
+                horizontal-stretch: 1;
+                spacing: 12px;
+
+                Card {
+                    VerticalLayout {
+                        padding: Theme.pad;
+                        spacing: 8px;
+                        Text { text: "LIÊN HỆ & NGÂN HÀNG"; font-size: Theme.font-small; font-weight: 700; color: Theme.primary; }
+                        Rectangle { height: 1px; background: Theme.border; }
+                        KvRow { label: "ĐẦU MỐI LIÊN HỆ"; value: root.profile.contact-name; }
+                        KvRow { label: "ĐIỆN THOẠI"; value: root.profile.phone; }
+                        KvRow { label: "EMAIL"; value: root.profile.email; }
+                        Rectangle { height: 1px; background: Theme.border; }
+                        KvRow { label: "SỐ TÀI KHOẢN"; value: root.profile.bank-account; }
+                        KvRow { label: "NGÂN HÀNG"; value: root.profile.bank-name; }
+                        KvRow { label: "ĐƠN VỊ THỤ HƯỞNG"; value: root.profile.beneficiary-name; }
+                    }
+                }
+
+                if root.profile.notes != "" : Card {
+                    VerticalLayout {
+                        padding: Theme.pad;
+                        spacing: 6px;
+                        Text { text: "GHI CHÚ"; font-size: Theme.font-small; font-weight: 700; color: Theme.primary; }
+                        Rectangle { height: 1px; background: Theme.border; }
+                        Text { text: root.profile.notes; color: Theme.text; font-size: Theme.font-body; wrap: word-wrap; }
+                    }
+                }
+
+                Card {
+                    VerticalLayout {
+                        padding: Theme.pad;
+                        spacing: 8px;
+                        Text { text: "THÔNG TIN HỆ THỐNG"; font-size: Theme.font-small; font-weight: 700; color: Theme.primary; }
+                        Rectangle { height: 1px; background: Theme.border; }
+                        KvRow { label: "NGÀY TẠO"; value: root.profile.created-at; }
+                        KvRow { label: "CẬP NHẬT LẦN CUỐI"; value: root.profile.updated-at; }
+                    }
+                }
+            }
+        }
+    }
+}

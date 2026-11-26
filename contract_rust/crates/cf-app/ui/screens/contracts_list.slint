@@ -1,0 +1,276 @@
+import { CheckBox, ComboBox, LineEdit, ScrollView } from "std-widgets.slint";
+import { Theme } from "../theme.slint";
+import { Card, CfButton, EmptyState, StatusBadge } from "../components/common.slint";
+import { ContractHub } from "../globals.slint";
+
+// Một dòng hợp đồng đã định dạng sẵn (Rust điền).
+export struct ContractRowData {
+    id: int,
+    number: string,
+    customer: string,
+    status-label: string,
+    status-variant: string,
+    amount: string,
+    sign-date: string,
+    end-date: string,
+    flags: string,
+    selected: bool,
+}
+
+// S13 — danh sách hợp đồng. Không tính nghiệp vụ ở đây.
+export component ContractsListScreen inherits VerticalLayout {
+    in property <[ContractRowData]> rows;
+    in property <[string]> status-options;
+    in property <[string]> year-options;
+    in property <[string]> alert-options;
+    in property <[string]> target-options;
+    in property <[string]> customer-options;
+    in property <[string]> product-options;
+    in property <[string]> date-field-options;
+    in property <int> status-index: 0;
+    in property <int> year-index: 0;
+    in property <int> alert-index: 0;
+    in property <int> customer-index: 0;
+    in property <int> product-index: 0;
+    in property <int> date-field-index: 0;
+    in-out property <string> date-from;
+    in-out property <string> date-to;
+    in property <string> summary-text;
+    in property <string> page-text;
+    in property <bool> has-prev: false;
+    in property <bool> has-next: false;
+    in property <int> selected-count: 0;
+
+    callback search-changed(string);
+    callback filter-changed(int, int, int, int, int, int, string, string);
+    callback sort-changed(string);
+    callback alert-unsent();
+    callback alert-expiring();
+    callback toggle-row(int);
+    callback prev-page();
+    callback next-page();
+    callback bulk-status(int);
+    callback bulk-delete();
+    callback export-excel();
+    callback open-contract(int);
+
+    spacing: 10px;
+
+    // Dòng tổng hợp + nút hành động trên cùng (khớp Python)
+    HorizontalLayout {
+        height: 36px;
+        spacing: Theme.gap;
+        Text {
+            text: root.summary-text;
+            color: Theme.text-2;
+            font-size: Theme.font-body;
+            font-weight: 600;
+            vertical-alignment: center;
+        }
+        Rectangle { horizontal-stretch: 1; }
+        CfButton { text: "Xuất Excel"; variant: "outline-primary"; clicked => { root.export-excel(); } }
+        CfButton { text: "+ Tạo hợp đồng mới"; variant: "primary"; clicked => { ContractHub.list-create-new(); } }
+    }
+
+    // Cảnh báo nhanh + Xóa lọc
+    HorizontalLayout {
+        height: 34px;
+        spacing: Theme.gap;
+        CfButton {
+            text: ContractHub.list-cnt-unsent > 0
+                ? "Chưa gửi >10 ngày (" + ContractHub.list-cnt-unsent + ")"
+                : "Chưa gửi >10 ngày";
+            variant: root.alert-index == 1 ? "warning" : "outline-secondary";
+            clicked => { root.alert-unsent(); }
+        }
+        CfButton {
+            text: ContractHub.list-cnt-expiring > 0
+                ? "Sắp hết hạn ≤60 ngày (" + ContractHub.list-cnt-expiring + ")"
+                : "Sắp hết hạn ≤60 ngày";
+            variant: root.alert-index == 2 ? "danger" : "outline-secondary";
+            clicked => { root.alert-expiring(); }
+        }
+        if root.alert-index != 0 || root.status-index != 0 || root.year-index != 0 || root.customer-index != 0 || root.product-index != 0 || root.date-from != "" || root.date-to != "" || ContractHub.list-search-text != "" : CfButton {
+            text: "Xóa lọc";
+            variant: "secondary";
+            clicked => { ContractHub.list-reset-filters(); }
+        }
+        Rectangle { horizontal-stretch: 1; }
+    }
+
+    // Thanh bộ lọc trong Card
+    Card {
+        VerticalLayout {
+            padding: 10px;
+            spacing: 8px;
+            HorizontalLayout {
+                spacing: Theme.gap;
+                LineEdit {
+                    horizontal-stretch: 1;
+                    height: 32px;
+                    placeholder-text: "Tìm số hợp đồng, tên khách hàng...";
+                    text <=> ContractHub.list-search-text;
+                    edited(text) => { root.search-changed(text); }
+                }
+                ComboBox {
+                    width: 170px;
+                    height: 32px;
+                    model: root.status-options;
+                    current-index: root.status-index;
+                    selected(value) => { root.filter-changed(self.current-index, root.year-index, root.alert-index, root.customer-index, root.product-index, root.date-field-index, root.date-from, root.date-to); }
+                }
+                ComboBox {
+                    width: 115px;
+                    height: 32px;
+                    model: root.year-options;
+                    current-index: root.year-index;
+                    selected(value) => { root.filter-changed(root.status-index, self.current-index, root.alert-index, root.customer-index, root.product-index, root.date-field-index, root.date-from, root.date-to); }
+                }
+                ComboBox {
+                    width: 200px;
+                    height: 32px;
+                    model: root.alert-options;
+                    current-index: root.alert-index;
+                    selected(value) => { root.filter-changed(root.status-index, root.year-index, self.current-index, root.customer-index, root.product-index, root.date-field-index, root.date-from, root.date-to); }
+                }
+            }
+            HorizontalLayout {
+                spacing: Theme.gap;
+                ComboBox {
+                    width: 185px;
+                    height: 32px;
+                    model: root.customer-options;
+                    current-index: root.customer-index;
+                    selected(value) => { root.filter-changed(root.status-index, root.year-index, root.alert-index, self.current-index, root.product-index, root.date-field-index, root.date-from, root.date-to); }
+                }
+                ComboBox {
+                    width: 185px;
+                    height: 32px;
+                    model: root.product-options;
+                    current-index: root.product-index;
+                    selected(value) => { root.filter-changed(root.status-index, root.year-index, root.alert-index, root.customer-index, self.current-index, root.date-field-index, root.date-from, root.date-to); }
+                }
+                ComboBox {
+                    width: 130px;
+                    height: 32px;
+                    model: root.date-field-options;
+                    current-index: root.date-field-index;
+                    selected(value) => { root.filter-changed(root.status-index, root.year-index, root.alert-index, root.customer-index, root.product-index, self.current-index, root.date-from, root.date-to); }
+                }
+                LineEdit {
+                    width: 135px;
+                    height: 32px;
+                    placeholder-text: "Từ YYYY-MM-DD";
+                    text <=> root.date-from;
+                    edited(text) => { root.filter-changed(root.status-index, root.year-index, root.alert-index, root.customer-index, root.product-index, root.date-field-index, text, root.date-to); }
+                }
+                LineEdit {
+                    width: 135px;
+                    height: 32px;
+                    placeholder-text: "Đến YYYY-MM-DD";
+                    text <=> root.date-to;
+                    edited(text) => { root.filter-changed(root.status-index, root.year-index, root.alert-index, root.customer-index, root.product-index, root.date-field-index, root.date-from, text); }
+                }
+                Rectangle { horizontal-stretch: 1; }
+            }
+        }
+    }
+
+    // Tiêu đề cột (khớp thứ tự cột Python: Số HĐ | Khách hàng | Ngày ký | Hết hạn | Giá trị | Trạng thái | Cảnh báo)
+    Rectangle {
+        height: 36px;
+        background: Theme.surface-2;
+        border-color: Theme.border;
+        border-width: 1px;
+        border-radius: Theme.radius-sm;
+        HorizontalLayout {
+            padding-left: 8px; padding-right: 8px; spacing: 7px;
+            CheckBox {
+                width: 28px;
+                checked: ContractHub.list-all-selected;
+                toggled => { ContractHub.list-toggle-all(); }
+            }
+            Rectangle { width: 120px; TouchArea { mouse-cursor: pointer; clicked => { root.sort-changed("contract_number"); } } Text { text: "SỐ HỢP ĐỒNG ↕"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; } }
+            Rectangle { horizontal-stretch: 1; TouchArea { mouse-cursor: pointer; clicked => { root.sort-changed("customer_name"); } } Text { text: "KHÁCH HÀNG ↕"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; } }
+            Rectangle { width: 95px; TouchArea { mouse-cursor: pointer; clicked => { root.sort-changed("sign_date"); } } Text { text: "NGÀY KÝ ↕"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; } }
+            Rectangle { width: 95px; TouchArea { mouse-cursor: pointer; clicked => { root.sort-changed("end_date"); } } Text { text: "HẾT HẠN ↕"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; } }
+            Rectangle { width: 120px; TouchArea { mouse-cursor: pointer; clicked => { root.sort-changed("total_amount"); } } Text { text: "GIÁ TRỊ ↕"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; horizontal-alignment: right; vertical-alignment: center; } }
+            Rectangle { width: 140px; TouchArea { mouse-cursor: pointer; clicked => { root.sort-changed("status"); } } Text { text: "TRẠNG THÁI ↕"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; } }
+            Text { width: 155px; text: "CẢNH BÁO"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; vertical-alignment: center; }
+        }
+    }
+
+    if root.rows.length == 0 : EmptyState {
+        vertical-stretch: 1;
+        message: "Không có hợp đồng nào khớp bộ lọc.";
+    }
+    if root.rows.length > 0 : Card {
+        vertical-stretch: 1;
+        clip: true;
+        ScrollView {
+            VerticalLayout {
+                for row[index] in root.rows : Rectangle {
+                    height: 42px;
+                    background: row.selected ? Theme.primary-tint : (cta.has-hover ? Theme.primary-tint : Theme.surface);
+                    Rectangle { x: 0px; y: parent.height - 1px; width: parent.width; height: 1px; background: Theme.border; }
+                    HorizontalLayout {
+                        padding-left: 8px; padding-right: 8px; spacing: 7px;
+                        CheckBox { width: 28px; checked: row.selected; toggled => { root.toggle-row(index); } }
+                        Rectangle {
+                            horizontal-stretch: 1;
+                            cta := TouchArea { mouse-cursor: pointer; clicked => { root.open-contract(row.id); } }
+                            HorizontalLayout {
+                                spacing: 7px;
+                                Text { width: 120px; text: row.number; color: Theme.primary; font-size: Theme.font-body; font-weight: 600; vertical-alignment: center; overflow: elide; }
+                                Text { horizontal-stretch: 1; text: row.customer; color: Theme.text; font-size: Theme.font-body; vertical-alignment: center; overflow: elide; }
+                                Text { width: 95px; text: row.sign-date; color: Theme.text-2; font-size: Theme.font-small; vertical-alignment: center; }
+                                Text { width: 95px; text: row.end-date; color: Theme.text-2; font-size: Theme.font-small; vertical-alignment: center; }
+                                Text { width: 120px; text: row.amount; color: Theme.text; font-size: Theme.font-body; font-weight: 600; horizontal-alignment: right; vertical-alignment: center; }
+                                HorizontalLayout {
+                                    width: 140px;
+                                    alignment: start;
+                                    StatusBadge { y: (parent.height - self.height) / 2; label: row.status-label; variant: row.status-variant; }
+                                }
+                                Text { width: 155px; text: row.flags; color: Theme.danger-fg; font-size: Theme.font-small; vertical-alignment: center; overflow: elide; }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Hàng loạt và phân trang
+    HorizontalLayout {
+        spacing: Theme.gap;
+        height: 36px;
+        Text {
+            text: root.selected-count > 0 ? ("Đã chọn " + root.selected-count + " hợp đồng") : "Chọn hợp đồng để thao tác hàng loạt";
+            color: Theme.text-muted;
+            vertical-alignment: center;
+        }
+        ComboBox {
+            width: 185px;
+            height: 32px;
+            model: root.target-options;
+            enabled: root.selected-count > 0;
+            current-index <=> ContractHub.list-target-index;
+        }
+        CfButton {
+            text: "Áp dụng trạng thái";
+            variant: "outline-primary";
+            enabled: root.selected-count > 0 && ContractHub.list-target-index >= 0;
+            clicked => { root.bulk-status(ContractHub.list-target-index); }
+        }
+        CfButton {
+            text: "Xóa đã chọn";
+            variant: "danger";
+            enabled: root.selected-count > 0;
+            clicked => { root.bulk-delete(); }
+        }
+        Rectangle { horizontal-stretch: 1; }
+        CfButton { text: "‹ Trước"; enabled: root.has-prev; clicked => { root.prev-page(); } }
+        Text { text: root.page-text; color: Theme.text; vertical-alignment: center; }
+        CfButton { text: "Sau ›"; enabled: root.has-next; clicked => { root.next-page(); } }
+    }
+}

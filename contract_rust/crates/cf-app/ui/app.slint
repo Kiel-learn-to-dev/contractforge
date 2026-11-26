@@ -1,0 +1,632 @@
+import { Palette } from "std-widgets.slint";
+import { Theme } from "theme.slint";
+import { Sidebar } from "sidebar.slint";
+import { PageHeader } from "components/common.slint";
+import { Toast } from "components/toast.slint";
+import { ConfirmDialog } from "components/confirm.slint";
+import { DashboardScreen, DashboardMetric, DashboardAction } from "screens/dashboard.slint";
+import { CustomersScreen } from "screens/customers.slint";
+import { CustomerFormScreen } from "screens/customer_form.slint";
+import { CustomerDetailScreen } from "screens/customer_detail.slint";
+import { CustomersTrashScreen } from "screens/customers_trash.slint";
+import { CustomersImportScreen } from "screens/customers_import.slint";
+import { DossierScreen } from "screens/dossier.slint";
+import { BatchHub, ContractHub, CustomerHub, DashboardHub, ExpiringHub, QuotationHub, SearchHub } from "globals.slint";
+export { BatchHub, ContractHub, CustomerHub, DashboardHub, ExpiringHub, QuotationHub, SearchHub }
+import { BatchScreen } from "screens/batch.slint";
+import { ExpiringScreen } from "screens/expiring.slint";
+import { QuotationScreen } from "screens/quotation.slint";
+import { GlobalSearch, GlobalSearchPopup } from "components/global_search.slint";
+import { ContractsListScreen, ContractRowData } from "screens/contracts_list.slint";
+import { ContractFormScreen, FormAddonRow } from "screens/contract_form.slint";
+import { ContractDetailScreen } from "screens/contract_detail.slint";
+import { AddendumFormScreen } from "screens/addendum_form.slint";
+import { RenewalFormScreen } from "screens/renewal_form.slint";
+import { CustomerRowData } from "types.slint";
+import { SettingsScreen, SettingsPartyB } from "screens/settings.slint";
+import { ProductsListScreen } from "screens/products_list.slint";
+import { ProductFormScreen } from "screens/product_form.slint";
+import { ProductRowData, ProductFormData } from "types.slint";
+import { ProductImportRowData } from "types.slint";
+import { ProductsImportScreen } from "screens/products_import.slint";
+import { TemplatesListScreen } from "screens/templates_list.slint";
+import { TemplateRowData } from "types.slint";
+import { TemplateFormData, TemplateMappingRowData } from "types.slint";
+import { TemplateFormScreen } from "screens/template_form.slint";
+import { TemplateDetailScreen } from "screens/template_detail.slint";
+
+// Khung ứng dụng. Mọi nghiệp vụ nằm ở Rust; file này chỉ hiển thị và chuyển sự kiện.
+export component MainWindow inherits Window {
+    title: "ContractForge";
+    preferred-width: 1200px;
+    preferred-height: 780px;
+    min-width: 900px;
+    min-height: 600px;
+    default-font-family: "Segoe UI";
+    background: Theme.background;
+    init => { Palette.color-scheme = ColorScheme.light; }
+
+    in property <[string]> screen-titles;
+    in property <int> current-screen: 0;
+    in property <string> screen-title;
+    in property <bool> can-go-back: false;
+    in property <string> version;
+
+    in property <bool> toast-shown: false;
+    in property <string> toast-kind: "success";
+    in property <string> toast-message;
+
+    in property <[DashboardMetric]> dashboard-metrics;
+    in property <[DashboardAction]> dashboard-actions;
+
+    in property <[CustomerRowData]> customer-rows;
+    in property <[string]> customer-ward-options;
+    in property <[string]> customer-type-options;
+    in property <int> customer-ward-index: 0;
+    in property <int> customer-type-index: 0;
+    in property <bool> customer-active-only: true;
+    in property <string> customer-summary-text;
+    in property <string> customer-page-text;
+    in property <bool> customer-has-prev: false;
+    in property <bool> customer-has-next: false;
+    in property <int> customer-selected-count: 0;
+
+    in property <[ProductRowData]> product-rows;
+    in property <string> product-show: "active";
+    in property <string> product-empty-message;
+    in-out property <ProductFormData> product-form-data;
+    in property <bool> product-form-visible: false;
+    in property <[string]> product-template-options;
+    in property <int> product-template-index: 0;
+    in property <[string]> product-replaced-options;
+    in property <int> product-replaced-index: 0;
+    in property <string> product-form-errors;
+    in property <bool> product-import-visible: false;
+    in property <[ProductImportRowData]> product-import-rows;
+    in property <string> product-import-summary;
+    in property <bool> product-import-busy: false;
+    in property <bool> product-import-can-apply: false;
+    in property <[TemplateRowData]> template-rows;
+    in property <[string]> template-type-options;
+    in property <[string]> template-group-options;
+    in property <string> template-type-filter;
+    in property <string> template-group-filter;
+    in property <bool> template-active-only: false;
+    in property <string> template-operation-message;
+    in-out property <string> template-mode: "list";
+    in-out property <TemplateFormData> template-form-data;
+    in property <string> template-form-error;
+    in property <string> template-selected-file;
+    in property <[string]> template-type-suggestions;
+    in property <[string]> template-canonical-fields;
+    in property <[TemplateMappingRowData]> template-mapping-rows;
+    in property <string> template-detail-code;
+    in property <string> template-detail-name;
+    in property <string> template-detail-summary;
+    in property <string> template-detail-flags;
+    in property <bool> template-detail-legacy: false;
+
+    in-out property <SettingsPartyB> settings-party-b;
+    in-out property <string> settings-addendum-format;
+    in property <string> settings-data-root;
+    in property <bool> settings-setup-required: false;
+
+    in property <bool> confirm-shown: false;
+    in property <string> confirm-title;
+    in property <string> confirm-message;
+
+    callback navigate(int);
+    callback back();
+    callback toast-closed();
+    callback confirm-ok();
+    callback confirm-cancel();
+    callback dashboard-open(int);
+
+    callback customer-search(string);
+    callback customer-filter(int, int, bool);
+    callback customer-toggle(int);
+    callback customer-prev();
+    callback customer-next();
+    callback customer-delete();
+    callback customer-reload();
+    callback settings-save-party-b(SettingsPartyB);
+    callback settings-save-addendum-format(string);
+    callback settings-open-data-root();
+    callback settings-open-customer-trash();
+    callback product-show-changed(string);
+    callback product-toggle-active(int);
+    callback product-add();
+    callback product-edit(int);
+    callback product-save(ProductFormData);
+    callback product-cancel();
+    callback product-group-changed(string);
+    callback product-template-changed(string);
+    callback product-replaced-changed(int);
+    callback product-import-open();
+    callback product-import-close();
+    callback product-import-choose();
+    callback product-import-template();
+    callback product-import-export();
+    callback product-import-apply();
+    callback template-filter-changed(string, string, bool);
+    callback template-toggle(int);
+    callback template-upload();
+    callback template-cleanup();
+    callback template-download(int);
+    callback template-create();
+    callback template-open(int);
+    callback template-edit-id(int);
+    callback template-detail-download();
+
+    in property <[ContractRowData]> contract-rows;
+    in property <[string]> contract-status-options;
+    in property <[string]> contract-year-options;
+    in property <[string]> contract-alert-options;
+    in property <[string]> contract-target-options;
+    in property <int> contract-status-index: 0;
+    in property <int> contract-year-index: 0;
+    in property <int> contract-alert-index: 0;
+    in property <string> contract-summary-text;
+    in property <string> contract-page-text;
+    in property <bool> contract-has-prev: false;
+    in property <bool> contract-has-next: false;
+    in property <int> contract-selected-count: 0;
+    in property <[string]> contract-list-customer-options;
+    in property <[string]> contract-list-product-options;
+    in property <[string]> contract-list-date-field-options;
+    in property <int> contract-list-customer-index: 0;
+    in property <int> contract-list-product-index: 0;
+    in property <int> contract-list-date-field-index: 0;
+    in-out property <string> contract-list-date-from;
+    in-out property <string> contract-list-date-to;
+    callback contracts-search(string);
+    callback contracts-filter(int, int, int, int, int, int, string, string);
+    callback contracts-sort(string);
+    callback contracts-alert-unsent();
+    callback contracts-alert-expiring();
+    callback contracts-toggle(int);
+    callback contracts-prev();
+    callback contracts-next();
+    callback contracts-bulk-status(int);
+    callback contracts-bulk-delete();
+    callback contracts-export();
+    callback contracts-reload();
+
+    in property <[string]> contract-customer-names;
+    in property <int> contract-customer-index: -1;
+    in property <[string]> contract-main-names;
+    in property <int> contract-main-index: -1;
+    in property <[string]> contract-template-names;
+    in property <int> contract-template-index: -1;
+    in property <[FormAddonRow]> contract-addon-rows;
+    in property <string> contract-number-text;
+    in property <string> contract-end-date-text;
+    in property <string> form-summary-text;
+    in property <string> form-error-text;
+    callback contract-customer-changed(int);
+    callback contract-product-changed(int);
+    callback contract-template-changed(int);
+    callback contract-addon-toggled(int);
+    callback contract-field-changed(string, string);
+    callback contract-save(bool);
+
+    in property <int> contract-detail-id: 0;
+    in property <string> contract-detail-title;
+    in property <string> contract-detail-info;
+    in property <string> contract-detail-status;
+    in property <string> contract-detail-status-variant;
+    in property <[string]> contract-detail-target-names;
+    in property <[string]> contract-detail-evidence;
+    in property <string> contract-detail-generated;
+    in property <[string]> contract-detail-events;
+    callback contracts-open(int);
+    callback contract-detail-back();
+    callback contract-detail-target(int);
+    callback contract-detail-upload(int);
+    callback contract-detail-remove(int);
+    callback contract-detail-generate();
+    callback contract-detail-delete();
+    callback template-form-save(TemplateFormData);
+    callback template-form-cancel();
+    callback template-file-pick();
+    callback template-mapping-change(string, string);
+    callback template-mapping-custom(string, string);
+    callback template-mapping-save();
+    callback template-reanalyze();
+    callback template-detail-back();
+    callback template-edit();
+
+    HorizontalLayout {
+        Sidebar {
+            items: root.screen-titles;
+            current: root.current-screen;
+            version: root.version;
+            navigate(index) => { root.navigate(index); }
+        }
+
+        VerticalLayout {
+            padding: 0px;
+            spacing: 0px;
+
+            // Thanh tiêu đề trắng dính trên cùng kiểu Python .topbar
+            Rectangle {
+                height: 54px;
+                background: Theme.surface;
+                Rectangle {
+                    x: 0px;
+                    y: parent.height - 1px;
+                    width: parent.width;
+                    height: 1px;
+                    background: Theme.border;
+                }
+                HorizontalLayout {
+                    padding-left: 20px;
+                    padding-right: 20px;
+                    spacing: 12px;
+                    if root.can-go-back : Rectangle {
+                        width: 82px;
+                        height: 30px;
+                        y: (parent.height - self.height) / 2;
+                        border-radius: Theme.radius-sm;
+                        background: back-ta.has-hover ? Theme.surface-2 : Theme.surface;
+                        border-color: Theme.border-strong;
+                        border-width: 1px;
+                        back-ta := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { root.back(); }
+                        }
+                        Text {
+                            text: "‹ Quay lại";
+                            color: Theme.text-2;
+                            font-size: Theme.font-small;
+                            font-weight: 600;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+                    PageHeader { title: root.screen-title; }
+                    Rectangle { horizontal-stretch: 1; }
+                    GlobalSearch {
+                        height: 30px;
+                        y: (parent.height - self.height) / 2;
+                    }
+                    if DashboardHub.today-label != "" : Text {
+                        text: DashboardHub.today-label;
+                        color: Theme.text-muted;
+                        font-size: Theme.font-small;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+
+            // Vùng nội dung chính nền #f2f4f6
+            VerticalLayout {
+                padding: 18px;
+                spacing: 12px;
+                vertical-stretch: 1;
+
+            if root.current-screen == 0 && DashboardHub.submode == "overview" : DashboardScreen {
+                vertical-stretch: 1;
+                metrics: root.dashboard-metrics;
+                actions: root.dashboard-actions;
+                open(route) => { root.dashboard-open(route); }
+            }
+            if root.current-screen == 0 && DashboardHub.submode == "expiring" : ExpiringScreen {
+                vertical-stretch: 1;
+            }
+
+            if root.current-screen == 1 && CustomerHub.mode == "list" : CustomersScreen {
+                vertical-stretch: 1;
+                rows: root.customer-rows;
+                ward-options: root.customer-ward-options;
+                type-options: root.customer-type-options;
+                ward-index: root.customer-ward-index;
+                type-index: root.customer-type-index;
+                active-only: root.customer-active-only;
+                summary-text: root.customer-summary-text;
+                page-text: root.customer-page-text;
+                has-prev: root.customer-has-prev;
+                has-next: root.customer-has-next;
+                selected-count: root.customer-selected-count;
+                search-changed(text) => { root.customer-search(text); }
+                filter-changed(ward, type, active) => { root.customer-filter(ward, type, active); }
+                toggle-row(index) => { root.customer-toggle(index); }
+                open-detail(id) => { CustomerHub.open-detail(id); }
+                add-customer => { CustomerHub.open-add(); }
+                open-import => { CustomerHub.open-import(); }
+                export-report => { CustomerHub.export-report(); }
+                open-trash => { CustomerHub.open-trash(); }
+                prev-page => { root.customer-prev(); }
+                next-page => { root.customer-next(); }
+                delete-selected => { root.customer-delete(); }
+            }
+            if root.current-screen == 1 && CustomerHub.mode == "form" : CustomerFormScreen {
+                vertical-stretch: 1;
+                form-title: CustomerHub.form-title;
+                data <=> CustomerHub.form-data;
+                customer-types: CustomerHub.customer-types;
+                province-options: CustomerHub.province-options;
+                ward-options: CustomerHub.ward-options;
+                units: CustomerHub.form-units;
+                error-text: CustomerHub.form-error;
+                province-changed(p) => { CustomerHub.form-province-changed(p); }
+                add-unit => { CustomerHub.form-add-unit(); }
+                remove-unit(i) => { CustomerHub.form-remove-unit(i); }
+                update-unit(i, n, t, a, nt) => { CustomerHub.form-update-unit(i, n, t, a, nt); }
+                save(d) => { CustomerHub.form-save(d); }
+                cancel => { CustomerHub.form-cancel(); }
+            }
+            if root.current-screen == 1 && CustomerHub.mode == "detail" : CustomerDetailScreen {
+                vertical-stretch: 1;
+                profile: CustomerHub.detail-profile;
+                slot-cccd-front: CustomerHub.detail-slot-cccd-front;
+                slot-cccd-back: CustomerHub.detail-slot-cccd-back;
+                slot-establishment: CustomerHub.detail-slot-establishment;
+                bill-main-station <=> CustomerHub.detail-bill-main;
+                billing-units: CustomerHub.detail-billing-units;
+                docs: CustomerHub.detail-docs;
+                contracts: CustomerHub.detail-contracts;
+                other-doc-label <=> CustomerHub.detail-other-doc-label;
+                back => { CustomerHub.back-to-list(); }
+                edit-customer => { CustomerHub.open-edit(0); }
+                toggle-active => { CustomerHub.detail-toggle-active(); }
+                create-contract => { CustomerHub.detail-create-contract(); }
+                open-dossier => { CustomerHub.open-dossier(); }
+                export-info => { CustomerHub.detail-export-info(); }
+                download-bundle => { CustomerHub.detail-download-bundle(); }
+                toggle-bill-main(v) => { CustomerHub.detail-toggle-bill-main(v); }
+                toggle-billing-unit(i) => { CustomerHub.detail-toggle-billing-unit(i); }
+                save-billing => { CustomerHub.detail-save-billing(); }
+                upload-doc(t, l) => { CustomerHub.detail-upload-doc(t, l); }
+                open-doc(id) => { CustomerHub.detail-open-doc(id); }
+                download-doc(id) => { CustomerHub.detail-download-doc(id); }
+                delete-doc(id) => { CustomerHub.detail-delete-doc(id); }
+                open-contract(id) => { CustomerHub.detail-open-contract(id); }
+            }
+            if root.current-screen == 1 && CustomerHub.mode == "trash" : CustomersTrashScreen {
+                vertical-stretch: 1;
+                rows: CustomerHub.trash-rows;
+                back => { CustomerHub.back-to-list(); }
+                restore(id) => { CustomerHub.trash-restore(id); }
+            }
+            if root.current-screen == 1 && CustomerHub.mode == "import" : CustomersImportScreen {
+                vertical-stretch: 1;
+                import-mode <=> CustomerHub.import-mode;
+                sheet-name <=> CustomerHub.import-sheet;
+                summary-text: CustomerHub.import-summary;
+                error-rows: CustomerHub.import-errors;
+                back => { CustomerHub.back-to-list(); }
+                download-template => { CustomerHub.import-download-template(); }
+                choose-and-import(m, s) => { CustomerHub.import-run(m, s); }
+            }
+            if root.current-screen == 1 && CustomerHub.mode == "dossier" : DossierScreen {
+                vertical-stretch: 1;
+                customer-name: CustomerHub.dossier-customer-name;
+                dest-dir: CustomerHub.dossier-dest-dir;
+                summary-text: CustomerHub.dossier-summary;
+                stale: CustomerHub.dossier-stale;
+                slots: CustomerHub.dossier-slots;
+                back => { CustomerHub.back-to-detail(); }
+                materialize => { CustomerHub.dossier-materialize(); }
+                open-folder => { CustomerHub.dossier-open-folder(); }
+            }
+
+            if root.current-screen == 2 && !root.product-form-visible && !root.product-import-visible : ProductsListScreen {
+                vertical-stretch: 1;
+                rows: root.product-rows;
+                show: root.product-show;
+                empty-message: root.product-empty-message;
+                show-changed(show) => { root.product-show-changed(show); }
+                toggle-active(id) => { root.product-toggle-active(id); }
+                add-product => { root.product-add(); }
+                edit-product(id) => { root.product-edit(id); }
+                import-products => { root.product-import-open(); }
+            }
+            if root.current-screen == 2 && root.product-form-visible && !root.product-import-visible : ProductFormScreen {
+                vertical-stretch: 1;
+                data <=> root.product-form-data;
+                template-options: root.product-template-options;
+                template-index: root.product-template-index;
+                replaced-options: root.product-replaced-options;
+                replaced-index: root.product-replaced-index;
+                errors: root.product-form-errors;
+                save => { root.product-save(root.product-form-data); }
+                cancel => { root.product-cancel(); }
+                group-changed(group) => { root.product-group-changed(group); }
+                template-changed(index) => { root.product-template-changed(index); }
+                replaced-changed(index) => { root.product-replaced-changed(index); }
+            }
+            if root.current-screen == 2 && root.product-import-visible : ProductsImportScreen {
+                vertical-stretch: 1;
+                rows: root.product-import-rows; summary: root.product-import-summary; busy: root.product-import-busy;
+                can-apply: root.product-import-can-apply;
+                choose-file => { root.product-import-choose(); }
+                download-template => { root.product-import-template(); }
+                export-catalog => { root.product-import-export(); }
+                apply => { root.product-import-apply(); }
+                close => { root.product-import-close(); }
+            }
+
+            if root.current-screen == 3 && root.template-mode == "list" : TemplatesListScreen {
+                vertical-stretch: 1;
+                rows: root.template-rows;
+                type-options: root.template-type-options; group-options: root.template-group-options;
+                type-filter: root.template-type-filter; group-filter: root.template-group-filter;
+                active-only: root.template-active-only; operation-message: root.template-operation-message;
+                filter-changed(kind, group, active) => { root.template-filter-changed(kind, group, active); }
+                toggle(id) => { root.template-toggle(id); }
+                upload => { root.template-upload(); }
+                cleanup => { root.template-cleanup(); }
+                download(id) => { root.template-download(id); }
+                create-template => { root.template-create(); }
+                open-template(id) => { root.template-open(id); }
+                edit-template(id) => { root.template-edit-id(id); }
+            }
+            if root.current-screen == 3 && root.template-mode == "form" : TemplateFormScreen {
+                vertical-stretch: 1; data <=> root.template-form-data;
+                type-suggestions: root.template-type-suggestions; selected-file: root.template-selected-file; error: root.template-form-error;
+                pick-file => { root.template-file-pick(); } save => { root.template-form-save(root.template-form-data); } cancel => { root.template-form-cancel(); }
+            }
+            if root.current-screen == 3 && root.template-mode == "detail" : TemplateDetailScreen {
+                vertical-stretch: 1; code: root.template-detail-code; name: root.template-detail-name;
+                summary: root.template-detail-summary; flags: root.template-detail-flags; legacy: root.template-detail-legacy;
+                mapping-rows: root.template-mapping-rows; canonical-fields: root.template-canonical-fields;
+                mapping-changed(placeholder, field) => { root.template-mapping-change(placeholder, field); }
+                mapping-custom(placeholder, field) => { root.template-mapping-custom(placeholder, field); }
+                save-mapping => { root.template-mapping-save(); } reanalyze => { root.template-reanalyze(); } back => { root.template-detail-back(); }
+                edit => { root.template-edit(); }
+                download => { root.template-detail-download(); }
+            }
+
+            if root.current-screen == 8 : SettingsScreen {
+                vertical-stretch: 1;
+                party-b <=> root.settings-party-b;
+                addendum-format <=> root.settings-addendum-format;
+                data-root: root.settings-data-root;
+                setup-required: root.settings-setup-required;
+                save-party-b => { root.settings-save-party-b(root.settings-party-b); }
+                save-addendum-format => { root.settings-save-addendum-format(root.settings-addendum-format); }
+                open-data-root => { root.settings-open-data-root(); }
+                open-customer-trash => { root.settings-open-customer-trash(); }
+            }
+
+            if root.current-screen == 5 : ContractFormScreen {
+                vertical-stretch: 1;
+                customer-names: root.contract-customer-names;
+                customer-index: root.contract-customer-index;
+                main-names: root.contract-main-names;
+                main-index: root.contract-main-index;
+                template-names: root.contract-template-names;
+                template-index: root.contract-template-index;
+                addon-rows: root.contract-addon-rows;
+                number-text: root.contract-number-text;
+                end-date-text: root.contract-end-date-text;
+                form-summary-text: root.form-summary-text;
+                form-error-text: root.form-error-text;
+                customer-changed(index) => { root.contract-customer-changed(index); }
+                product-changed(index) => { root.contract-product-changed(index); }
+                template-changed(index) => { root.contract-template-changed(index); }
+                addon-toggled(index) => { root.contract-addon-toggled(index); }
+                field-changed(key, value) => { root.contract-field-changed(key, value); }
+                save(generate) => { root.contract-save(generate); }
+            }
+
+            if root.current-screen == 4 && root.contract-detail-id > 0 && ContractHub.detail-submode == "detail" : ContractDetailScreen {
+                vertical-stretch: 1;
+                title-text: root.contract-detail-title;
+                info-text: root.contract-detail-info;
+                status-text: root.contract-detail-status;
+                status-variant: root.contract-detail-status-variant;
+                target-names: root.contract-detail-target-names;
+                evidence-lines: root.contract-detail-evidence;
+                generated-text: root.contract-detail-generated;
+                event-lines: root.contract-detail-events;
+                back => { root.contract-detail-back(); }
+                target-chosen(index) => { root.contract-detail-target(index); }
+                upload(index) => { root.contract-detail-upload(index); }
+                remove(index) => { root.contract-detail-remove(index); }
+                generate => { root.contract-detail-generate(); }
+                delete-contract => { root.contract-detail-delete(); }
+            }
+            if root.current-screen == 4 && root.contract-detail-id > 0 && ContractHub.detail-submode == "addendum" : AddendumFormScreen {
+                vertical-stretch: 1;
+                parent-title: ContractHub.addon-parent-title;
+                suggested-number: ContractHub.addon-number;
+                start-date <=> ContractHub.addon-start-date;
+                end-date: ContractHub.addon-end-date;
+                months-text: ContractHub.addon-months;
+                sign-date <=> ContractHub.addon-sign-date;
+                products: ContractHub.addon-products;
+                template-names: ContractHub.addon-templates;
+                template-index: ContractHub.addon-template-index;
+                error-text: ContractHub.addon-error;
+                back => { ContractHub.back-to-contract-detail(); }
+                start-changed(s) => { ContractHub.addon-start-changed(s); }
+                toggle-product(i) => { ContractHub.addon-toggle-product(i); }
+                template-changed(i) => { ContractHub.addon-template-changed(i); }
+                save(st, sg, gen) => { ContractHub.addon-save(st, sg, gen); }
+            }
+            if root.current-screen == 4 && root.contract-detail-id > 0 && ContractHub.detail-submode == "renewal" : RenewalFormScreen {
+                vertical-stretch: 1;
+                parent-title: ContractHub.renew-parent-title;
+                renew-mode <=> ContractHub.renew-mode;
+                contract-number <=> ContractHub.renew-number;
+                start-date <=> ContractHub.renew-start-date;
+                months-text <=> ContractHub.renew-months;
+                sign-date <=> ContractHub.renew-sign-date;
+                comparison-text: ContractHub.renew-comparison-text;
+                products: ContractHub.renew-products;
+                template-names: ContractHub.renew-templates;
+                template-index: ContractHub.renew-template-index;
+                error-text: ContractHub.renew-error;
+                back => { ContractHub.back-to-contract-detail(); }
+                mode-changed(m) => { ContractHub.renew-mode-changed(m); }
+                toggle-product(i) => { ContractHub.renew-toggle-product(i); }
+                template-changed(i) => { ContractHub.renew-template-changed(i); }
+                save(num, st, m, sg, gen) => { ContractHub.renew-save(num, st, m, sg, gen); }
+            }
+
+            if root.current-screen == 4 && root.contract-detail-id <= 0 : ContractsListScreen {
+                vertical-stretch: 1;
+                rows: root.contract-rows;
+                status-options: root.contract-status-options;
+                year-options: root.contract-year-options;
+                alert-options: root.contract-alert-options;
+                target-options: root.contract-target-options;
+                customer-options: root.contract-list-customer-options; product-options: root.contract-list-product-options;
+                date-field-options: root.contract-list-date-field-options;
+                status-index: root.contract-status-index;
+                year-index: root.contract-year-index;
+                alert-index: root.contract-alert-index;
+                summary-text: root.contract-summary-text;
+                page-text: root.contract-page-text;
+                has-prev: root.contract-has-prev;
+                has-next: root.contract-has-next;
+                selected-count: root.contract-selected-count;
+                customer-index: root.contract-list-customer-index; product-index: root.contract-list-product-index;
+                date-field-index: root.contract-list-date-field-index; date-from: root.contract-list-date-from; date-to: root.contract-list-date-to;
+                search-changed(text) => { root.contracts-search(text); }
+                filter-changed(status, year, alert, customer, product, date-field, date-from, date-to) => { root.contracts-filter(status, year, alert, customer, product, date-field, date-from, date-to); }
+                sort-changed(field) => { root.contracts-sort(field); }
+                alert-unsent => { root.contracts-alert-unsent(); }
+                alert-expiring => { root.contracts-alert-expiring(); }
+                toggle-row(index) => { root.contracts-toggle(index); }
+                open-contract(id) => { root.contracts-open(id); }
+                prev-page => { root.contracts-prev(); }
+                next-page => { root.contracts-next(); }
+                bulk-status(index) => { root.contracts-bulk-status(index); }
+                bulk-delete => { root.contracts-bulk-delete(); }
+                export-excel => { root.contracts-export(); }
+            }
+
+            if root.current-screen == 6 : BatchScreen { vertical-stretch: 1; }
+            if root.current-screen == 7 : QuotationScreen { vertical-stretch: 1; }
+            }
+        }
+    }
+
+    if SearchHub.open : GlobalSearchPopup {
+        x: root.width - self.width - 20px;
+        y: 50px;
+    }
+
+    Toast {
+        x: root.width - self.width - 24px;
+        y: root.height - self.height - 24px;
+        available-width: root.width;
+        shown: root.toast-shown;
+        kind: root.toast-kind;
+        message: root.toast-message;
+        closed => { root.toast-closed(); }
+    }
+
+    ConfirmDialog {
+        width: root.width;
+        height: root.height;
+        shown: root.confirm-shown;
+        title: root.confirm-title;
+        message: root.confirm-message;
+        confirmed => { root.confirm-ok(); }
+        cancelled => { root.confirm-cancel(); }
+    }
+}

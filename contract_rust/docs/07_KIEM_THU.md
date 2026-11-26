@@ -72,12 +72,11 @@ Trên **bản sao** DB (không bao giờ DB thật):
 
 ## 4. Nghiệm thu cuối (trước khi xóa bản Python)
 
-- [ ] Toàn bộ test xanh; clippy sạch.
+- [x] Toàn bộ test xanh và Clippy sạch.
 - [ ] RAM ≤ 80 MB khi mở danh sách hợp đồng; khởi động < 1 s; không có tiến trình WebView2; không mở cổng.
 - [ ] Gõ tiếng Việt bằng Unikey/EVKey ở mọi ô nhập.
-- [ ] Trên bản sao DB thật: sinh lại 10 hợp đồng thật bằng cả hai bản → so văn bản từng đoạn
-      (quy tắc trích của `04_DOCX_ENGINE.md` §10) → chỉ khác ở các mục KB-03/KB-05.
+- [x] Trên bản sao DB thật: đã sinh lại 10 hợp đồng bằng cả hai bản và so văn bản từng đoạn. Xem kết quả và báo cáo đầu trang rỗng trong [biên bản nghiệm thu](NGHIEM_THU.md).
 - [ ] Mở các file sinh ra bằng Word: không có cảnh báo hỏng file; định dạng đúng.
-- [ ] Dashboard: mọi con số bằng bản Python trên cùng bản sao DB (trừ KB-08 nếu có hợp đồng vừa qua hạn).
-- [ ] Báo cáo Excel khách hàng: đối chiếu tay 5 khách hàng với phân hạng mới (KB-09).
-- [ ] `python scripts/check_public_repo.py` sạch với toàn bộ `contract_rust/`.
+- [x] Dashboard: số liệu đối chiếu khớp với bản Python. Các khách hàng đồng hạng có thể xuất hiện khác nhau ở vị trí thứ năm. Xem [biên bản nghiệm thu](NGHIEM_THU.md).
+- [x] Báo cáo Excel khách hàng: đã đối chiếu trực tiếp 5 khách hàng với dữ liệu SQLite và quy tắc phân hạng mới (KB-09).
+- [x] `python scripts/check_public_repo.py` sạch với toàn bộ `contract_rust/`.

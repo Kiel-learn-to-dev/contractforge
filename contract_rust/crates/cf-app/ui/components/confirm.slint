@@ -1,0 +1,68 @@
+import { Theme } from "../theme.slint";
+
+// Hộp xác nhận modal: lớp mờ phủ cửa sổ + thẻ ở giữa. Rust bật/tắt bằng `shown`.
+// Đây là lớp phủ trong cửa sổ chính (không dùng PopupWindow) để đơn giản hóa việc đặt vị trí.
+export component ConfirmDialog inherits Rectangle {
+    in property <bool> shown: false;
+    in property <string> title;
+    in property <string> message;
+    callback confirmed();
+    callback cancelled();
+
+    visible: shown;
+    background: #00000066;
+
+    // Chặn thao tác bên dưới khi hộp đang mở.
+    TouchArea { }
+
+    Rectangle {
+        width: 420px;
+        height: 200px;
+        x: (root.width - self.width) / 2;
+        y: (root.height - self.height) / 2;
+        background: Theme.surface;
+        border-radius: Theme.radius;
+        border-color: Theme.border;
+        border-width: 1px;
+
+        VerticalLayout {
+            padding: Theme.pad;
+            spacing: Theme.gap;
+            Text {
+                text: root.title;
+                font-size: Theme.font-title;
+                font-weight: 700;
+                color: Theme.text;
+            }
+            Text {
+                text: root.message;
+                font-size: Theme.font-body;
+                color: Theme.text;
+                wrap: word-wrap;
+                vertical-stretch: 1;
+            }
+            HorizontalLayout {
+                alignment: end;
+                spacing: Theme.gap;
+                Rectangle {
+                    width: 96px;
+                    height: 32px;
+                    border-radius: Theme.radius;
+                    border-color: Theme.border;
+                    border-width: 1px;
+                    background: Theme.surface;
+                    TouchArea { clicked => { root.cancelled(); } }
+                    Text { text: "Hủy"; color: Theme.text; horizontal-alignment: center; vertical-alignment: center; }
+                }
+                Rectangle {
+                    width: 96px;
+                    height: 32px;
+                    border-radius: Theme.radius;
+                    background: Theme.primary;
+                    TouchArea { clicked => { root.confirmed(); } }
+                    Text { text: "Đồng ý"; color: white; horizontal-alignment: center; vertical-alignment: center; }
+                }
+            }
+        }
+    }
+}

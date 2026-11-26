@@ -1,0 +1,57 @@
+import { Theme } from "../theme.slint";
+import { Card } from "common.slint";
+import { ForecastBarItem } from "../globals.slint";
+
+// Biểu đồ cột dự báo hết hạn 12 tháng tới (S01).
+export component BarChart inherits Card {
+    in property <[ForecastBarItem]> bars;
+
+    VerticalLayout {
+        padding: 14px;
+        spacing: 8px;
+
+        Text {
+            text: "Dự báo hết hạn 12 tháng tới";
+            font-size: Theme.font-body;
+            font-weight: 600;
+            color: Theme.text;
+        }
+
+        if root.bars.length == 0 : Text {
+            text: "Chưa có dữ liệu hết hạn trong 12 tháng tới.";
+            color: Theme.text-muted;
+            font-size: Theme.font-small;
+        }
+
+        if root.bars.length > 0 : HorizontalLayout {
+            vertical-stretch: 1;
+            min-height: 144px;
+            spacing: 5px;
+            alignment: stretch;
+            for bar[idx] in root.bars : VerticalLayout {
+                horizontal-stretch: 1;
+                alignment: end;
+                spacing: 3px;
+                Text {
+                    text: bar.count > 0 ? bar.count : "";
+                    color: Theme.text-2;
+                    font-size: Theme.font-xs;
+                    font-weight: 600;
+                    horizontal-alignment: center;
+                }
+                Rectangle {
+                    height: max(4px, bar.ratio * 96px);
+                    background: bar.count == 0 ? Theme.surface-3
+                        : (idx == 0 ? Theme.danger-fg : (idx == 1 ? Theme.warning-fg : Theme.primary));
+                    border-radius: 3px;
+                }
+                Text {
+                    text: bar.label;
+                    color: Theme.text-muted;
+                    font-size: Theme.font-xs;
+                    horizontal-alignment: center;
+                }
+            }
+        }
+    }
+}

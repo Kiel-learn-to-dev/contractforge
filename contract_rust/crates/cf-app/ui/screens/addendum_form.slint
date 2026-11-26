@@ -1,0 +1,122 @@
+import { CheckBox, ComboBox, LineEdit, ScrollView } from "std-widgets.slint";
+import { Theme } from "../theme.slint";
+import { Card, CfButton } from "../components/common.slint";
+import { ContractHub, IdLabel } from "../globals.slint";
+
+// S16 — Phụ lục bổ sung gói giữa kỳ.
+export component AddendumFormScreen inherits ScrollView {
+    in property <string> parent-title;
+    in property <string> suggested-number;
+    in-out property <string> start-date;
+    in property <string> end-date;
+    in property <string> months-text;
+    in-out property <string> sign-date;
+    in property <[IdLabel]> products;
+    in property <[string]> template-names;
+    in property <int> template-index: 0;
+    in property <string> error-text;
+
+    callback back();
+    callback start-changed(string);
+    callback toggle-product(int);
+    callback template-changed(int);
+    callback save(string, string, bool);
+
+    VerticalLayout {
+        padding: Theme.pad;
+        spacing: Theme.gap;
+
+        HorizontalLayout {
+            height: 36px;
+            spacing: Theme.gap;
+            CfButton { text: "‹ Quay lại hợp đồng"; clicked => { root.back(); } }
+            Text { text: "Tạo phụ lục bổ sung — " + root.parent-title; font-size: Theme.font-title; font-weight: 700; color: Theme.text; vertical-alignment: center; }
+        }
+
+        if root.error-text != "" : Card {
+            border-color: Theme.danger-fg;
+            background: Theme.danger-bg;
+            HorizontalLayout { padding: 10px; Text { text: root.error-text; color: Theme.danger-fg; wrap: word-wrap; } }
+        }
+
+        // Hợp đồng gốc
+        Card {
+            VerticalLayout {
+                padding: Theme.pad;
+                spacing: 6px;
+                Text { text: "HỢP ĐỒNG GỐC"; font-size: Theme.font-small; font-weight: 700; color: Theme.info-fg; }
+                Rectangle { height: 1px; background: Theme.border; }
+                Text { text: "Số hợp đồng: " + root.parent-title; font-weight: 700; color: Theme.text; }
+                if ContractHub.addon-parent-customer != "" : Text { text: "Khách hàng: " + ContractHub.addon-parent-customer; color: Theme.text-2; }
+                if ContractHub.addon-parent-product != "" : Text { text: "Gói chính: " + ContractHub.addon-parent-product; color: Theme.text-2; }
+                if ContractHub.addon-parent-dates != "" : Text { text: "Thời hạn gốc: " + ContractHub.addon-parent-dates; color: Theme.text-muted; font-size: Theme.font-small; }
+            }
+        }
+
+        Card {
+            VerticalLayout {
+                padding: Theme.pad;
+                spacing: Theme.gap;
+                Text { text: "THỜI HẠN PHỤ LỤC"; font-size: Theme.font-small; font-weight: 700; color: Theme.primary; }
+                Rectangle { height: 1px; background: Theme.border; }
+                HorizontalLayout {
+                    spacing: Theme.gap;
+                    VerticalLayout {
+                        horizontal-stretch: 1; spacing: 4px;
+                        Text { text: "SỐ PHỤ LỤC (TỰ GỢI Ý)"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
+                        Text { text: root.suggested-number; font-weight: 700; color: Theme.primary; font-size: Theme.font-body; }
+                    }
+                    VerticalLayout {
+                        width: 180px; spacing: 4px;
+                        Text { text: "NGÀY KÝ"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
+                        LineEdit { height: 32px; text <=> root.sign-date; placeholder-text: "dd/mm/yyyy"; }
+                    }
+                    VerticalLayout {
+                        width: 190px; spacing: 4px;
+                        Text { text: "NGÀY BẮT ĐẦU *"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
+                        LineEdit { height: 32px; text <=> root.start-date; placeholder-text: "dd/mm/yyyy"; edited(t) => { root.start-changed(t); } }
+                    }
+                }
+                HorizontalLayout {
+                    spacing: Theme.gap;
+                    Text { text: "Kết thúc (theo HĐ gốc): " + root.end-date; color: Theme.text-2; font-weight: 600; vertical-alignment: center; }
+                    Text { text: "· Số tháng tự động: " + root.months-text + " tháng"; color: Theme.primary; font-weight: 700; vertical-alignment: center; }
+                }
+                HorizontalLayout {
+                    spacing: Theme.gap;
+                    Text { width: 140px; text: "Mẫu phụ lục"; color: Theme.text; vertical-alignment: center; }
+                    ComboBox {
+                        horizontal-stretch: 1;
+                        height: 32px;
+                        model: root.template-names;
+                        current-index: root.template-index;
+                        selected(v) => { root.template-changed(self.current-index); }
+                    }
+                }
+            }
+        }
+
+        Card {
+            VerticalLayout {
+                padding: Theme.pad;
+                spacing: 6px;
+                Text { text: "CHỌN GÓI BỔ SUNG CÙNG NHÓM"; font-size: Theme.font-small; font-weight: 700; color: Theme.success-fg; }
+                Rectangle { height: 1px; background: Theme.border; }
+                if root.products.length == 0 : Text { text: "Không có gói bổ sung nào đang bán cùng nhóm với gói chính của hợp đồng gốc."; color: Theme.text-muted; }
+                for item[idx] in root.products : CheckBox {
+                    text: item.label;
+                    checked: item.checked;
+                    toggled => { root.toggle-product(idx); }
+                }
+            }
+        }
+
+        HorizontalLayout {
+            alignment: end;
+            spacing: Theme.gap;
+            CfButton { text: "Hủy"; clicked => { root.back(); } }
+            CfButton { text: "Lưu nháp"; clicked => { root.save(root.start-date, root.sign-date, false); } }
+            CfButton { text: "Lưu và sinh file"; variant: "primary"; clicked => { root.save(root.start-date, root.sign-date, true); } }
+        }
+    }
+}

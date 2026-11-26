@@ -1,0 +1,153 @@
+import { LineEdit, ScrollView } from "std-widgets.slint";
+import { Theme } from "../theme.slint";
+import { Card, CfButton } from "../components/common.slint";
+
+export struct SettingsPartyB {
+    name: string,
+    address: string,
+    bank_account: string,
+    bank_name: string,
+    beneficiary: string,
+    tax_code: string,
+    title: string,
+    representative: string,
+    authorization_number: string,
+    authorization_date: string,
+    phone: string,
+    contact_name: string,
+    contact_email: string,
+}
+
+export component SettingsScreen inherits VerticalLayout {
+    in-out property <SettingsPartyB> party-b;
+    in-out property <string> addendum-format;
+    in property <string> data-root;
+    in property <bool> setup-required: false;
+    callback save-party-b();
+    callback save-addendum-format();
+    callback open-data-root();
+    callback open-customer-trash();
+    spacing: Theme.gap;
+
+    ScrollView {
+        vertical-stretch: 1;
+        VerticalLayout {
+            padding-right: 8px;
+            spacing: 12px;
+
+            if root.setup-required : Card {
+                border-color: Theme.info-fg;
+                background: Theme.info-bg;
+                HorizontalLayout {
+                    padding: 10px;
+                    Text {
+                        text: "Hãy hoàn tất thông tin tổ chức Bên B trước khi tạo hợp đồng đầu tiên.";
+                        color: Theme.info-fg;
+                        font-weight: 600;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+
+            // Bố cục 2 cột giống Python settings.html
+            HorizontalLayout {
+                spacing: 14px;
+                alignment: stretch;
+
+                // Trái: Thông tin tổ chức Bên B
+                VerticalLayout {
+                    horizontal-stretch: 7;
+                    spacing: 12px;
+                    Card {
+                        VerticalLayout {
+                            padding: Theme.pad;
+                            spacing: 10px;
+                            Text { text: "THÔNG TIN TỔ CHỨC (BÊN B — VIETTEL)"; color: Theme.primary; font-size: Theme.font-small; font-weight: 700; }
+                            Text { text: "Thông tin tự điền vào hợp đồng mới. Sau khi sửa, bấm Sinh lại file trên hợp đồng cũ để cập nhật."; color: Theme.text-muted; font-size: Theme.font-small; wrap: word-wrap; }
+                            Rectangle { height: 1px; background: Theme.border; }
+
+                            VerticalLayout { spacing: 4px; Text { text: "TÊN ĐƠN VỊ *"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.party-b.name; placeholder-text: "VD: Viettel Chi nhánh..."; } }
+                            VerticalLayout { spacing: 4px; Text { text: "ĐỊA CHỈ *"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.party-b.address; } }
+
+                            HorizontalLayout {
+                                spacing: 10px;
+                                VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "MÃ SỐ THUẾ"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.party-b.tax_code; } }
+                                VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "CHỨC VỤ NGƯỜI ĐẠI DIỆN"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.party-b.title; placeholder-text: "VD: Giám đốc"; } }
+                            }
+                            HorizontalLayout {
+                                spacing: 10px;
+                                VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "ĐIỆN THOẠI"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.party-b.phone; } }
+                                VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "NGƯỜI LIÊN HỆ"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.party-b.contact_name; } }
+                                VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "EMAIL LIÊN HỆ"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.party-b.contact_email; } }
+                            }
+                            HorizontalLayout {
+                                spacing: 10px;
+                                VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "SỐ TÀI KHOẢN NGÂN HÀNG"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.party-b.bank_account; } }
+                                VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "NGÂN HÀNG"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.party-b.bank_name; } }
+                            }
+                            VerticalLayout { spacing: 4px; Text { text: "ĐƠN VỊ THỤ HƯỞNG"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.party-b.beneficiary; } }
+
+                            Rectangle { height: 1px; background: Theme.border; }
+                            Text { text: "GIẤY ỦY QUYỀN KÝ HỢP ĐỒNG"; color: Theme.text; font-size: Theme.font-small; font-weight: 700; }
+                            VerticalLayout { spacing: 4px; Text { text: "ĐẠI DIỆN KÝ HỢP ĐỒNG"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.party-b.representative; } }
+                            HorizontalLayout {
+                                spacing: 10px;
+                                VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "SỐ GIẤY ỦY QUYỀN"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.party-b.authorization_number; } }
+                                VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "NGÀY ỦY QUYỀN (dd/mm/yyyy)"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.party-b.authorization_date; placeholder-text: "09/07/2026"; } }
+                            }
+                            HorizontalLayout {
+                                alignment: end;
+                                CfButton { text: "Lưu thông tin Bên B"; variant: "primary"; clicked => { root.save-party-b(); } }
+                            }
+                        }
+                    }
+                }
+
+                // Phải: Khuôn số phụ lục + Thư mục dữ liệu + Thông tin hệ thống + Thùng rác
+                VerticalLayout {
+                    horizontal-stretch: 5;
+                    spacing: 12px;
+                    alignment: start;
+
+                    Card {
+                        VerticalLayout {
+                            padding: Theme.pad;
+                            spacing: 8px;
+                            Text { text: "KHUÔN SỐ PHỤ LỤC"; color: Theme.primary; font-size: Theme.font-small; font-weight: 700; }
+                            Rectangle { height: 1px; background: Theme.border; }
+                            Text { text: "Bắt buộc chứa {seq} (số thứ tự) và {parent} (số hợp đồng gốc). VD: PL{seq}/{parent}"; color: Theme.text-muted; font-size: Theme.font-small; wrap: word-wrap; }
+                            LineEdit { height: 32px; text <=> root.addendum-format; placeholder-text: "PL{seq}/{parent}"; }
+                            HorizontalLayout {
+                                alignment: end;
+                                CfButton { text: "Lưu khuôn phụ lục"; variant: "outline-primary"; clicked => { root.save-addendum-format(); } }
+                            }
+                        }
+                    }
+
+                    Card {
+                        VerticalLayout {
+                            padding: Theme.pad;
+                            spacing: 8px;
+                            Text { text: "THƯ MỤC DỮ LIỆU & LƯU TRỮ"; color: Theme.primary; font-size: Theme.font-small; font-weight: 700; }
+                            Rectangle { height: 1px; background: Theme.border; }
+                            Text { text: "Cơ sở dữ liệu SQLite, mẫu văn bản và hợp đồng sinh ra được lưu tại:"; color: Theme.text-muted; font-size: Theme.font-small; wrap: word-wrap; }
+                            Text { text: root.data-root; color: Theme.text; font-weight: 600; font-size: Theme.font-small; wrap: word-wrap; }
+                            CfButton { text: "Mở thư mục dữ liệu"; variant: "outline-primary"; clicked => { root.open-data-root(); } }
+                        }
+                    }
+
+                    Card {
+                        VerticalLayout {
+                            padding: Theme.pad;
+                            spacing: 8px;
+                            Text { text: "HỆ THỐNG & BẢO TRÌ"; color: Theme.text; font-size: Theme.font-small; font-weight: 700; }
+                            Rectangle { height: 1px; background: Theme.border; }
+                            Text { text: "ContractForge Desktop (Rust + Slint · SQLite tương thích Python)."; color: Theme.text-muted; font-size: Theme.font-small; wrap: word-wrap; }
+                            CfButton { text: "Mở Thùng rác khách hàng"; variant: "outline-secondary"; clicked => { root.open-customer-trash(); } }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

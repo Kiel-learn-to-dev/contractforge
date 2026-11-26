@@ -1,0 +1,457 @@
+import { ScrollView } from "std-widgets.slint";
+import { Theme } from "../theme.slint";
+import { AccentCard, Card, CfButton } from "../components/common.slint";
+import { BarChart } from "../components/bar_chart.slint";
+import { PieChart } from "../components/pie_chart.slint";
+import { DashboardHub } from "../globals.slint";
+
+export struct DashboardMetric {
+    label: string,
+    value: string,
+    route: int,
+    accent: color,
+}
+
+export struct DashboardAction {
+    message: string,
+    level: string,
+    route: int,
+}
+
+component MetricCard inherits Card {
+    in property <DashboardMetric> metric;
+    callback clicked();
+    min-height: 86px;
+    background: ta.has-hover ? Theme.primary-tint : Theme.surface;
+
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+    VerticalLayout {
+        padding-top: 12px;
+        padding-bottom: 12px;
+        padding-left: 10px;
+        padding-right: 10px;
+        spacing: 4px;
+        alignment: center;
+        Text {
+            text: root.metric.value;
+            color: root.metric.accent;
+            font-size: 22px;
+            font-weight: 700;
+            horizontal-alignment: center;
+        }
+        Text {
+            text: root.metric.label;
+            color: Theme.text-muted;
+            font-size: Theme.font-small;
+            font-weight: 500;
+            horizontal-alignment: center;
+            overflow: elide;
+        }
+    }
+}
+
+component ActionPill inherits Rectangle {
+    in property <DashboardAction> action;
+    callback clicked();
+    height: 28px;
+    width: pill-text.preferred-width + 26px;
+    border-radius: Theme.radius-sm;
+    background: action.level == "high" ? Theme.danger-bg
+        : (action.level == "medium" ? Theme.warning-bg : Theme.info-bg);
+
+    TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+    pill-text := Text {
+        text: action.message + "  ›";
+        color: action.level == "high" ? Theme.danger-fg
+            : (action.level == "medium" ? Theme.warning-fg : Theme.info-fg);
+        font-size: Theme.font-small;
+        font-weight: 600;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
+
+export component DashboardScreen inherits ScrollView {
+    in property <[DashboardMetric]> metrics;
+    in property <[DashboardAction]> actions;
+    callback open(int);
+
+    VerticalLayout {
+        padding-right: 6px;
+        spacing: 12px;
+
+        // ── Thanh thao tác nhanh + Làm mới ─────────────────────────────────
+        HorizontalLayout {
+            height: 36px;
+            spacing: 8px;
+            CfButton { text: "+ Tạo hợp đồng"; variant: "primary"; clicked => { DashboardHub.quick-nav(5); } }
+            CfButton { text: "Khách hàng"; variant: "outline-primary"; clicked => { DashboardHub.quick-nav(1); } }
+            CfButton { text: "Sinh hàng loạt"; variant: "outline-primary"; clicked => { DashboardHub.quick-nav(6); } }
+            CfButton { text: "Báo giá"; variant: "outline-primary"; clicked => { DashboardHub.quick-nav(7); } }
+            Rectangle { horizontal-stretch: 1; }
+            CfButton { text: "↻ Làm mới"; variant: "outline-secondary"; clicked => { DashboardHub.refresh(); } }
+        }
+
+        // ── Việc cần xử lý (Action Strip kiểu .acc-a Python) ───────────────
+        if root.actions.length > 0 : AccentCard {
+            accent: Theme.warning-fg;
+            VerticalLayout {
+                padding-top: 9px;
+                padding-bottom: 9px;
+                padding-left: 14px;
+                padding-right: 14px;
+                spacing: 6px;
+                HorizontalLayout {
+                    spacing: 8px;
+                    Text {
+                        text: "Cần xử lý:";
+                        color: Theme.text-2;
+                        font-size: Theme.font-small;
+                        font-weight: 700;
+                        vertical-alignment: center;
+                    }
+                    for action[idx] in root.actions : ActionPill {
+                        action: action;
+                        clicked => { DashboardHub.open-action(idx); }
+                    }
+                    Rectangle { horizontal-stretch: 1; }
+                }
+            }
+        }
+        if root.actions.length == 0 : Text {
+            text: "✓ Không có việc tồn đọng — mọi hợp đồng đang trong tầm kiểm soát.";
+            color: Theme.success-fg;
+            font-size: Theme.font-small;
+            font-weight: 500;
+        }
+
+        // ── Hàng 1: 6 thẻ số liệu màu giống hệt Python dashboard/index.html ─
+        HorizontalLayout {
+            spacing: 10px;
+            for metric[idx] in root.metrics : MetricCard {
+                metric: metric;
+                horizontal-stretch: 1;
+                clicked => { DashboardHub.open-metric(idx); }
+            }
+        }
+
+        // ── Thống kê trong tháng (strip .acc-p) ───────────────────────────
+        if DashboardHub.monthly-title != "" : AccentCard {
+            accent: Theme.primary;
+            HorizontalLayout {
+                padding-top: 9px;
+                padding-bottom: 9px;
+                padding-left: 14px;
+                padding-right: 14px;
+                spacing: 12px;
+                Text { text: DashboardHub.monthly-title + ":"; font-size: Theme.font-small; font-weight: 700; color: Theme.primary; vertical-alignment: center; }
+                Text { text: DashboardHub.monthly-new-text; font-size: Theme.font-small; color: Theme.text; vertical-alignment: center; }
+                Text { text: "|"; font-size: Theme.font-small; color: Theme.border-strong; vertical-alignment: center; }
+                Text { text: DashboardHub.monthly-signed-text; font-size: Theme.font-small; color: Theme.success-fg; vertical-alignment: center; }
+                Text { text: "|"; font-size: Theme.font-small; color: Theme.border-strong; vertical-alignment: center; }
+                Text { text: DashboardHub.monthly-expired-text; font-size: Theme.font-small; color: Theme.danger-fg; vertical-alignment: center; }
+                Rectangle { horizontal-stretch: 1; }
+                Text { text: DashboardHub.monthly-value-text; font-size: Theme.font-small; font-weight: 700; color: Theme.primary; vertical-alignment: center; }
+            }
+        }
+
+        // ── Hàng 2: Hero Giá trị HĐ hiệu lực + Dự báo 12 tháng + Cơ cấu gói ─
+        HorizontalLayout {
+            spacing: 10px;
+            Card {
+                width: 300px;
+                VerticalLayout {
+                    padding: 14px;
+                    spacing: 8px;
+                    Text {
+                        text: "GIÁ TRỊ HĐ TRONG VÒNG ĐỜI HIỆU LỰC";
+                        color: Theme.text-2;
+                        font-size: Theme.font-xs;
+                        font-weight: 700;
+                        letter-spacing: 0.5px;
+                    }
+                    Text {
+                        text: DashboardHub.value-total-text;
+                        color: Theme.primary;
+                        font-size: 20px;
+                        font-weight: 700;
+                    }
+                    Text {
+                        text: DashboardHub.value-in-force-sub;
+                        color: Theme.text-muted;
+                        font-size: Theme.font-small;
+                    }
+                    Rectangle { height: 1px; background: Theme.border; }
+                    Rectangle {
+                        height: 24px;
+                        border-radius: Theme.radius-sm;
+                        background: pta.has-hover ? Theme.primary-tint : transparent;
+                        pta := TouchArea { mouse-cursor: pointer; clicked => { DashboardHub.open-value-status("PaidActive"); } }
+                        HorizontalLayout {
+                            padding-left: 4px; padding-right: 4px; spacing: 8px;
+                            Rectangle { width: 8px; height: 8px; border-radius: 4px; background: Theme.success-fg; y: (parent.height - self.height) / 2; }
+                            Text { horizontal-stretch: 1; text: "Đã thanh toán ›"; color: Theme.text-2; font-size: Theme.font-small; vertical-alignment: center; }
+                            Text { text: DashboardHub.value-paid-text; color: Theme.success-fg; font-size: Theme.font-small; font-weight: 600; vertical-alignment: center; }
+                        }
+                    }
+                    Rectangle {
+                        height: 24px;
+                        border-radius: Theme.radius-sm;
+                        background: ita.has-hover ? Theme.primary-tint : transparent;
+                        ita := TouchArea { mouse-cursor: pointer; clicked => { DashboardHub.open-value-status("Invoiced"); } }
+                        HorizontalLayout {
+                            padding-left: 4px; padding-right: 4px; spacing: 8px;
+                            Rectangle { width: 8px; height: 8px; border-radius: 4px; background: Theme.cyan-fg; y: (parent.height - self.height) / 2; }
+                            Text { horizontal-stretch: 1; text: "Đã xuất hóa đơn ›"; color: Theme.text-2; font-size: Theme.font-small; vertical-alignment: center; }
+                            Text { text: DashboardHub.value-invoiced-text; color: Theme.cyan-fg; font-size: Theme.font-small; font-weight: 600; vertical-alignment: center; }
+                        }
+                    }
+                    Rectangle {
+                        height: 24px;
+                        border-radius: Theme.radius-sm;
+                        background: uta.has-hover ? Theme.primary-tint : transparent;
+                        uta := TouchArea { mouse-cursor: pointer; clicked => { DashboardHub.open-value-status("Signed"); } }
+                        HorizontalLayout {
+                            padding-left: 4px; padding-right: 4px; spacing: 8px;
+                            Rectangle { width: 8px; height: 8px; border-radius: 4px; background: Theme.warning-fg; y: (parent.height - self.height) / 2; }
+                            Text { horizontal-stretch: 1; text: "Chờ hóa đơn / ký ›"; color: Theme.text-2; font-size: Theme.font-small; vertical-alignment: center; }
+                            Text { text: DashboardHub.value-unpaid-text; color: Theme.warning-fg; font-size: Theme.font-small; font-weight: 600; vertical-alignment: center; }
+                        }
+                    }
+                }
+            }
+            BarChart {
+                horizontal-stretch: 1;
+                bars: DashboardHub.forecast-bars;
+            }
+            PieChart {
+                horizontal-stretch: 1;
+                items: DashboardHub.pie-items;
+            }
+        }
+
+        // ── Phân bố trạng thái (thanh tiến độ clickable giống Python) ───────
+        if DashboardHub.status-dist.length > 0 : Card {
+            VerticalLayout {
+                padding: 14px;
+                spacing: 8px;
+                Text { text: "Phân bố hợp đồng theo trạng thái"; font-size: Theme.font-body; font-weight: 600; color: Theme.text; }
+                Rectangle { height: 1px; background: Theme.border; }
+                for item in DashboardHub.status-dist : Rectangle {
+                    height: 24px;
+                    border-radius: Theme.radius-sm;
+                    background: sdt.has-hover ? Theme.primary-tint : transparent;
+                    sdt := TouchArea { mouse-cursor: pointer; clicked => { DashboardHub.open-value-status(item.status-code); } }
+                    HorizontalLayout {
+                        padding-left: 4px; padding-right: 4px; spacing: 10px;
+                        Text { width: 170px; text: item.label; font-size: Theme.font-small; color: Theme.text; vertical-alignment: center; overflow: elide; }
+                        Rectangle {
+                            horizontal-stretch: 1;
+                            height: 10px;
+                            y: (parent.height - self.height) / 2;
+                            border-radius: 5px;
+                            background: Theme.surface-3;
+                            Rectangle {
+                                x: 0px;
+                                y: 0px;
+                                height: parent.height;
+                                width: max(6px, parent.width * item.ratio);
+                                border-radius: 5px;
+                                background: item.accent;
+                            }
+                        }
+                        Text { width: 42px; text: item.count; font-size: Theme.font-small; font-weight: 700; color: Theme.text-2; horizontal-alignment: right; vertical-alignment: center; }
+                    }
+                }
+            }
+        }
+
+        // ── Hàng 3: Sắp hết hạn <= 30 ngày & 31-60 ngày ───────────────────
+        HorizontalLayout {
+            spacing: 10px;
+            Card {
+                horizontal-stretch: 1;
+                VerticalLayout {
+                    padding: 14px;
+                    spacing: 6px;
+                    HorizontalLayout {
+                        Text { text: "Sắp hết hạn ≤ 30 ngày (" + DashboardHub.expiring-30.length + ")"; font-size: Theme.font-body; font-weight: 600; color: Theme.danger-fg; vertical-alignment: center; }
+                        Rectangle { horizontal-stretch: 1; }
+                        CfButton { text: "Xem tất cả ›"; variant: "outline-primary"; clicked => { DashboardHub.open-expiring(30); } }
+                    }
+                    Rectangle { height: 1px; background: Theme.border; }
+                    if DashboardHub.expiring-30.length == 0 : Text {
+                        text: "Không có hợp đồng nào hết hạn trong 30 ngày.";
+                        color: Theme.text-muted;
+                        font-size: Theme.font-small;
+                    }
+                    for row in DashboardHub.expiring-30 : Rectangle {
+                        height: 36px;
+                        border-radius: Theme.radius-sm;
+                        background: ta30.has-hover ? Theme.primary-tint : (row.urgency == "critical" ? Theme.danger-bg : transparent);
+                        ta30 := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { DashboardHub.open-contract(row.contract-id); }
+                        }
+                        HorizontalLayout {
+                            padding-left: 8px;
+                            padding-right: 8px;
+                            spacing: 8px;
+                            Text { text: row.contract-number; font-size: Theme.font-small; font-weight: 600; color: Theme.primary; vertical-alignment: center; }
+                            Text { horizontal-stretch: 1; text: row.customer-name; font-size: Theme.font-small; color: Theme.text; overflow: elide; vertical-alignment: center; }
+                            Text { text: row.end-date; font-size: Theme.font-xs; color: Theme.text-muted; vertical-alignment: center; }
+                            Rectangle {
+                                width: d30.preferred-width + 14px;
+                                height: 20px;
+                                border-radius: 10px;
+                                y: (parent.height - self.height) / 2;
+                                background: row.urgency == "critical" ? Theme.danger-bg : Theme.warning-bg;
+                                d30 := Text {
+                                    text: "Còn " + row.days-left + "n";
+                                    font-size: Theme.font-xs;
+                                    font-weight: 700;
+                                    color: row.urgency == "critical" ? Theme.danger-fg : Theme.warning-fg;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Card {
+                horizontal-stretch: 1;
+                VerticalLayout {
+                    padding: 14px;
+                    spacing: 6px;
+                    HorizontalLayout {
+                        Text { text: "Sắp hết hạn 31–60 ngày (" + DashboardHub.expiring-31-60.length + ")"; font-size: Theme.font-body; font-weight: 600; color: Theme.warning-fg; vertical-alignment: center; }
+                        Rectangle { horizontal-stretch: 1; }
+                        CfButton { text: "Xem tất cả ›"; variant: "outline-primary"; clicked => { DashboardHub.open-expiring(60); } }
+                    }
+                    Rectangle { height: 1px; background: Theme.border; }
+                    if DashboardHub.expiring-31-60.length == 0 : Text {
+                        text: "Không có hợp đồng nào trong khoảng 31–60 ngày.";
+                        color: Theme.text-muted;
+                        font-size: Theme.font-small;
+                    }
+                    for row in DashboardHub.expiring-31-60 : Rectangle {
+                        height: 36px;
+                        border-radius: Theme.radius-sm;
+                        background: ta60.has-hover ? Theme.primary-tint : transparent;
+                        ta60 := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { DashboardHub.open-contract(row.contract-id); }
+                        }
+                        HorizontalLayout {
+                            padding-left: 8px;
+                            padding-right: 8px;
+                            spacing: 8px;
+                            Text { text: row.contract-number; font-size: Theme.font-small; font-weight: 600; color: Theme.primary; vertical-alignment: center; }
+                            Text { horizontal-stretch: 1; text: row.customer-name; font-size: Theme.font-small; color: Theme.text; overflow: elide; vertical-alignment: center; }
+                            Text { text: row.end-date; font-size: Theme.font-xs; color: Theme.text-muted; vertical-alignment: center; }
+                            Rectangle {
+                                width: d60.preferred-width + 14px;
+                                height: 20px;
+                                border-radius: 10px;
+                                y: (parent.height - self.height) / 2;
+                                background: Theme.warning-bg;
+                                d60 := Text {
+                                    text: "Còn " + row.days-left + "n";
+                                    font-size: Theme.font-xs;
+                                    font-weight: 700;
+                                    color: Theme.warning-fg;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── Hàng 4: Top 5 khách hàng & Hoạt động gần đây ───────────────────
+        HorizontalLayout {
+            spacing: 10px;
+            Card {
+                horizontal-stretch: 1;
+                VerticalLayout {
+                    padding: 14px;
+                    spacing: 6px;
+                    Text { text: "Top 5 khách hàng hiệu lực"; font-size: Theme.font-body; font-weight: 600; color: Theme.text; }
+                    Rectangle { height: 1px; background: Theme.border; }
+                    if DashboardHub.top-customers.length == 0 : Text {
+                        text: "Chưa có dữ liệu.";
+                        color: Theme.text-muted;
+                        font-size: Theme.font-small;
+                    }
+                    for cust[idx] in DashboardHub.top-customers : Rectangle {
+                        height: 32px;
+                        border-radius: Theme.radius-sm;
+                        background: tac.has-hover ? Theme.primary-tint : transparent;
+                        tac := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { DashboardHub.open-customer(cust.id); }
+                        }
+                        HorizontalLayout {
+                            padding-left: 6px;
+                            padding-right: 6px;
+                            spacing: 8px;
+                            Rectangle {
+                                width: 20px; height: 20px; border-radius: 10px;
+                                y: (parent.height - self.height) / 2;
+                                background: idx == 0 ? Theme.primary : Theme.surface-3;
+                                Text { text: idx + 1; font-size: Theme.font-xs; font-weight: 700; color: idx == 0 ? Theme.surface : Theme.text-2; horizontal-alignment: center; vertical-alignment: center; }
+                            }
+                            Text { horizontal-stretch: 1; text: cust.name; font-size: Theme.font-small; color: Theme.text; overflow: elide; vertical-alignment: center; }
+                            Text { text: cust.count + " HĐ"; font-size: Theme.font-small; font-weight: 700; color: Theme.primary; vertical-alignment: center; }
+                        }
+                    }
+                }
+            }
+            Card {
+                horizontal-stretch: 2;
+                VerticalLayout {
+                    padding: 14px;
+                    spacing: 6px;
+                    Text { text: "Hoạt động gần đây"; font-size: Theme.font-body; font-weight: 600; color: Theme.text; }
+                    Rectangle { height: 1px; background: Theme.border; }
+                    if DashboardHub.recent-activities.length == 0 : Text {
+                        text: "Chưa có hoạt động gần đây.";
+                        color: Theme.text-muted;
+                        font-size: Theme.font-small;
+                    }
+                    for act in DashboardHub.recent-activities : Rectangle {
+                        height: 32px;
+                        border-radius: Theme.radius-sm;
+                        background: taa.has-hover ? Theme.primary-tint : transparent;
+                        taa := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { DashboardHub.open-contract(act.contract-id); }
+                        }
+                        HorizontalLayout {
+                            padding-left: 6px;
+                            padding-right: 6px;
+                            spacing: 8px;
+                            Rectangle {
+                                width: 8px; height: 8px; border-radius: 4px;
+                                y: (parent.height - self.height) / 2;
+                                background: Theme.primary;
+                            }
+                            Text { width: 135px; text: act.title; font-size: Theme.font-small; font-weight: 600; color: Theme.primary; overflow: elide; vertical-alignment: center; }
+                            Text { horizontal-stretch: 1; text: act.subtitle; font-size: Theme.font-small; color: Theme.text-2; overflow: elide; vertical-alignment: center; }
+                            Text { text: act.when-text; color: Theme.text-muted; font-size: Theme.font-xs; vertical-alignment: center; }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

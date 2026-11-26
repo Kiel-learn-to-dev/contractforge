@@ -1,0 +1,120 @@
+import { ScrollView } from "std-widgets.slint";
+import { Theme } from "../theme.slint";
+import { AccentCard, Card, CfButton, StatusBadge } from "../components/common.slint";
+import { DossierContractRowData, DossierSlotRowData } from "../types.slint";
+import { CustomerHub } from "../globals.slint";
+
+// S06 — hồ sơ đấu nối của khách hàng.
+export component DossierScreen inherits VerticalLayout {
+    in property <string> customer-name;
+    in property <string> dest-dir;
+    in property <string> summary-text;
+    in property <bool> stale: false;
+    in property <[DossierSlotRowData]> slots;
+
+    callback back();
+    callback materialize();
+    callback open-folder();
+
+    spacing: 12px;
+
+    HorizontalLayout {
+        height: 36px;
+        spacing: Theme.gap;
+        CfButton { text: "‹ Quay lại khách hàng"; clicked => { root.back(); } }
+        Text { text: "Hồ sơ đấu nối — " + root.customer-name; font-size: Theme.font-title; font-weight: 700; color: Theme.text; vertical-alignment: center; overflow: elide; }
+        if CustomerHub.dossier-dir-exists : StatusBadge { y: (parent.height - self.height) / 2; label: "Đã tồn tại — sẽ tạo đè"; variant: "warning"; }
+        Rectangle { horizontal-stretch: 1; }
+        if CustomerHub.dossier-dir-exists : CfButton { text: "Mở thư mục hiện có"; clicked => { root.open-folder(); } }
+        CfButton { text: "Chỉ tạo, không mở"; variant: "outline-primary"; clicked => { CustomerHub.dossier-materialize-only(); } }
+        CfButton { text: "Tạo thư mục và mở"; variant: "primary"; clicked => { root.materialize(); } }
+    }
+
+    if root.stale : AccentCard {
+        accent: Theme.warning-fg;
+        background: Theme.warning-bg;
+        HorizontalLayout {
+            padding: 10px;
+            Text { text: "Cảnh báo: Có tài liệu gốc mới hơn lần tạo hồ sơ trước. Hãy bấm 'Tạo thư mục và mở' để gom lại (hardlink, không tốn thêm dung lượng)."; color: Theme.warning-fg; wrap: word-wrap; }
+        }
+    }
+
+    if CustomerHub.dossier-missing-text != "" : AccentCard {
+        accent: Theme.danger-fg;
+        background: Theme.danger-bg;
+        HorizontalLayout {
+            padding: 10px;
+            Text { text: "Thiếu tài liệu bắt buộc: " + CustomerHub.dossier-missing-text; color: Theme.danger-fg; font-weight: 600; wrap: word-wrap; }
+        }
+    }
+
+    Text { text: root.summary-text + " · Thư mục đích: " + root.dest-dir; color: Theme.text-muted; font-size: Theme.font-small; wrap: word-wrap; }
+
+    ScrollView {
+        vertical-stretch: 1;
+        VerticalLayout {
+            padding-right: 6px;
+            spacing: 12px;
+
+            // Hợp đồng đưa vào hồ sơ
+            Card {
+                VerticalLayout {
+                    padding: Theme.pad;
+                    spacing: 6px;
+                    Text { text: "HỢP ĐỒNG ĐƯA VÀO HỒ SƠ (" + CustomerHub.dossier-contracts.length + ")"; font-size: Theme.font-small; font-weight: 700; color: Theme.primary; }
+                    Rectangle { height: 1px; background: Theme.border; }
+                    if CustomerHub.dossier-contracts.length == 0 : Text { text: "Khách hàng chưa có hợp đồng đã ký / hiệu lực nào."; color: Theme.text-muted; font-size: Theme.font-small; }
+                    for ct in CustomerHub.dossier-contracts : HorizontalLayout {
+                        height: 30px;
+                        spacing: 8px;
+                        Text { width: 140px; text: ct.number; font-weight: 600; color: Theme.primary; vertical-alignment: center; }
+                        Text { horizontal-stretch: 1; text: ct.product; color: Theme.text; vertical-alignment: center; overflow: elide; }
+                        StatusBadge { y: (parent.height - self.height) / 2; label: ct.status-label; variant: ct.status-variant; }
+                        StatusBadge { y: (parent.height - self.height) / 2; label: ct.has-scan ? "✓ Có scan" : "⚠ Chưa có scan"; variant: ct.has-scan ? "success" : "warning"; }
+                    }
+                }
+            }
+
+            // Bảng các slot tài liệu
+            Card {
+                clip: true;
+                VerticalLayout {
+                    Rectangle {
+                        height: 34px;
+                        background: Theme.surface-2;
+                        Rectangle { x: 0px; y: parent.height - 1px; width: parent.width; height: 1px; background: Theme.border; }
+                        HorizontalLayout {
+                            padding-left: 10px; padding-right: 10px; spacing: 8px;
+                            Text { width: 42px; text: "STT"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
+                            Text { horizontal-stretch: 1; text: "TÀI LIỆU"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
+                            Text { width: 230px; text: "TÊN FILE ĐÍCH"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
+                            Text { width: 80px; text: "DUNG LƯỢNG"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; horizontal-alignment: right; vertical-alignment: center; }
+                            Text { width: 120px; text: "TRẠNG THÁI"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
+                        }
+                    }
+                    for slot in root.slots : Rectangle {
+                        height: 38px;
+                        background: (!slot.ok && slot.required) ? Theme.warning-bg : Theme.surface;
+                        Rectangle { x: 0px; y: parent.height - 1px; width: parent.width; height: 1px; background: Theme.border; }
+                        HorizontalLayout {
+                            padding-left: 10px; padding-right: 10px; spacing: 8px;
+                            Text { width: 42px; text: slot.order; color: Theme.text-muted; vertical-alignment: center; }
+                            Text { horizontal-stretch: 1; text: slot.label + (slot.required ? " *" : " · không bắt buộc"); color: Theme.text; vertical-alignment: center; overflow: elide; }
+                            Text { width: 230px; text: slot.ok ? slot.dest-name : slot.note; color: slot.ok ? Theme.text : Theme.text-muted; vertical-alignment: center; overflow: elide; }
+                            Text { width: 80px; text: slot.size-text; color: Theme.text-muted; horizontal-alignment: right; vertical-alignment: center; }
+                            HorizontalLayout {
+                                width: 120px;
+                                alignment: start;
+                                StatusBadge {
+                                    y: (parent.height - self.height) / 2;
+                                    label: slot.ok ? "Đủ" : (slot.required ? "Thiếu" : "Trống");
+                                    variant: slot.ok ? "success" : (slot.required ? "danger" : "secondary");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

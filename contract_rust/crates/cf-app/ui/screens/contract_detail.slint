@@ -1,0 +1,377 @@
+import { CheckBox, LineEdit, ScrollView } from "std-widgets.slint";
+import { Theme } from "../theme.slint";
+import { Card, CfButton, StatusBadge } from "../components/common.slint";
+import { ContractHub } from "../globals.slint";
+
+// S15 — chi tiết hợp đồng (bố cục 2 cột giống Python contracts/detail.html).
+export component ContractDetailScreen inherits ScrollView {
+    in property <string> title-text;
+    in property <string> info-text;
+    in property <string> status-text;
+    in property <string> status-variant;
+    in property <[string]> target-names;
+    in property <[string]> evidence-lines;
+    in property <string> generated-text;
+    in property <[string]> event-lines;
+
+    callback back();
+    callback target-chosen(int);
+    callback upload(int);
+    callback remove(int);
+    callback generate();
+    callback delete-contract();
+
+    VerticalLayout {
+        padding: Theme.pad;
+        spacing: 12px;
+
+        // Thanh điều hướng & Header card
+        HorizontalLayout {
+            height: 36px;
+            spacing: Theme.gap;
+            CfButton { text: "‹ Quay lại danh sách"; clicked => { root.back(); } }
+            Rectangle { horizontal-stretch: 1; }
+            if ContractHub.can-add-addendum : CfButton { text: "Tạo phụ lục"; variant: "outline-primary"; clicked => { ContractHub.open-addendum(); } }
+            if ContractHub.can-renew : CfButton { text: "Gia hạn"; variant: "outline-primary"; clicked => { ContractHub.open-renewal(); } }
+            CfButton { text: "Biểu mẫu 08A"; variant: "outline-primary"; clicked => { ContractHub.download-08a(); } }
+            CfButton { text: "Xóa hợp đồng"; variant: "danger"; clicked => { root.delete-contract(); } }
+        }
+
+        Card {
+            VerticalLayout {
+                padding: Theme.pad;
+                spacing: 8px;
+                HorizontalLayout {
+                    spacing: 10px;
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        spacing: 4px;
+                        HorizontalLayout {
+                            spacing: 6px;
+                            StatusBadge { label: root.status-text; variant: root.status-variant; }
+                            if ContractHub.detail-is-expiring : StatusBadge { label: "Sắp hết hạn"; variant: "warning"; }
+                            if ContractHub.detail-has-scan : StatusBadge { label: "Đã có scan"; variant: "success"; }
+                        }
+                        Text { text: root.title-text; font-size: Theme.font-title; font-weight: 700; color: Theme.text; }
+                        if ContractHub.detail-customer-name != "" : Text { text: ContractHub.detail-customer-name; color: Theme.text-muted; font-size: Theme.font-body; }
+                    }
+                    HorizontalLayout {
+                        spacing: Theme.gap;
+                        alignment: end;
+                        CfButton { text: "Sinh file .docx"; variant: "primary"; clicked => { ContractHub.confirm-generate(); } }
+                        if ContractHub.has-docx : CfButton { text: "Tải / Mở .docx"; variant: "outline-primary"; clicked => { ContractHub.open-docx(); } }
+                    }
+                }
+            }
+        }
+
+        // Bố cục 2 cột (~66% trái / ~34% phải)
+        HorizontalLayout {
+            spacing: 14px;
+            alignment: stretch;
+
+            // CỘT TRÁI
+            VerticalLayout {
+                horizontal-stretch: 2;
+                spacing: 12px;
+
+                // Thông tin cơ bản (Bên A + Thời hạn)
+                Card {
+                    VerticalLayout {
+                        padding: Theme.pad;
+                        spacing: 10px;
+                        Text { text: "THÔNG TIN CƠ BẢN"; font-size: Theme.font-small; font-weight: 700; color: Theme.primary; }
+                        Rectangle { height: 1px; background: Theme.border; }
+                        HorizontalLayout {
+                            spacing: 16px;
+                            VerticalLayout {
+                                horizontal-stretch: 1; spacing: 4px;
+                                Text { text: "BÊN A — KHÁCH HÀNG"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
+                                Text { text: ContractHub.detail-customer-name; font-weight: 600; color: Theme.text; wrap: word-wrap; }
+                                if ContractHub.detail-customer-addr != "" : Text { text: "Địa chỉ: " + ContractHub.detail-customer-addr; color: Theme.text-2; font-size: Theme.font-small; wrap: word-wrap; }
+                                if ContractHub.detail-customer-rep != "" : Text { text: "Đại diện: " + ContractHub.detail-customer-rep; color: Theme.text-2; font-size: Theme.font-small; }
+                                if ContractHub.detail-customer-id > 0 : HorizontalLayout {
+                                    padding-top: 4px;
+                                    alignment: start;
+                                    CfButton { text: "Xem hồ sơ khách hàng"; variant: "outline-primary"; clicked => { ContractHub.open-customer(ContractHub.detail-customer-id); } }
+                                }
+                            }
+                            VerticalLayout {
+                                horizontal-stretch: 1; spacing: 4px;
+                                Text { text: "THỜI HẠN"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
+                                Text { text: "Ngày ký: " + ContractHub.detail-sign-date; color: Theme.text; font-size: Theme.font-small; }
+                                Text { text: "Bắt đầu: " + ContractHub.detail-start-date; color: Theme.text; font-size: Theme.font-small; }
+                                Text { text: "Kết thúc: " + ContractHub.detail-end-date; color: Theme.text; font-size: Theme.font-small; }
+                                Text { text: "Số tháng: " + ContractHub.detail-months; color: Theme.text; font-size: Theme.font-small; }
+                            }
+                        }
+                    }
+                }
+
+                // Giá trị hợp đồng
+                Card {
+                    VerticalLayout {
+                        padding: Theme.pad;
+                        spacing: 8px;
+                        Text { text: "GIÁ TRỊ HỢP ĐỒNG"; font-size: Theme.font-small; font-weight: 700; color: Theme.success-fg; }
+                        Rectangle { height: 1px; background: Theme.border; }
+                        HorizontalLayout {
+                            spacing: 12px;
+                            Text { horizontal-stretch: 1; text: "Sản phẩm: " + ContractHub.detail-product-name; font-weight: 600; color: Theme.text; }
+                            Text { text: "Nhóm: " + ContractHub.detail-product-group; color: Theme.text-muted; font-size: Theme.font-small; }
+                        }
+
+                        if ContractHub.detail-pricing-model == "items" && ContractHub.detail-items.length > 0 : VerticalLayout {
+                            spacing: 3px;
+                            Rectangle {
+                                height: 28px;
+                                background: Theme.surface-2;
+                                border-radius: Theme.radius-sm;
+                                HorizontalLayout {
+                                    padding-left: 6px; padding-right: 6px; spacing: 4px;
+                                    Text { width: 26px; text: "TT"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
+                                    Text { horizontal-stretch: 1; text: "DỊCH VỤ"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
+                                    Text { width: 45px; text: "SL"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; horizontal-alignment: right; vertical-alignment: center; }
+                                    Text { width: 45px; text: "KỲ"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; horizontal-alignment: right; vertical-alignment: center; }
+                                    Text { width: 85px; text: "ĐƠN GIÁ"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; horizontal-alignment: right; vertical-alignment: center; }
+                                    Text { width: 42px; text: "VAT"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; horizontal-alignment: right; vertical-alignment: center; }
+                                    Text { width: 100px; text: "SAU THUẾ"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; horizontal-alignment: right; vertical-alignment: center; }
+                                }
+                            }
+                            for it in ContractHub.detail-items : Rectangle {
+                                height: 30px;
+                                border-color: Theme.border;
+                                border-width: 1px;
+                                HorizontalLayout {
+                                    padding-left: 6px; padding-right: 6px; spacing: 4px;
+                                    Text { width: 26px; text: it.idx; font-size: Theme.font-small; color: Theme.text-muted; vertical-alignment: center; }
+                                    Text { horizontal-stretch: 1; text: it.description; font-size: Theme.font-small; color: Theme.text; vertical-alignment: center; overflow: elide; }
+                                    Text { width: 45px; text: it.quantity; font-size: Theme.font-small; color: Theme.text; horizontal-alignment: right; vertical-alignment: center; }
+                                    Text { width: 45px; text: it.periods; font-size: Theme.font-small; color: Theme.text; horizontal-alignment: right; vertical-alignment: center; }
+                                    Text { width: 85px; text: it.unit-price; font-size: Theme.font-small; color: Theme.text; horizontal-alignment: right; vertical-alignment: center; }
+                                    Text { width: 42px; text: it.vat-rate; font-size: Theme.font-small; color: Theme.text-muted; horizontal-alignment: right; vertical-alignment: center; }
+                                    Text { width: 100px; text: it.total; font-size: Theme.font-small; font-weight: 600; color: Theme.text; horizontal-alignment: right; vertical-alignment: center; }
+                                }
+                            }
+                            HorizontalLayout {
+                                alignment: end; spacing: 12px;
+                                Text { text: "Trước thuế: " + ContractHub.detail-pre-vat; font-size: Theme.font-small; color: Theme.text-2; }
+                                Text { text: "Thuế: " + ContractHub.detail-vat; font-size: Theme.font-small; color: Theme.text-2; }
+                            }
+                        }
+
+                        if ContractHub.detail-pricing-model != "items" : VerticalLayout {
+                            spacing: 4px;
+                            Text { text: "Số đơn vị: " + ContractHub.detail-unit-count + " · Đơn giá chưa VAT: " + ContractHub.detail-unit-price-pre + " · VAT: " + ContractHub.detail-vat-rate + " · Có VAT: " + ContractHub.detail-unit-price-vat; font-size: Theme.font-small; color: Theme.text-2; wrap: word-wrap; }
+                        }
+
+                        if ContractHub.detail-payment-text != "" : Text {
+                            text: ContractHub.detail-payment-text;
+                            color: Theme.text-muted;
+                            font-size: Theme.font-small;
+                        }
+
+                        if ContractHub.detail-selected-units.length > 0 : VerticalLayout {
+                            spacing: 4px;
+                            Text { text: "Cơ sở áp dụng (" + ContractHub.detail-selected-units.length + "):"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
+                            for uname in ContractHub.detail-selected-units : Text { text: "• " + uname; font-size: Theme.font-small; color: Theme.text-2; }
+                        }
+
+                        Rectangle {
+                            background: Theme.success-bg;
+                            border-radius: Theme.radius-sm;
+                            VerticalLayout {
+                                padding: 10px;
+                                spacing: 2px;
+                                HorizontalLayout {
+                                    Text { text: "Tổng giá trị"; font-weight: 700; color: Theme.text; vertical-alignment: center; }
+                                    Rectangle { horizontal-stretch: 1; }
+                                    Text { text: ContractHub.detail-total; font-size: Theme.font-title; font-weight: 700; color: Theme.success-fg; }
+                                }
+                                if ContractHub.detail-amount-words != "" : Text { text: ContractHub.detail-amount-words; font-size: Theme.font-small; color: Theme.text-muted; wrap: word-wrap; }
+                            }
+                        }
+                    }
+                }
+
+                // Chuyển trạng thái
+                Card {
+                    VerticalLayout {
+                        padding: Theme.pad;
+                        spacing: Theme.gap;
+                        Text { text: "CHUYỂN TRẠNG THÁI"; font-size: Theme.font-small; font-weight: 700; color: Theme.primary; }
+                        Rectangle { height: 1px; background: Theme.border; }
+                        if root.target-names.length == 0 : Text { text: "Không còn bước chuyển trạng thái nào."; color: Theme.text-muted; }
+                        if root.target-names.length > 0 : HorizontalLayout {
+                            spacing: Theme.gap;
+                            for target[index] in root.target-names : CfButton {
+                                text: "→ " + target;
+                                variant: "outline-primary";
+                                clicked => { root.target-chosen(index); }
+                            }
+                        }
+                    }
+                }
+
+                // Phụ lục & Liên kết
+                Card {
+                    VerticalLayout {
+                        padding: Theme.pad;
+                        spacing: 8px;
+                        HorizontalLayout {
+                            spacing: Theme.gap;
+                            Text { text: "PHỤ LỤC & LIÊN KẾT"; font-size: Theme.font-small; font-weight: 700; color: Theme.info-fg; vertical-alignment: center; }
+                            Rectangle { horizontal-stretch: 1; }
+                            if ContractHub.can-add-addendum : CfButton { text: "+ Phụ lục bổ sung"; variant: "outline-primary"; clicked => { ContractHub.open-addendum(); } }
+                            if ContractHub.can-renew : CfButton { text: "Gia hạn"; variant: "outline-primary"; clicked => { ContractHub.open-renewal(); } }
+                        }
+                        Rectangle { height: 1px; background: Theme.border; }
+                        if ContractHub.related-links.length == 0 : Text { text: "Chưa có phụ lục hoặc hợp đồng liên kết."; color: Theme.text-muted; font-size: Theme.font-small; }
+                        if ContractHub.related-links.length > 0 : HorizontalLayout {
+                            spacing: Theme.gap;
+                            for item in ContractHub.related-links : CfButton {
+                                text: item.label;
+                                variant: "outline-secondary";
+                                clicked => { ContractHub.open-related(item.id); }
+                            }
+                        }
+                    }
+                }
+
+                // Văn bản kèm theo
+                Card {
+                    VerticalLayout {
+                        padding: Theme.pad;
+                        spacing: Theme.gap;
+                        Text { text: "VĂN BẢN KÈM THEO"; font-size: Theme.font-small; font-weight: 700; color: Theme.text; }
+                        Rectangle { height: 1px; background: Theme.border; }
+                        if ContractHub.regen-attachments.length > 0 : VerticalLayout {
+                            spacing: 4px;
+                            Text { text: "Kèm theo khi sinh lại (tạo gói ZIP):"; color: Theme.text-muted; font-size: Theme.font-small; }
+                            for item[idx] in ContractHub.regen-attachments : CheckBox {
+                                text: item.label;
+                                checked: item.checked;
+                                toggled => { ContractHub.toggle-regen-attachment(idx); }
+                            }
+                        }
+                        if ContractHub.single-attachments.length == 0 : Text { text: "Chưa có mẫu văn bản kèm theo (nghiệm thu, bàn giao, thanh lý...) đang bật."; color: Theme.text-muted; font-size: Theme.font-small; }
+                        if ContractHub.single-attachments.length > 0 : VerticalLayout {
+                            spacing: 4px;
+                            Text { text: "Sinh lẻ từng văn bản (không đổi trạng thái hợp đồng):"; color: Theme.text-muted; font-size: Theme.font-small; }
+                            for att in ContractHub.single-attachments : HorizontalLayout {
+                                spacing: Theme.gap;
+                                Text { horizontal-stretch: 1; text: att.label; color: Theme.text; vertical-alignment: center; }
+                                CfButton { text: "Sinh văn bản"; variant: "outline-secondary"; clicked => { ContractHub.download-single-attachment(att.id); } }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // CỘT PHẢI: File .docx, Chứng từ (Scan/HĐ/UNC), Nhật ký
+            VerticalLayout {
+                horizontal-stretch: 1;
+                spacing: 12px;
+                alignment: start;
+
+                // File .docx + ZIP
+                Card {
+                    VerticalLayout {
+                        padding: Theme.pad;
+                        spacing: 8px;
+                        Text { text: "FILE HỢP ĐỒNG (.DOCX)"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
+                        Text { text: root.generated-text; color: Theme.text; font-weight: 600; wrap: word-wrap; }
+                        HorizontalLayout {
+                            spacing: 6px;
+                            if ContractHub.has-docx : CfButton { text: "Mở file"; variant: "outline-primary"; clicked => { ContractHub.open-docx(); } }
+                            if ContractHub.has-docx : CfButton { text: "Thư mục"; clicked => { ContractHub.open-folder(); } }
+                            if ContractHub.has-bundle : CfButton { text: "Mở ZIP"; variant: "outline-primary"; clicked => { ContractHub.open-bundle(); } }
+                        }
+                        if ContractHub.detail-template-id > 0 : CfButton {
+                            text: "Mẫu: " + ContractHub.detail-template-name;
+                            clicked => { ContractHub.open-template(ContractHub.detail-template-id); }
+                        }
+                    }
+                }
+
+                // Scan hợp đồng đã ký (PDF)
+                Card {
+                    VerticalLayout {
+                        padding: Theme.pad;
+                        spacing: 8px;
+                        Text { text: "SCAN HỢP ĐỒNG ĐÃ KÝ (PDF)"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
+                        if ContractHub.detail-scan.has-file : VerticalLayout {
+                            spacing: 2px;
+                            Text { text: ContractHub.detail-scan.file-name; font-weight: 600; color: Theme.text; wrap: word-wrap; }
+                            if ContractHub.detail-scan.uploaded-at != "" : Text { text: "Upload: " + ContractHub.detail-scan.uploaded-at; font-size: Theme.font-xs; color: Theme.text-muted; }
+                        }
+                        if !ContractHub.detail-scan.has-file : Text { text: "Chưa có file scan (chỉ PDF, tối đa 5 MB)"; font-size: Theme.font-small; color: Theme.text-muted; }
+                        HorizontalLayout {
+                            spacing: 6px;
+                            if ContractHub.detail-scan.has-file : CfButton { text: "Xem PDF"; variant: "outline-primary"; clicked => { ContractHub.view-evidence(0); } }
+                            CfButton { text: ContractHub.detail-scan.has-file ? "Thay file" : "Tải scan PDF"; variant: "outline-primary"; clicked => { root.upload(0); } }
+                            if ContractHub.detail-scan.has-file : CfButton { text: "Xóa"; variant: "danger"; clicked => { root.remove(0); } }
+                        }
+                    }
+                }
+
+                // Hóa đơn (PDF + ngày xuất)
+                Card {
+                    VerticalLayout {
+                        padding: Theme.pad;
+                        spacing: 8px;
+                        Text { text: "HÓA ĐƠN (PDF)"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
+                        if ContractHub.detail-invoice.has-file : VerticalLayout {
+                            spacing: 2px;
+                            Text { text: ContractHub.detail-invoice.file-name; font-weight: 600; color: Theme.text; wrap: word-wrap; }
+                            if ContractHub.detail-invoice.date-label != "" : Text { text: "Ngày xuất: " + ContractHub.detail-invoice.date-label; font-size: Theme.font-xs; color: Theme.text-2; }
+                            if ContractHub.detail-invoice.uploaded-at != "" : Text { text: "Upload: " + ContractHub.detail-invoice.uploaded-at; font-size: Theme.font-xs; color: Theme.text-muted; }
+                        }
+                        if !ContractHub.detail-invoice.has-file : Text { text: "Chưa có hóa đơn (chỉ PDF, tối đa 5 MB)"; font-size: Theme.font-small; color: Theme.text-muted; }
+                        LineEdit { height: 30px; placeholder-text: "Ngày xuất HĐ (dd/mm/yyyy)"; text <=> ContractHub.detail-invoice-date-input; }
+                        HorizontalLayout {
+                            spacing: 6px;
+                            if ContractHub.detail-invoice.has-file : CfButton { text: "Xem PDF"; variant: "outline-primary"; clicked => { ContractHub.view-evidence(1); } }
+                            CfButton { text: ContractHub.detail-invoice.has-file ? "Thay hóa đơn" : "Upload hóa đơn"; variant: "outline-primary"; clicked => { ContractHub.upload-evidence-dated(1, ContractHub.detail-invoice-date-input); } }
+                            if ContractHub.detail-invoice.has-file : CfButton { text: "Xóa"; variant: "danger"; clicked => { root.remove(1); } }
+                        }
+                    }
+                }
+
+                // Ủy nhiệm chi (+ ngày thanh toán)
+                Card {
+                    VerticalLayout {
+                        padding: Theme.pad;
+                        spacing: 8px;
+                        Text { text: "ỦY NHIỆM CHI"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
+                        if ContractHub.detail-payment-slip.has-file : VerticalLayout {
+                            spacing: 2px;
+                            Text { text: ContractHub.detail-payment-slip.file-name; font-weight: 600; color: Theme.text; wrap: word-wrap; }
+                            if ContractHub.detail-payment-slip.date-label != "" : Text { text: "Ngày TT: " + ContractHub.detail-payment-slip.date-label; font-size: Theme.font-xs; color: Theme.text-2; }
+                            if ContractHub.detail-payment-slip.uploaded-at != "" : Text { text: "Upload: " + ContractHub.detail-payment-slip.uploaded-at; font-size: Theme.font-xs; color: Theme.text-muted; }
+                        }
+                        if !ContractHub.detail-payment-slip.has-file : Text { text: "Chưa có ủy nhiệm chi (.pdf, .jpg, .png)"; font-size: Theme.font-small; color: Theme.text-muted; }
+                        LineEdit { height: 30px; placeholder-text: "Ngày thanh toán (dd/mm/yyyy)"; text <=> ContractHub.detail-payment-date-input; }
+                        HorizontalLayout {
+                            spacing: 6px;
+                            if ContractHub.detail-payment-slip.has-file : CfButton { text: "Xem file"; variant: "outline-primary"; clicked => { ContractHub.view-evidence(2); } }
+                            CfButton { text: ContractHub.detail-payment-slip.has-file ? "Thay UNC" : "Upload UNC"; variant: "outline-primary"; clicked => { ContractHub.upload-evidence-dated(2, ContractHub.detail-payment-date-input); } }
+                            if ContractHub.detail-payment-slip.has-file : CfButton { text: "Xóa"; variant: "danger"; clicked => { root.remove(2); } }
+                        }
+                    }
+                }
+
+                // Nhật ký
+                Card {
+                    VerticalLayout {
+                        padding: Theme.pad;
+                        spacing: 4px;
+                        Text { text: "NHẬT KÝ (MỚI NHẤT TRÊN CÙNG)"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
+                        if root.event-lines.length == 0 : Text { text: "Chưa có sự kiện."; color: Theme.text-muted; font-size: Theme.font-small; }
+                        for line in root.event-lines : Text { text: line; color: Theme.text-2; font-size: Theme.font-xs; wrap: word-wrap; }
+                    }
+                }
+            }
+        }
+    }
+}

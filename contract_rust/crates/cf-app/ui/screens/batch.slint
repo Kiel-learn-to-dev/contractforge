@@ -1,0 +1,341 @@
+import { CheckBox, ComboBox, LineEdit, ProgressIndicator, ScrollView } from "std-widgets.slint";
+import { Theme } from "../theme.slint";
+import { Card, CfButton, StatusBadge } from "../components/common.slint";
+import { BatchHub } from "../globals.slint";
+
+// S18 — Sinh hợp đồng hàng loạt (Form 2 cột + Xem trước chỉnh sửa được, Chạy nền + Kết quả, Nhập Excel).
+export component BatchScreen inherits VerticalLayout {
+    spacing: 12px;
+
+    if BatchHub.mode == "form" : ScrollView {
+        vertical-stretch: 1;
+        VerticalLayout {
+            padding-right: 6px;
+            spacing: 12px;
+
+            HorizontalLayout {
+                height: 36px;
+                spacing: Theme.gap;
+                Text { text: "Chọn sản phẩm, mẫu, danh sách khách hàng → xem trước và sinh hàng loạt"; font-size: Theme.font-body; color: Theme.text-muted; vertical-alignment: center; }
+                Rectangle { horizontal-stretch: 1; }
+                CfButton { text: "Import từ Excel (.xlsx/.xls)"; variant: "outline-primary"; clicked => { BatchHub.open-import(); } }
+            }
+
+            // Bố cục 2 cột (trái: tham số chung + gói bổ sung + Bên B; phải: tìm & chọn khách hàng)
+            HorizontalLayout {
+                spacing: 14px;
+                alignment: stretch;
+
+                // Trái
+                VerticalLayout {
+                    horizontal-stretch: 7;
+                    spacing: 12px;
+
+                    Card {
+                        VerticalLayout {
+                            padding: Theme.pad;
+                            spacing: 10px;
+                            Text { text: "1. THAM SỐ CHUNG"; font-size: Theme.font-small; font-weight: 700; color: Theme.primary; }
+                            Rectangle { height: 1px; background: Theme.border; }
+                            HorizontalLayout {
+                                spacing: 12px;
+                                VerticalLayout {
+                                    horizontal-stretch: 1; spacing: 4px;
+                                    Text { text: "SẢN PHẨM (GÓI CHÍNH) *"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
+                                    ComboBox {
+                                        height: 32px;
+                                        model: BatchHub.product-names;
+                                        current-index: BatchHub.product-index;
+                                        selected(v) => { BatchHub.product-changed(self.current-index); }
+                                    }
+                                }
+                                VerticalLayout {
+                                    horizontal-stretch: 1; spacing: 4px;
+                                    Text { text: "MẪU HỢP ĐỒNG *"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
+                                    ComboBox {
+                                        height: 32px;
+                                        model: BatchHub.template-names;
+                                        current-index: BatchHub.template-index;
+                                        selected(v) => { BatchHub.template-changed(self.current-index); }
+                                    }
+                                }
+                            }
+                            HorizontalLayout {
+                                spacing: 12px;
+                                VerticalLayout {
+                                    horizontal-stretch: 1; spacing: 4px;
+                                    Text { text: "NGÀY KÝ *"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
+                                    LineEdit { height: 32px; text <=> BatchHub.sign-date; placeholder-text: "dd/mm/yyyy"; }
+                                }
+                                VerticalLayout {
+                                    horizontal-stretch: 1; spacing: 4px;
+                                    Text { text: "NGÀY HIỆU LỰC *"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
+                                    LineEdit { height: 32px; text <=> BatchHub.start-date; placeholder-text: "dd/mm/yyyy"; }
+                                }
+                                VerticalLayout {
+                                    width: 100px; spacing: 4px;
+                                    Text { text: "SỐ THÁNG *"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
+                                    LineEdit { height: 32px; text <=> BatchHub.months; }
+                                }
+                            }
+                            if BatchHub.group-addons.length > 0 : VerticalLayout {
+                                spacing: 4px;
+                                Text { text: "GÓI BỔ SUNG CÙNG NHÓM (ÁP CHUNG CHO CẢ LÔ)"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
+                                for ad[idx] in BatchHub.group-addons : CheckBox {
+                                    text: ad.label;
+                                    checked: ad.checked;
+                                    toggled => { BatchHub.toggle-addon(idx); }
+                                }
+                            }
+                            Text {
+                                text: "Tiền từng khách hàng tự tính theo số cơ sở hoặc số hồ sơ đang hoạt động của khách.";
+                                font-size: Theme.font-xs;
+                                color: Theme.text-muted;
+                            }
+                            Rectangle { height: 1px; background: Theme.border; }
+                            Text { text: "BÊN B (VIETTEL) — MẶC ĐỊNH TỪ CÀI ĐẶT"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
+                            HorizontalLayout {
+                                spacing: 8px;
+                                VerticalLayout {
+                                    horizontal-stretch: 1; spacing: 3px;
+                                    Text { text: "Đại diện"; font-size: Theme.font-xs; color: Theme.text-muted; }
+                                    LineEdit { height: 30px; text <=> BatchHub.party-b-rep; }
+                                }
+                                VerticalLayout {
+                                    width: 120px; spacing: 3px;
+                                    Text { text: "Số UQ"; font-size: Theme.font-xs; color: Theme.text-muted; }
+                                    LineEdit { height: 30px; text <=> BatchHub.party-b-auth-num; }
+                                }
+                                VerticalLayout {
+                                    width: 120px; spacing: 3px;
+                                    Text { text: "Ngày UQ"; font-size: Theme.font-xs; color: Theme.text-muted; }
+                                    LineEdit { height: 30px; text <=> BatchHub.party-b-auth-date; }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Phải: chọn khách hàng
+                VerticalLayout {
+                    horizontal-stretch: 5;
+                    spacing: 12px;
+
+                    Card {
+                        VerticalLayout {
+                            padding: Theme.pad;
+                            spacing: 8px;
+                            HorizontalLayout {
+                                spacing: 6px;
+                                Text { text: "2. CHỌN KHÁCH HÀNG"; font-size: Theme.font-small; font-weight: 700; color: Theme.primary; vertical-alignment: center; }
+                                Rectangle { horizontal-stretch: 1; }
+                                CfButton { text: "Chọn hết"; clicked => { BatchHub.select-all-customers(true); } }
+                                CfButton { text: "Bỏ hết"; clicked => { BatchHub.select-all-customers(false); } }
+                            }
+                            LineEdit {
+                                height: 30px;
+                                placeholder-text: "Tìm nhanh khách hàng (tên hoặc mã)...";
+                                text <=> BatchHub.customer-search;
+                                edited(q) => { BatchHub.customer-search-changed(q); }
+                            }
+                            Rectangle { height: 1px; background: Theme.border; }
+                            if BatchHub.customers.length == 0 : Text { text: "Không có khách hàng khớp tìm kiếm."; color: Theme.text-muted; font-size: Theme.font-small; }
+                            for cust[idx] in BatchHub.customers : CheckBox {
+                                text: cust.label;
+                                checked: cust.checked;
+                                toggled => { BatchHub.toggle-customer(idx); }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Bước 3: Xem trước bảng (số HĐ chỉnh sửa được + số cơ sở + ước tính tiền)
+            if BatchHub.preview-rows.length > 0 : Card {
+                VerticalLayout {
+                    padding: Theme.pad;
+                    spacing: 6px;
+                    Text { text: "3. XEM TRƯỚC (" + BatchHub.preview-rows.length + " HỢP ĐỒNG) — CÓ THỂ SỬA SỐ HĐ"; font-size: Theme.font-small; font-weight: 700; color: Theme.primary; }
+                    Rectangle { height: 1px; background: Theme.border; }
+                    Rectangle {
+                        height: 28px;
+                        background: Theme.surface-2;
+                        border-radius: Theme.radius-sm;
+                        HorizontalLayout {
+                            padding-left: 8px; padding-right: 8px; spacing: 8px;
+                            Text { horizontal-stretch: 1; text: "KHÁCH HÀNG"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
+                            Text { width: 210px; text: "SỐ HỢP ĐỒNG (CHỈNH SỬA)"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
+                            Text { width: 65px; text: "CƠ SỞ"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; horizontal-alignment: right; vertical-alignment: center; }
+                            Text { width: 120px; text: "ƯỚC TÍNH"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; horizontal-alignment: right; vertical-alignment: center; }
+                        }
+                    }
+                    for row[idx] in BatchHub.preview-rows : HorizontalLayout {
+                        height: 36px;
+                        padding-left: 8px; padding-right: 8px; spacing: 8px;
+                        Text { horizontal-stretch: 1; text: row.customer-name; color: Theme.text; vertical-alignment: center; overflow: elide; }
+                        LineEdit {
+                            width: 210px;
+                            height: 30px;
+                            text: row.contract-number;
+                            edited(val) => { BatchHub.preview-number-edited(idx, val); }
+                        }
+                        Text { width: 65px; text: row.units; color: Theme.text-muted; horizontal-alignment: right; vertical-alignment: center; }
+                        Text { width: 120px; text: row.amount-text; color: Theme.primary; font-weight: 600; horizontal-alignment: right; vertical-alignment: center; }
+                    }
+                }
+            }
+
+            HorizontalLayout {
+                alignment: end;
+                spacing: Theme.gap;
+                CfButton { text: "Xem trước số HĐ & Giá"; variant: "outline-primary"; clicked => { BatchHub.refresh-preview(BatchHub.sign-date, BatchHub.start-date, BatchHub.months); } }
+                CfButton {
+                    text: "Chạy sinh hàng loạt";
+                    variant: "primary";
+                    clicked => { BatchHub.run-batch(BatchHub.sign-date, BatchHub.start-date, BatchHub.months); }
+                }
+            }
+        }
+    }
+
+    if BatchHub.mode == "result" : VerticalLayout {
+        spacing: 12px;
+        HorizontalLayout {
+            height: 36px;
+            spacing: 8px;
+            CfButton { text: "‹ Quay lại"; enabled: !BatchHub.running; clicked => { BatchHub.back-to-form(); } }
+            Text { text: "Kết quả chạy lô"; font-size: Theme.font-title; font-weight: 700; color: Theme.text; vertical-alignment: center; }
+            Rectangle { horizontal-stretch: 1; }
+            if BatchHub.running : CfButton { text: "Hủy lô"; variant: "danger"; clicked => { BatchHub.cancel-batch(); } }
+            if !BatchHub.running && BatchHub.has-zip : CfButton { text: "Lưu file ZIP"; variant: "primary"; clicked => { BatchHub.save-zip(); } }
+            if !BatchHub.running : CfButton { text: "Mở thư mục batch"; variant: "outline-primary"; clicked => { BatchHub.open-batch-folder(); } }
+        }
+
+        if BatchHub.running : Card {
+            VerticalLayout {
+                padding: Theme.pad;
+                spacing: 6px;
+                Text { text: BatchHub.progress-label + " (" + BatchHub.progress-done + "/" + BatchHub.progress-total + ")"; color: Theme.text; }
+                ProgressIndicator { progress: BatchHub.progress-total > 0 ? (BatchHub.progress-done / BatchHub.progress-total) : 0; }
+            }
+        }
+
+        if BatchHub.result-summary != "" : Text { text: BatchHub.result-summary; font-weight: 700; color: Theme.text; }
+
+        Card {
+            vertical-stretch: 1;
+            clip: true;
+            ScrollView {
+                VerticalLayout {
+                    for row in BatchHub.outcome-rows : Rectangle {
+                        height: 40px;
+                        background: Theme.surface;
+                        Rectangle { x: 0px; y: parent.height - 1px; width: parent.width; height: 1px; background: Theme.border; }
+                        HorizontalLayout {
+                            padding-left: 12px; padding-right: 12px; spacing: 10px;
+                            Text { width: 180px; text: row.contract-number; font-weight: 600; color: Theme.primary; vertical-alignment: center; }
+                            HorizontalLayout { width: 110px; StatusBadge { y: (parent.height - self.height) / 2; label: row.status; variant: row.ok ? "success" : "danger"; } }
+                            Text { horizontal-stretch: 1; text: row.message; color: Theme.text; vertical-alignment: center; overflow: elide; }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if BatchHub.mode == "import" : ScrollView {
+        vertical-stretch: 1;
+        VerticalLayout {
+            padding-right: 6px;
+            spacing: 12px;
+
+            HorizontalLayout {
+                height: 36px;
+                spacing: 8px;
+                CfButton { text: "‹ Quay lại"; clicked => { BatchHub.back-to-form(); } }
+                Text { text: "Sinh hàng loạt từ Excel"; font-size: Theme.font-title; font-weight: 700; color: Theme.text; vertical-alignment: center; }
+                Rectangle { horizontal-stretch: 1; }
+                CfButton { text: "Tải file Excel mẫu"; variant: "outline-primary"; clicked => { BatchHub.download-excel-template(); } }
+            }
+
+            Card {
+                VerticalLayout {
+                    padding: Theme.pad;
+                    spacing: 10px;
+                    Text { text: "1. UPLOAD FILE EXCEL & CHỌN MẪU"; font-size: Theme.font-small; font-weight: 700; color: Theme.primary; }
+                    Rectangle { height: 1px; background: Theme.border; }
+                    HorizontalLayout {
+                        spacing: 12px;
+                        VerticalLayout {
+                            horizontal-stretch: 1; spacing: 4px;
+                            Text { text: "MẪU HỢP ĐỒNG *"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
+                            ComboBox {
+                                height: 32px;
+                                model: BatchHub.template-names;
+                                current-index: BatchHub.template-index;
+                                selected(v) => { BatchHub.template-changed(self.current-index); }
+                            }
+                        }
+                        VerticalLayout {
+                            horizontal-stretch: 1; spacing: 4px;
+                            Text { text: "PREFIX SỐ HĐ (NẾU CỘT SỐ HĐ TRỐNG)"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
+                            LineEdit { height: 32px; placeholder-text: "VD: HD-DV"; text <=> BatchHub.import-prefix; }
+                        }
+                    }
+                    HorizontalLayout {
+                        spacing: 8px;
+                        CfButton { text: "Chọn file Excel (.xlsx/.xls)"; variant: "outline-primary"; clicked => { BatchHub.pick-excel(); } }
+                        if BatchHub.import-filename != "" : Text { text: BatchHub.import-filename; font-weight: 600; color: Theme.text; vertical-alignment: center; }
+                        Rectangle { horizontal-stretch: 1; }
+                        CfButton {
+                            text: "Chạy lô từ Excel (" + BatchHub.import-ready-count + " dòng)";
+                            variant: "primary";
+                            enabled: BatchHub.import-ready-count > 0;
+                            clicked => { BatchHub.run-excel-batch(); }
+                        }
+                    }
+                    if BatchHub.import-summary != "" : Text { text: BatchHub.import-summary; font-weight: 600; color: Theme.text; }
+                }
+            }
+
+            if BatchHub.import-errors.length > 0 : Card {
+                border-color: Theme.warning-fg;
+                background: Theme.warning-bg;
+                VerticalLayout {
+                    padding: Theme.pad;
+                    spacing: 4px;
+                    Text { text: "Cảnh báo phân tích (" + BatchHub.import-errors.length + "):"; font-weight: 700; color: Theme.warning-fg; }
+                    for err in BatchHub.import-errors : Text { text: "• " + err; color: Theme.warning-fg; font-size: Theme.font-small; wrap: word-wrap; }
+                }
+            }
+
+            if BatchHub.import-preview-rows.length > 0 : Card {
+                VerticalLayout {
+                    padding: Theme.pad;
+                    spacing: 6px;
+                    Text { text: "KẾT QUẢ PHÂN TÍCH (" + BatchHub.import-preview-rows.length + " DÒNG HỢP LỆ)"; font-size: Theme.font-small; font-weight: 700; color: Theme.success-fg; }
+                    Rectangle {
+                        height: 28px;
+                        background: Theme.surface-2;
+                        border-radius: Theme.radius-sm;
+                        HorizontalLayout {
+                            padding-left: 8px; padding-right: 8px; spacing: 8px;
+                            Text { width: 110px; text: "MÃ KH"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
+                            Text { horizontal-stretch: 1; text: "SỐ HỢP ĐỒNG"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
+                            Text { width: 110px; text: "NGÀY KÝ"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
+                            Text { width: 140px; text: "TỔNG GIÁ TRỊ"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; horizontal-alignment: right; vertical-alignment: center; }
+                        }
+                    }
+                    for row in BatchHub.import-preview-rows : HorizontalLayout {
+                        height: 28px;
+                        padding-left: 8px; padding-right: 8px; spacing: 8px;
+                        Text { width: 110px; text: row.customer-code; color: Theme.text; font-size: Theme.font-small; vertical-alignment: center; }
+                        Text { horizontal-stretch: 1; text: row.contract-number; color: Theme.primary; font-weight: 600; font-size: Theme.font-small; vertical-alignment: center; }
+                        Text { width: 110px; text: row.sign-date; color: Theme.text-muted; font-size: Theme.font-small; vertical-alignment: center; }
+                        Text { width: 140px; text: row.total-amount; color: Theme.text; font-size: Theme.font-small; horizontal-alignment: right; vertical-alignment: center; }
+                    }
+                }
+            }
+        }
+    }
+}

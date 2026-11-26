@@ -1,0 +1,124 @@
+import { ComboBox, LineEdit, ScrollView, TextEdit } from "std-widgets.slint";
+import { Theme } from "../theme.slint";
+import { Card, CfButton } from "../components/common.slint";
+import { ProductFormData } from "../types.slint";
+
+export component ProductFormScreen inherits VerticalLayout {
+    in-out property <ProductFormData> data;
+    in property <[string]> template-options;
+    in property <int> template-index: 0;
+    in property <[string]> replaced-options;
+    in property <int> replaced-index: 0;
+    in property <string> errors;
+    callback save();
+    callback cancel();
+    callback group-changed(string);
+    callback template-changed(string);
+    callback replaced-changed(int);
+    spacing: 10px;
+
+    HorizontalLayout {
+        height: 36px;
+        spacing: 8px;
+        CfButton { text: "‹ Quay lại"; clicked => { root.cancel(); } }
+        Text { text: "Thông tin sản phẩm / gói dịch vụ"; color: Theme.text; font-size: Theme.font-title; font-weight: 700; vertical-alignment: center; }
+        Rectangle { horizontal-stretch: 1; }
+        CfButton { text: "Hủy"; clicked => { root.cancel(); } }
+        CfButton { text: "Lưu sản phẩm"; variant: "primary"; clicked => { root.save(); } }
+    }
+    if root.errors != "" : Card {
+        border-color: Theme.danger-fg;
+        background: Theme.danger-bg;
+        HorizontalLayout {
+            padding: 10px;
+            Text { text: root.errors; color: Theme.danger-fg; wrap: word-wrap; }
+        }
+    }
+    ScrollView {
+        vertical-stretch: 1;
+        VerticalLayout {
+            padding-right: 6px;
+            spacing: 12px;
+            Card {
+                VerticalLayout {
+                    padding: Theme.pad;
+                    spacing: 8px;
+                    Text { text: "1. ĐỊNH DANH & PHÂN NHÓM"; font-size: Theme.font-small; font-weight: 700; color: Theme.primary; }
+                    Rectangle { height: 1px; background: Theme.border; }
+                    HorizontalLayout {
+                        spacing: 12px;
+                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "MÃ SẢN PHẨM *"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.data.code; } }
+                        VerticalLayout { horizontal-stretch: 2; spacing: 4px; Text { text: "TÊN SẢN PHẨM *"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.data.name; } }
+                    }
+                    HorizontalLayout {
+                        spacing: 12px;
+                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "LOẠI SẢN PHẨM"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.data.product-type; } }
+                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "MÃ NHÓM"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.data.group-code; edited => { root.group-changed(root.data.group-code); } } }
+                        VerticalLayout {
+                            horizontal-stretch: 1; spacing: 4px;
+                            Text { text: "KIỂU GÓI"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
+                            ComboBox { height: 32px; model: ["Gói chính", "Gói bổ sung", "Gói lưu trữ"]; current-index: root.data.kind == "addon" ? 1 : root.data.kind == "storage" ? 2 : 0; selected(value) => { root.data.kind = value == "Gói bổ sung" ? "addon" : value == "Gói lưu trữ" ? "storage" : "main"; } }
+                        }
+                    }
+                    Text { text: "MẪU HỢP ĐỒNG MẶC ĐỊNH"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
+                    ComboBox { height: 32px; model: root.template-options; current-index: root.template-index; selected(value) => { root.template-changed(value); } }
+                }
+            }
+            Card {
+                VerticalLayout {
+                    padding: Theme.pad;
+                    spacing: 8px;
+                    Text { text: "2. GIÁ & THỜI HẠN MẶC ĐỊNH"; font-size: Theme.font-small; font-weight: 700; color: Theme.success-fg; }
+                    Rectangle { height: 1px; background: Theme.border; }
+                    HorizontalLayout {
+                        spacing: 12px;
+                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "ĐƠN VỊ TÍNH"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.data.unit-label; } }
+                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "ĐƠN GIÁ TRƯỚC VAT"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.data.default-price; } }
+                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "VAT (%)"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.data.default-vat-rate; } }
+                    }
+                    HorizontalLayout {
+                        spacing: 12px;
+                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "KỲ GIÁ (THÁNG)"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.data.price-period-months; } }
+                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "THỜI HẠN MẶC ĐỊNH (THÁNG)"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.data.default-duration-months; } }
+                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "THỨ TỰ HIỂN THỊ"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.data.sort-order; } }
+                    }
+                }
+            }
+            Card {
+                VerticalLayout {
+                    padding: Theme.pad;
+                    spacing: 8px;
+                    Text { text: "3. CẤU HÌNH SỐ LƯỢNG, THAY THẾ & TÍNH NĂNG"; font-size: Theme.font-small; font-weight: 700; color: Theme.info-fg; }
+                    Rectangle { height: 1px; background: Theme.border; }
+                    HorizontalLayout {
+                        spacing: 12px;
+                        VerticalLayout {
+                            horizontal-stretch: 1; spacing: 4px;
+                            Text { text: "NGUỒN SỐ LƯỢNG"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
+                            ComboBox { height: 32px; model: ["Theo đơn vị", "Theo hồ sơ", "Nhập thủ công"]; current-index: root.data.quantity-source == "records" ? 1 : root.data.quantity-source == "manual" ? 2 : 0; selected(value) => { root.data.quantity-source = value == "Theo hồ sơ" ? "records" : value == "Nhập thủ công" ? "manual" : "units"; } }
+                        }
+                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "SỐ LƯỢNG TỐI THIỂU"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.data.min-quantity; } }
+                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "BƯỚC LÀM TRÒN"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.data.quantity-step; } }
+                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "GIỚI HẠN TK"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.data.account-limit; } }
+                    }
+                    HorizontalLayout {
+                        spacing: 12px;
+                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "ĐỊNH DẠNG SỐ HỢP ĐỒNG"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.data.contract-number-format; } }
+                        VerticalLayout {
+                            horizontal-stretch: 1; spacing: 4px;
+                            Text { text: "GÓI THAY THẾ (KHI NGỪNG BÁN)"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
+                            ComboBox {
+                                height: 32px;
+                                model: root.replaced-options;
+                                current-index: root.replaced-index;
+                                selected(v) => { root.replaced-changed(self.current-index); }
+                            }
+                        }
+                    }
+                    Text { text: "DANH SÁCH TÍNH NĂNG (MỖI DÒNG: TÊN | MÔ TẢ)"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
+                    TextEdit { text <=> root.data.feature-text; height: 100px; }
+                }
+            }
+        }
+    }
+}

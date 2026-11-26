@@ -1,0 +1,125 @@
+import { LineEdit, ScrollView } from "std-widgets.slint";
+import { Theme } from "../theme.slint";
+import { Card, CfButton, EmptyState, StatusBadge, TabPill } from "../components/common.slint";
+import { CustomerImportRowData } from "../types.slint";
+import { CustomerHub } from "../globals.slint";
+
+// S07 — nhập danh sách khách hàng từ Excel (phẳng hoặc nhóm trạm/điểm trạm).
+export component CustomersImportScreen inherits VerticalLayout {
+    in-out property <string> import-mode: "flat";
+    in-out property <string> sheet-name;
+    in property <string> summary-text;
+    in property <[CustomerImportRowData]> error-rows;
+
+    callback back();
+    callback download-template();
+    callback choose-and-import(string, string);
+
+    spacing: 12px;
+
+    HorizontalLayout {
+        height: 36px;
+        spacing: Theme.gap;
+        CfButton { text: "‹ Quay lại"; clicked => { root.back(); } }
+        Text { text: "Nhập khách hàng từ Excel"; font-size: Theme.font-title; font-weight: 700; color: Theme.text; vertical-alignment: center; }
+        Rectangle { horizontal-stretch: 1; }
+        CfButton { text: "Tải file mẫu (.xlsx)"; variant: "outline-primary"; clicked => { root.download-template(); } }
+    }
+
+    Card {
+        height: 44px;
+        HorizontalLayout {
+            padding-left: 10px;
+            padding-right: 10px;
+            spacing: 6px;
+            TabPill {
+                y: (parent.height - self.height) / 2;
+                text: "File phẳng (chuẩn)";
+                active: root.import-mode != "grouped";
+                clicked => { root.import-mode = "flat"; }
+            }
+            TabPill {
+                y: (parent.height - self.height) / 2;
+                text: "Danh sách trạm nhóm";
+                active: root.import-mode == "grouped";
+                clicked => { root.import-mode = "grouped"; }
+            }
+            Rectangle { horizontal-stretch: 1; }
+        }
+    }
+
+    HorizontalLayout {
+        spacing: 12px;
+        alignment: stretch;
+
+        Card {
+            horizontal-stretch: 2;
+            VerticalLayout {
+                padding: Theme.pad;
+                spacing: 10px;
+                Text {
+                    text: root.import-mode == "grouped" ? "NHẬP DANH SÁCH TRẠM Y TẾ & ĐIỂM TRẠM" : "NHẬP TỪ FILE MẪU PHẲNG";
+                    font-size: Theme.font-small; font-weight: 700; color: Theme.primary;
+                }
+                Rectangle { height: 1px; background: Theme.border; }
+                HorizontalLayout {
+                    spacing: 10px;
+                    if root.import-mode == "grouped" : LineEdit {
+                        width: 240px;
+                        height: 32px;
+                        placeholder-text: "Tên sheet (trống = sheet đầu)";
+                        text <=> root.sheet-name;
+                    }
+                    CfButton {
+                        text: "Chọn file Excel (.xlsx/.xls) và nhập";
+                        variant: "primary";
+                        clicked => { root.choose-and-import(root.import-mode, root.sheet-name); }
+                    }
+                }
+                if CustomerHub.import-filename != "" : Text { text: "File: " + CustomerHub.import-filename; color: Theme.text-muted; font-size: Theme.font-small; }
+                if root.summary-text != "" : Text { text: root.summary-text; color: Theme.primary; font-weight: 600; wrap: word-wrap; }
+            }
+        }
+
+        Card {
+            horizontal-stretch: 1;
+            VerticalLayout {
+                padding: Theme.pad;
+                spacing: 6px;
+                Text { text: "HƯỚNG DẪN ĐỊNH DẠNG"; font-size: Theme.font-small; font-weight: 700; color: Theme.primary; }
+                Rectangle { height: 1px; background: Theme.border; }
+                Text {
+                    text: root.import-mode == "grouped"
+                        ? "• Hỗ trợ file Excel gộp trạm chính & điểm trạm (tối đa 10 MB).\n• Cột tự nhận theo tiêu đề dòng đầu.\n• Trùng mã/tên sẽ cập nhật."
+                        : "• Dùng file mẫu chuẩn (tối đa 5 MB).\n• Bắt buộc có cột Tên pháp lý.\n• Nếu trùng Mã KH hoặc Tên pháp lý sẽ cập nhật thông tin mới.";
+                    color: Theme.text-2;
+                    font-size: Theme.font-small;
+                    wrap: word-wrap;
+                }
+            }
+        }
+    }
+
+    if root.error-rows.length == 0 : EmptyState {
+        vertical-stretch: 1;
+        message: "Chọn file Excel (.xlsx, .xls) để nhập khách hàng.";
+    }
+    if root.error-rows.length > 0 : ScrollView {
+        vertical-stretch: 1;
+        VerticalLayout {
+            spacing: 4px;
+            for item in root.error-rows : Card {
+                background: item.is-warning ? Theme.warning-bg : Theme.surface;
+                HorizontalLayout {
+                    padding: 8px; spacing: 8px;
+                    StatusBadge {
+                        y: (parent.height - self.height) / 2;
+                        label: (item.is-warning ? "Cảnh báo · Dòng " : "Lỗi · Dòng ") + item.row;
+                        variant: item.is-warning ? "warning" : "danger";
+                    }
+                    Text { horizontal-stretch: 1; text: item.message; color: item.is-warning ? Theme.warning-fg : Theme.text; wrap: word-wrap; vertical-alignment: center; }
+                }
+            }
+        }
+    }
+}

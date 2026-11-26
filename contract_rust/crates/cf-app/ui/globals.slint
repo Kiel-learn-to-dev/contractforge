@@ -1,0 +1,536 @@
+import {
+    BatchImportPreviewRow, ContractEvidenceSlot, ContractItemViewRow, ContractPriceLineRow,
+    CustomerContractRowData, CustomerDetailDocSlot, CustomerDetailProfile,
+    CustomerDocRowData, CustomerFormData, CustomerImportRowData,
+    CustomerTrashRowData, CustomerUnitRowData, DossierContractRowData,
+    DossierSlotRowData, RenewLineRow,
+} from "types.slint";
+
+export struct IdLabel {
+    id: int,
+    label: string,
+    checked: bool,
+}
+
+export struct RelatedLink {
+    id: int,
+    label: string,
+}
+
+// Trạng thái & callback cho cụm màn hình Khách hàng + Hồ sơ đấu nối.
+export global CustomerHub {
+    in-out property <string> mode: "list";
+
+    // S03 — danh sách mở rộng
+    in-out property <string> list-search-text;
+    in-out property <bool> list-all-selected: false;
+    callback list-toggle-all(bool);
+    callback list-reset-filters();
+
+    // S04 — form tạo/sửa
+    in-out property <string> form-title: "Thêm khách hàng";
+    in-out property <CustomerFormData> form-data;
+    in-out property <[string]> customer-types;
+    in-out property <[string]> unit-types;
+    in-out property <[string]> province-options;
+    in-out property <[string]> ward-options;
+    in-out property <[CustomerUnitRowData]> form-units;
+    in-out property <string> form-billed-badge: "1 cơ sở tính phí";
+    in-out property <string> form-error;
+
+    callback open-add();
+    callback open-edit(int);
+    callback form-province-changed(string);
+    callback form-add-unit();
+    callback form-remove-unit(int);
+    callback form-update-unit(int, string, string, string, string);
+    callback form-toggle-bill-main(bool);
+    callback form-toggle-unit-billing(int);
+    callback form-save(CustomerFormData);
+    callback form-cancel();
+
+    // S05 — chi tiết khách hàng
+    in-out property <CustomerDetailProfile> detail-profile;
+    in-out property <CustomerDetailDocSlot> detail-slot-cccd-front;
+    in-out property <CustomerDetailDocSlot> detail-slot-cccd-back;
+    in-out property <CustomerDetailDocSlot> detail-slot-establishment;
+    in-out property <bool> detail-bill-main: true;
+    in-out property <[CustomerUnitRowData]> detail-billing-units;
+    in-out property <[CustomerDocRowData]> detail-docs;
+    in-out property <[CustomerContractRowData]> detail-contracts;
+    in-out property <string> detail-other-doc-label;
+
+    callback open-detail(int);
+    callback detail-toggle-active();
+    callback detail-create-contract();
+    callback detail-export-info();
+    callback detail-download-bundle();
+    callback detail-toggle-bill-main(bool);
+    callback detail-toggle-billing-unit(int);
+    callback detail-save-billing();
+    callback detail-upload-doc(string, string);
+    callback detail-open-doc(int);
+    callback detail-download-doc(int);
+    callback detail-delete-doc(int);
+    callback detail-open-contract(int);
+
+    // Thùng rác
+    in-out property <[CustomerTrashRowData]> trash-rows;
+    callback open-trash();
+    callback trash-restore(int);
+
+    // S07 — nhập Excel & xuất báo cáo
+    in-out property <string> import-mode: "flat";
+    in-out property <string> import-sheet;
+    in-out property <string> import-filename;
+    in-out property <string> import-summary;
+    in-out property <[CustomerImportRowData]> import-errors;
+    callback open-import();
+    callback import-download-template();
+    callback import-run(string, string);
+    callback export-report();
+
+    // S06 — hồ sơ đấu nối
+    in-out property <string> dossier-customer-name;
+    in-out property <string> dossier-dest-dir;
+    in-out property <string> dossier-summary;
+    in-out property <bool> dossier-stale: false;
+    in-out property <bool> dossier-dir-exists: false;
+    in-out property <string> dossier-missing-text;
+    in-out property <[DossierSlotRowData]> dossier-slots;
+    in-out property <[DossierContractRowData]> dossier-contracts;
+    callback open-dossier();
+    callback dossier-materialize();
+    callback dossier-materialize-only();
+    callback dossier-open-folder();
+
+    callback back-to-list();
+    callback back-to-detail();
+}
+
+// Trạng thái mở rộng cho S13, S14, S15, S16, S17.
+export global ContractHub {
+    // S13 mở rộng
+    in-out property <string> list-search-text;
+    in-out property <bool> list-all-selected: false;
+    in-out property <int> list-cnt-unsent: 0;
+    in-out property <int> list-cnt-expiring: 0;
+    in-out property <int> list-target-index: -1;
+    callback list-toggle-all();
+    callback list-reset-filters();
+    callback list-create-new();
+
+    // S14 mở rộng
+    in-out property <bool> party-b-incomplete: false;
+    in-out property <string> customer-filter;
+    in-out property <string> customer-info-text;
+    in-out property <[IdLabel]> facilities;
+    in-out property <string> unit-count-text: "1";
+    in-out property <string> unit-count-input: "1";
+    in-out property <[IdLabel]> form-attachments;
+    in-out property <int> selected-att-count: 0;
+    in-out property <string> date-warnings;
+    in-out property <string> sign-date;
+    in-out property <string> start-date;
+    in-out property <string> end-date-input;
+    in-out property <string> months: "12";
+    in-out property <string> location;
+    in-out property <string> total-text;
+    in-out property <string> notes;
+    in-out property <string> acceptance-date;
+    in-out property <string> liquidation-date;
+    in-out property <string> amount-words;
+    in-out property <string> pricing-desc;
+    in-out property <int> payment-mode-index: 0;
+    in-out property <string> payment-cycle-months;
+    in-out property <string> party-b-rep;
+    in-out property <string> party-b-auth-num;
+    in-out property <string> party-b-auth-date;
+    in-out property <[ContractPriceLineRow]> price-lines;
+    in-out property <string> price-pre-vat;
+    in-out property <string> price-vat;
+    in-out property <string> price-total;
+
+    callback open-settings();
+    callback filter-customers(string);
+    callback toggle-facility(int);
+    callback select-all-facilities(bool);
+    callback toggle-form-attachment(int);
+    callback payment-mode-changed(int);
+    callback cancel-form();
+
+    // S15 mở rộng & điều hướng S16/S17
+    in-out property <string> detail-submode: "detail"; // "detail" | "addendum" | "renewal"
+    in-out property <bool> can-add-addendum: false;
+    in-out property <bool> can-renew: false;
+    in-out property <bool> has-docx: false;
+    in-out property <bool> has-bundle: false;
+    in-out property <bool> detail-is-expiring: false;
+    in-out property <bool> detail-has-scan: false;
+    in-out property <int> detail-customer-id: 0;
+    in-out property <string> detail-customer-name;
+    in-out property <string> detail-customer-addr;
+    in-out property <string> detail-customer-rep;
+    in-out property <string> detail-sign-date;
+    in-out property <string> detail-start-date;
+    in-out property <string> detail-end-date;
+    in-out property <string> detail-months;
+    in-out property <string> detail-product-name;
+    in-out property <string> detail-product-group;
+    in-out property <string> detail-pricing-model;
+    in-out property <[ContractItemViewRow]> detail-items;
+    in-out property <string> detail-pre-vat;
+    in-out property <string> detail-vat;
+    in-out property <string> detail-total;
+    in-out property <string> detail-amount-words;
+    in-out property <string> detail-payment-text;
+    in-out property <[string]> detail-selected-units;
+    in-out property <string> detail-unit-count;
+    in-out property <string> detail-unit-price-pre;
+    in-out property <string> detail-vat-rate;
+    in-out property <string> detail-unit-price-vat;
+    in-out property <string> detail-quantity;
+    in-out property <int> detail-template-id: 0;
+    in-out property <string> detail-template-name;
+    in-out property <ContractEvidenceSlot> detail-scan;
+    in-out property <ContractEvidenceSlot> detail-invoice;
+    in-out property <ContractEvidenceSlot> detail-payment-slip;
+    in-out property <string> detail-invoice-date-input;
+    in-out property <string> detail-payment-date-input;
+    in-out property <[RelatedLink]> related-links;
+    in-out property <[IdLabel]> regen-attachments;
+    in-out property <[IdLabel]> single-attachments;
+
+    callback open-docx();
+    callback open-folder();
+    callback open-bundle();
+    callback toggle-regen-attachment(int);
+    callback download-single-attachment(int);
+    callback download-08a();
+    callback open-related(int);
+    callback open-customer(int);
+    callback open-template(int);
+    callback view-evidence(int);
+    callback upload-evidence-dated(int, string);
+    callback confirm-generate();
+    callback open-addendum();
+    callback open-renewal();
+    callback back-to-contract-detail();
+
+    // S16 — Phụ lục bổ sung
+    in-out property <string> addon-parent-title;
+    in-out property <string> addon-parent-customer;
+    in-out property <string> addon-parent-product;
+    in-out property <string> addon-parent-dates;
+    in-out property <string> addon-number;
+    in-out property <string> addon-start-date;
+    in-out property <string> addon-end-date;
+    in-out property <string> addon-months;
+    in-out property <string> addon-sign-date;
+    in-out property <[IdLabel]> addon-products;
+    in-out property <[string]> addon-templates;
+    in-out property <int> addon-template-index: 0;
+    in-out property <string> addon-error;
+    callback addon-start-changed(string);
+    callback addon-toggle-product(int);
+    callback addon-template-changed(int);
+    callback addon-save(string, string, bool);
+
+    // S17 — Gia hạn
+    in-out property <string> renew-parent-title;
+    in-out property <string> renew-mode: "appendix";
+    in-out property <string> renew-number;
+    in-out property <string> renew-start-date;
+    in-out property <string> renew-months;
+    in-out property <string> renew-sign-date;
+    in-out property <string> renew-comparison-text;
+    in-out property <string> renew-old-monthly;
+    in-out property <string> renew-new-monthly;
+    in-out property <string> renew-diff-monthly;
+    in-out property <[RenewLineRow]> renew-lines;
+    in-out property <[string]> renew-candidate-names;
+    in-out property <[IdLabel]> renew-products;
+    in-out property <[string]> renew-templates;
+    in-out property <int> renew-template-index: 0;
+    in-out property <string> renew-error;
+    callback renew-mode-changed(string);
+    callback renew-toggle-product(int);
+    callback renew-line-changed(int, int);
+    callback renew-template-changed(int);
+    callback renew-save(string, string, string, string, bool);
+}
+
+export struct BatchPreviewRow {
+    customer-id: int,
+    customer-name: string,
+    contract-number: string,
+    sign-date: string,
+    start-date: string,
+    months: string,
+    units: int,
+    amount-text: string,
+}
+
+export struct BatchOutcomeRow {
+    contract-number: string,
+    status: string,
+    message: string,
+    ok: bool,
+}
+
+// S18 — Sinh hàng loạt (form, xem trước, chạy nền có tiến độ & hủy, nhập Excel).
+export global BatchHub {
+    in-out property <string> mode: "form"; // "form" | "preview" | "result" | "import"
+    in-out property <[string]> template-names;
+    in-out property <int> template-index: 0;
+    in-out property <[string]> product-names;
+    in-out property <int> product-index: 0;
+    in-out property <[IdLabel]> group-addons;
+    in-out property <[IdLabel]> customers;
+    in-out property <string> customer-search;
+    in-out property <string> sign-date;
+    in-out property <string> start-date;
+    in-out property <string> months: "12";
+    in-out property <string> party-b-rep;
+    in-out property <string> party-b-auth-num;
+    in-out property <string> party-b-auth-date;
+    in-out property <[BatchPreviewRow]> preview-rows;
+
+    in-out property <bool> running: false;
+    in-out property <int> progress-done: 0;
+    in-out property <int> progress-total: 0;
+    in-out property <string> progress-label;
+    in-out property <string> result-summary;
+    in-out property <bool> has-zip: false;
+    in-out property <[BatchOutcomeRow]> outcome-rows;
+
+    in-out property <string> import-filename;
+    in-out property <string> import-prefix;
+    in-out property <string> import-summary;
+    in-out property <[string]> import-errors;
+    in-out property <[BatchImportPreviewRow]> import-preview-rows;
+    in-out property <int> import-ready-count: 0;
+
+    callback open-import();
+    callback back-to-form();
+    callback template-changed(int);
+    callback product-changed(int);
+    callback toggle-addon(int);
+    callback customer-search-changed(string);
+    callback toggle-customer(int);
+    callback select-all-customers(bool);
+    callback refresh-preview(string, string, string);
+    callback preview-number-edited(int, string);
+    callback run-batch(string, string, string);
+    callback cancel-batch();
+    callback save-zip();
+    callback open-batch-folder();
+    callback download-excel-template();
+    callback pick-excel();
+    callback run-excel-batch();
+}
+
+export struct ManualItemRow {
+    name: string,
+    unit: string,
+    quantity: string,
+    periods: string,
+    price: string,
+    vat: string,
+}
+
+// S19 — Báo giá (3 tab: theo danh mục, tự nhập, yêu cầu báo giá).
+export global QuotationHub {
+    in-out property <string> active-tab: "catalog"; // "catalog" | "manual" | "request"
+
+    // Tab 1: Theo danh mục
+    in-out property <[string]> customer-names;
+    in-out property <int> customer-index: 0;
+    in-out property <[string]> product-names;
+    in-out property <int> product-index: 0;
+    in-out property <[string]> catalog-templates;
+    in-out property <int> catalog-template-index: 0;
+    in-out property <string> catalog-quote-date;
+    in-out property <string> catalog-months: "12";
+    in-out property <[IdLabel]> catalog-addons;
+    in-out property <string> catalog-summary;
+    callback catalog-customer-changed(int);
+    callback catalog-product-changed(int);
+    callback catalog-template-changed(int);
+    callback catalog-params-changed(string, string);
+    callback catalog-toggle-addon(int);
+    callback catalog-reset();
+    callback catalog-generate(int, int, int, string, string);
+
+    // Tab 2: Tự nhập (5 bố cục + hồ sơ người phát hành)
+    in-out property <[string]> layout-names;
+    in-out property <int> layout-index: 0;
+    in-out property <[string]> issuer-names;
+    in-out property <int> issuer-index: 0;
+    in-out property <string> issuer-name;
+    in-out property <string> issuer-address;
+    in-out property <string> issuer-tax-code;
+    in-out property <string> issuer-rep;
+    in-out property <string> issuer-title;
+    in-out property <string> issuer-phone;
+    in-out property <string> issuer-email;
+    in-out property <string> recipient-name;
+    in-out property <string> recipient-address;
+    in-out property <string> recipient-tax-code;
+    in-out property <string> recipient-contact;
+    in-out property <string> manual-quote-number;
+    in-out property <string> manual-quote-date;
+    in-out property <string> manual-valid-until;
+    in-out property <string> manual-note;
+    in-out property <[ManualItemRow]> manual-items;
+    in-out property <string> manual-totals-text;
+    callback manual-select-issuer(int);
+    callback manual-fill-customer(int);
+    callback manual-add-from-product(int);
+    callback manual-save-issuer();
+    callback manual-add-item();
+    callback manual-remove-item(int);
+    callback manual-update-item(int, string, string, string, string, string, string);
+    callback manual-download-blank(int);
+    callback manual-generate(int);
+
+    // Tab 3: Yêu cầu báo giá
+    in-out property <[string]> request-templates;
+    in-out property <int> request-template-index: 0;
+    in-out property <string> request-date;
+    in-out property <string> request-deadline;
+    in-out property <string> request-months: "12";
+    in-out property <string> request-main-name;
+    in-out property <string> request-main-qty: "1";
+    in-out property <[IdLabel]> request-addons;
+    in-out property <string> request-addressee;
+    in-out property <string> request-subject;
+    in-out property <string> request-note;
+    callback request-product-changed(int);
+    callback request-toggle-addon(int);
+    callback request-install-samples();
+    callback request-generate(int, int, int, string, string, string, string, string, string);
+}
+
+export struct ForecastBarItem {
+    label: string,
+    count: int,
+    ratio: float,
+    month-index: int,
+}
+
+export struct StatusDistItem {
+    label: string,
+    count: int,
+    ratio: float,
+    accent: color,
+    status-code: string,
+}
+
+export struct ProductPieItem {
+    name: string,
+    count: int,
+    value-text: string,
+    fill: color,
+    commands: string,
+}
+
+export struct ExpiringSummaryRow {
+    contract-id: int,
+    contract-number: string,
+    customer-name: string,
+    end-date: string,
+    days-left: int,
+    urgency: string,
+}
+
+export struct TopCustomerRow {
+    id: int,
+    name: string,
+    count: int,
+}
+
+export struct RecentActivityRow {
+    contract-id: int,
+    title: string,
+    subtitle: string,
+    when-text: string,
+}
+
+// S01 — Mở rộng dữ liệu Dashboard (biểu đồ, phân bố trạng thái, hết hạn, top KH, hoạt động gần đây).
+export global DashboardHub {
+    in-out property <string> submode: "overview"; // "overview" | "expiring"
+    in-out property <string> today-label;
+    in-out property <[ForecastBarItem]> forecast-bars;
+    in-out property <[StatusDistItem]> status-dist;
+    in-out property <[ProductPieItem]> pie-items;
+    in-out property <[ExpiringSummaryRow]> expiring-30;
+    in-out property <[ExpiringSummaryRow]> expiring-31-60;
+    in-out property <string> value-total-text;
+    in-out property <string> value-in-force-sub;
+    in-out property <string> value-paid-text;
+    in-out property <string> value-invoiced-text;
+    in-out property <string> value-unpaid-text;
+    in-out property <string> monthly-title;
+    in-out property <string> monthly-new-text;
+    in-out property <string> monthly-signed-text;
+    in-out property <string> monthly-expired-text;
+    in-out property <string> monthly-value-text;
+    in-out property <[TopCustomerRow]> top-customers;
+    in-out property <[RecentActivityRow]> recent-activities;
+
+    callback refresh();
+    callback quick-nav(int);
+    callback open-value-status(string);
+    callback open-expiring(int);
+    callback back-to-overview();
+    callback open-contract(int);
+    callback open-customer(int);
+    callback open-action(int);
+    callback open-metric(int);
+}
+
+export struct ExpiringRowData {
+    contract-id: int,
+    customer-id: int,
+    contract-number: string,
+    customer-name: string,
+    end-date: string,
+    days-left: int,
+    status-label: string,
+    total-text: string,
+    urgency: string,
+}
+
+// S02 — Danh sách hợp đồng sắp hết hạn (theo mốc ngày + xuất CSV).
+export global ExpiringHub {
+    in-out property <int> days: 30;
+    in-out property <[ExpiringRowData]> rows;
+    in-out property <string> summary-text;
+
+    callback load-days(int);
+    callback export-csv();
+    callback open-contract(int);
+    callback open-customer(int);
+    callback back();
+}
+
+export struct SearchResultRow {
+    kind: string,
+    id: int,
+    label: string,
+    sub: string,
+    status: string,
+}
+
+// Tìm kiếm nhanh toàn cục ở thanh trên cùng.
+export global SearchHub {
+    in-out property <string> query;
+    in-out property <bool> open: false;
+    in-out property <[SearchResultRow]> results;
+
+    callback search-changed(string);
+    callback submit-first();
+    callback pick-result(string, int);
+    callback close-popup();
+}
