@@ -6,9 +6,10 @@ import { SearchHub } from "../globals.slint";
 export component GlobalSearch inherits HorizontalLayout {
     spacing: 4px;
     LineEdit {
-        width: 280px;
-        height: 30px;
-        font-size: 12px;
+        preferred-width: 280px;
+        min-width: 0px;
+        height: Theme.control-height;
+        font-size: Theme.font-small;
         placeholder-text: "Tìm hợp đồng, khách hàng…";
         text <=> SearchHub.query;
         edited(t) => { SearchHub.search-changed(t); }

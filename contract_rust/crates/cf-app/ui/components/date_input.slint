@@ -1,0 +1,167 @@
+import { Button, Date, LineEdit } from "std-widgets.slint";
+import { Theme } from "../theme.slint";
+import { SearchHub } from "../globals.slint";
+
+// Nhập ngày tự do theo định dạng dd/mm/yyyy hoặc chọn ngày trên lịch chuẩn Slint.
+export component DateInput inherits HorizontalLayout {
+    in-out property <string> text;
+    in property <string> placeholder-text: "dd/mm/yyyy";
+    in property <bool> iso-format: false;
+    callback edited(string);
+    callback accepted(string);
+    property <Date> popup-date: { year: 2000, month: 1, day: 1 };
+
+    height: Theme.control-height;
+    spacing: 4px;
+
+    LineEdit {
+        min-width: 0px;
+        horizontal-stretch: 1;
+        height: root.height;
+        text <=> root.text;
+        placeholder-text: root.placeholder-text;
+        edited(value) => { root.edited(value); }
+        accepted => { root.accepted(root.text); }
+    }
+
+    Rectangle {
+        width: root.height;
+        height: root.height;
+        Button {
+            width: parent.width;
+            height: parent.height;
+            accessible-label: "Mở lịch chọn ngày";
+            clicked => {
+                root.popup-date = SearchHub.date-from-text(root.text);
+                root.view-year = root.popup-date.year;
+                root.view-month = root.popup-date.month;
+                calendar.show();
+            }
+        }
+
+        Path {
+            width: 16px;
+            height: 16px;
+            viewbox-width: 16;
+            viewbox-height: 16;
+            commands: "M 2 3 H 14 V 14 H 2 Z M 2 6 H 14 M 5 1 V 5 M 11 1 V 5 M 5 9 H 7 M 9 9 H 11 M 5 11 H 7";
+            stroke: Theme.primary;
+            stroke-width: 1.2px;
+        }
+    }
+
+    calendar := PopupWindow {
+        x: 0px;
+        y: root.height + 2px;
+        width: 232px;
+        height: 238px;
+        close-policy: close-on-click-outside;
+
+        Rectangle {
+            background: Theme.surface;
+            border-color: Theme.border-strong;
+            border-width: 1px;
+            border-radius: Theme.radius;
+        }
+
+        VerticalLayout {
+            padding: 8px;
+            spacing: 4px;
+
+            HorizontalLayout {
+                height: 28px;
+                spacing: 4px;
+                Rectangle {
+                    width: 28px;
+                    background: prev-touch.has-hover ? Theme.surface-2 : transparent;
+                    border-radius: Theme.radius-sm;
+                    Text { text: "‹"; font-size: 16px; color: Theme.text; }
+                    prev-touch := TouchArea {
+                        clicked => {
+                            if (root.view-month == 1) {
+                                root.view-month = 12;
+                                root.view-year -= 1;
+                            } else {
+                                root.view-month -= 1;
+                            }
+                        }
+                    }
+                }
+                Text {
+                    horizontal-stretch: 1;
+                    text: "Tháng " + root.view-month + " / " + root.view-year;
+                    font-size: Theme.font-small;
+                    font-weight: 700;
+                    color: Theme.text;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+                Rectangle {
+                    width: 28px;
+                    background: next-touch.has-hover ? Theme.surface-2 : transparent;
+                    border-radius: Theme.radius-sm;
+                    Text { text: "›"; font-size: 16px; color: Theme.text; }
+                    next-touch := TouchArea {
+                        clicked => {
+                            if (root.view-month == 12) {
+                                root.view-month = 1;
+                                root.view-year += 1;
+                            } else {
+                                root.view-month += 1;
+                            }
+                        }
+                    }
+                }
+            }
+
+            HorizontalLayout {
+                height: 20px;
+                for name in ["T2", "T3", "T4", "T5", "T6", "T7", "CN"] : Text {
+                    horizontal-stretch: 1;
+                    text: name;
+                    font-size: Theme.font-xs;
+                    color: Theme.text-muted;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+
+            for week in 6 : HorizontalLayout {
+                height: 28px;
+                for col in 7 : Rectangle {
+                    property <int> day: SearchHub.month-days(root.view-year, root.view-month)[week * 7 + col];
+                    property <bool> selected: day == root.popup-date.day
+                        && root.view-month == root.popup-date.month
+                        && root.view-year == root.popup-date.year;
+                    horizontal-stretch: 1;
+                    background: selected ? Theme.primary : (day-touch.has-hover && day > 0 ? Theme.primary-tint : transparent);
+                    border-radius: 14px;
+                    Text {
+                        text: day > 0 ? day : "";
+                        font-size: Theme.font-small;
+                        color: selected ? white : Theme.text;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                    day-touch := TouchArea {
+                        enabled: day > 0;
+                        clicked => {
+                            root.pick(root.view-year, root.view-month, day);
+                            calendar.close();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    property <int> view-year: 2000;
+    property <int> view-month: 1;
+    function pick(year: int, month: int, day: int) {
+        root.text = root.iso-format
+            ? year + "-" + (month < 10 ? "0" : "") + month + "-" + (day < 10 ? "0" : "") + day
+            : (day < 10 ? "0" : "") + day + "/" + (month < 10 ? "0" : "") + month + "/" + year;
+        root.edited(root.text);
+        root.accepted(root.text);
+    }
+}

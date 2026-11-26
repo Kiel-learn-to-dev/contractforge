@@ -1,5 +1,7 @@
-import { CheckBox, ComboBox, LineEdit, ScrollView } from "std-widgets.slint";
+import { CheckBox, LineEdit, ScrollView } from "std-widgets.slint";
 import { Theme } from "../theme.slint";
+import { DateInput } from "../components/date_input.slint";
+import { SearchableCombo } from "../components/searchable_combo.slint";
 import { Card, CfButton, StatusBadge } from "../components/common.slint";
 import { CustomerFormData, CustomerUnitRowData } from "../types.slint";
 import { CustomerHub } from "../globals.slint";
@@ -67,12 +69,12 @@ export component CustomerFormScreen inherits VerticalLayout {
                         VerticalLayout {
                             width: 180px; spacing: 4px;
                             FieldLbl { label: "MÃ KH (TRỐNG = TỰ SINH)"; }
-                            LineEdit { height: 32px; text <=> root.data.code; placeholder-text: "Tự sinh KH-NNN"; }
+                            LineEdit { min-width: 0px; height: Theme.control-height; text <=> root.data.code; placeholder-text: "Tự sinh KH-NNN"; }
                         }
                         VerticalLayout {
                             horizontal-stretch: 1; spacing: 4px;
                             FieldLbl { label: "TÊN PHÁP LÝ *"; }
-                            LineEdit { height: 32px; text <=> root.data.legal-name; }
+                            LineEdit { min-width: 0px; height: Theme.control-height; text <=> root.data.legal-name; }
                         }
                     }
                     HorizontalLayout {
@@ -80,15 +82,16 @@ export component CustomerFormScreen inherits VerticalLayout {
                         VerticalLayout {
                             horizontal-stretch: 1; spacing: 4px;
                             FieldLbl { label: "TÊN NGẮN"; }
-                            LineEdit { height: 32px; text <=> root.data.short-name; }
+                            LineEdit { min-width: 0px; height: Theme.control-height; text <=> root.data.short-name; }
                         }
                         VerticalLayout {
                             width: 240px; spacing: 4px;
                             FieldLbl { label: "LOẠI ĐƠN VỊ *"; }
-                            ComboBox {
-                                height: 32px;
+                            SearchableCombo {
+                                height: Theme.control-height;
                                 model: root.customer-types;
                                 current-value: root.data.customer-type;
+                                value-driven: true;
                                 selected(v) => { root.data.customer-type = v; }
                             }
                         }
@@ -103,16 +106,17 @@ export component CustomerFormScreen inherits VerticalLayout {
                     Text { text: "2. ĐỊA CHỈ (2 CẤP)"; font-size: Theme.font-small; font-weight: 700; color: Theme.primary; }
                     Rectangle { height: 1px; background: Theme.border; }
                     FieldLbl { label: "ĐỊA CHỈ CHI TIẾT"; }
-                    LineEdit { height: 32px; text <=> root.data.address; placeholder-text: "Số nhà, đường, ấp, khu phố…"; }
+                    LineEdit { min-width: 0px; height: Theme.control-height; text <=> root.data.address; placeholder-text: "Số nhà, đường, ấp, khu phố…"; }
                     HorizontalLayout {
                         spacing: 10px;
                         VerticalLayout {
                             horizontal-stretch: 1; spacing: 4px;
                             FieldLbl { label: "TỈNH / THÀNH PHỐ"; }
-                            ComboBox {
-                                height: 32px;
+                            SearchableCombo {
+                                height: Theme.control-height;
                                 model: root.province-options;
                                 current-value: root.data.province;
+                                value-driven: true;
                                 selected(v) => {
                                     root.data.province = v;
                                     root.data.ward = "";
@@ -123,10 +127,11 @@ export component CustomerFormScreen inherits VerticalLayout {
                         VerticalLayout {
                             horizontal-stretch: 1; spacing: 4px;
                             FieldLbl { label: "XÃ / PHƯỜNG / ĐẶC KHU"; }
-                            ComboBox {
-                                height: 32px;
+                            SearchableCombo {
+                                height: Theme.control-height;
                                 model: root.ward-options;
                                 current-value: root.data.ward;
+                                value-driven: true;
                                 selected(v) => { root.data.ward = v; }
                             }
                         }
@@ -142,46 +147,47 @@ export component CustomerFormScreen inherits VerticalLayout {
                     Rectangle { height: 1px; background: Theme.border; }
                     HorizontalLayout {
                         spacing: 10px;
-                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; FieldLbl { label: "MÃ SỐ THUẾ"; } LineEdit { height: 32px; text <=> root.data.tax-code; } }
-                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; FieldLbl { label: "MÃ QHNS"; } LineEdit { height: 32px; text <=> root.data.budget-relation-code; placeholder-text: "VD: 1073573"; } }
-                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; FieldLbl { label: "MÃ KCB BHYT"; } LineEdit { height: 32px; text <=> root.data.kcb-code; placeholder-text: "VD: 7502345"; } }
+                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; FieldLbl { label: "MÃ SỐ THUẾ"; } LineEdit { min-width: 0px; height: Theme.control-height; text <=> root.data.tax-code; } }
+                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; FieldLbl { label: "MÃ QHNS"; } LineEdit { min-width: 0px; height: Theme.control-height; text <=> root.data.budget-relation-code; placeholder-text: "VD: 1073573"; } }
+                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; FieldLbl { label: "MÃ KCB BHYT"; } LineEdit { min-width: 0px; height: Theme.control-height; text <=> root.data.kcb-code; placeholder-text: "VD: 7502345"; } }
                     }
                     HorizontalLayout {
                         spacing: 10px;
-                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; FieldLbl { label: "SỐ QĐ THÀNH LẬP"; } LineEdit { height: 32px; text <=> root.data.establishment-decision; placeholder-text: "VD: 1234/QĐ-UBND"; } }
-                        VerticalLayout { width: 200px; spacing: 4px; FieldLbl { label: "NGÀY THÀNH LẬP (DD/MM/YYYY)"; } LineEdit { height: 32px; text <=> root.data.establishment-date; } }
+                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; FieldLbl { label: "SỐ QĐ THÀNH LẬP"; } LineEdit { min-width: 0px; height: Theme.control-height; text <=> root.data.establishment-decision; placeholder-text: "VD: 1234/QĐ-UBND"; } }
+                        VerticalLayout { width: 200px; spacing: 4px; FieldLbl { label: "NGÀY THÀNH LẬP (DD/MM/YYYY)"; } DateInput { height: Theme.control-height; text <=> root.data.establishment-date; } }
                     }
                     HorizontalLayout {
                         spacing: 10px;
-                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; FieldLbl { label: "ĐẠI DIỆN PHÁP LÝ"; } LineEdit { height: 32px; text <=> root.data.representative-name; } }
+                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; FieldLbl { label: "ĐẠI DIỆN PHÁP LÝ"; } LineEdit { min-width: 0px; height: Theme.control-height; text <=> root.data.representative-name; } }
                         VerticalLayout {
                             width: 150px; spacing: 4px;
                             FieldLbl { label: "GIỚI TÍNH"; }
-                            ComboBox {
-                                height: 32px;
+                            SearchableCombo {
+                                height: Theme.control-height;
                                 model: ["(Chưa chọn)", "Nam (Ông)", "Nữ (Bà)"];
                                 current-value: root.data.representative-gender == "Nam" ? "Nam (Ông)" : (root.data.representative-gender == "Nữ" ? "Nữ (Bà)" : "(Chưa chọn)");
+                                value-driven: true;
                                 selected(v) => { root.data.representative-gender = v == "Nam (Ông)" ? "Nam" : (v == "Nữ (Bà)" ? "Nữ" : ""); }
                             }
                         }
-                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; FieldLbl { label: "CHỨC VỤ"; } LineEdit { height: 32px; text <=> root.data.representative-title; } }
+                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; FieldLbl { label: "CHỨC VỤ"; } LineEdit { min-width: 0px; height: Theme.control-height; text <=> root.data.representative-title; } }
                     }
                     Rectangle { height: 1px; background: Theme.border; }
                     HorizontalLayout {
                         spacing: 10px;
-                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; FieldLbl { label: "ĐẦU MỐI LIÊN HỆ"; } LineEdit { height: 32px; text <=> root.data.contact-name; } }
-                        VerticalLayout { width: 180px; spacing: 4px; FieldLbl { label: "ĐIỆN THOẠI"; } LineEdit { height: 32px; text <=> root.data.phone; } }
-                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; FieldLbl { label: "EMAIL"; } LineEdit { height: 32px; text <=> root.data.email; } }
+                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; FieldLbl { label: "ĐẦU MỐI LIÊN HỆ"; } LineEdit { min-width: 0px; height: Theme.control-height; text <=> root.data.contact-name; } }
+                        VerticalLayout { width: 180px; spacing: 4px; FieldLbl { label: "ĐIỆN THOẠI"; } LineEdit { min-width: 0px; height: Theme.control-height; text <=> root.data.phone; } }
+                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; FieldLbl { label: "EMAIL"; } LineEdit { min-width: 0px; height: Theme.control-height; text <=> root.data.email; } }
                     }
                     Rectangle { height: 1px; background: Theme.border; }
                     HorizontalLayout {
                         spacing: 10px;
-                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; FieldLbl { label: "SỐ TÀI KHOẢN"; } LineEdit { height: 32px; text <=> root.data.bank-account; } }
-                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; FieldLbl { label: "NGÂN HÀNG"; } LineEdit { height: 32px; text <=> root.data.bank-name; } }
-                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; FieldLbl { label: "TÊN THỤ HƯỞNG"; } LineEdit { height: 32px; text <=> root.data.beneficiary-name; } }
+                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; FieldLbl { label: "SỐ TÀI KHOẢN"; } LineEdit { min-width: 0px; height: Theme.control-height; text <=> root.data.bank-account; } }
+                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; FieldLbl { label: "NGÂN HÀNG"; } LineEdit { min-width: 0px; height: Theme.control-height; text <=> root.data.bank-name; } }
+                        VerticalLayout { horizontal-stretch: 1; spacing: 4px; FieldLbl { label: "TÊN THỤ HƯỞNG"; } LineEdit { min-width: 0px; height: Theme.control-height; text <=> root.data.beneficiary-name; } }
                     }
                     FieldLbl { label: "GHI CHÚ"; }
-                    LineEdit { height: 32px; text <=> root.data.notes; }
+                    LineEdit { min-width: 0px; height: Theme.control-height; text <=> root.data.notes; }
                 }
             }
 
@@ -213,22 +219,25 @@ export component CustomerFormScreen inherits VerticalLayout {
                     for unit[idx] in root.units : HorizontalLayout {
                         spacing: 6px;
                         LineEdit {
+                            min-width: 0px;
                             horizontal-stretch: 1;
-                            height: 32px;
+                            height: Theme.control-height;
                             placeholder-text: "Tên điểm trạm";
                             text: unit.name;
                             edited(t) => { root.update-unit(idx, t, unit.unit-type, unit.address, unit.notes); }
                         }
-                        ComboBox {
+                        SearchableCombo {
                             width: 140px;
-                            height: 32px;
+                            height: Theme.control-height;
                             model: CustomerHub.unit-types;
                             current-value: unit.unit-type;
+                                value-driven: true;
                             selected(t) => { root.update-unit(idx, unit.name, t, unit.address, unit.notes); }
                         }
                         LineEdit {
+                            min-width: 0px;
                             horizontal-stretch: 1;
-                            height: 32px;
+                            height: Theme.control-height;
                             placeholder-text: "Địa chỉ";
                             text: unit.address;
                             edited(t) => { root.update-unit(idx, unit.name, unit.unit-type, t, unit.notes); }

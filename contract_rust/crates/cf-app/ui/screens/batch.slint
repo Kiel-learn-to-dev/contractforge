@@ -1,5 +1,7 @@
-import { CheckBox, ComboBox, LineEdit, ProgressIndicator, ScrollView } from "std-widgets.slint";
+import { CheckBox, LineEdit, ProgressIndicator, ScrollView } from "std-widgets.slint";
 import { Theme } from "../theme.slint";
+import { DateInput } from "../components/date_input.slint";
+import { SearchableCombo } from "../components/searchable_combo.slint";
 import { Card, CfButton, StatusBadge } from "../components/common.slint";
 import { BatchHub } from "../globals.slint";
 
@@ -10,25 +12,30 @@ export component BatchScreen inherits VerticalLayout {
     if BatchHub.mode == "form" : ScrollView {
         vertical-stretch: 1;
         VerticalLayout {
+            alignment: start;
             padding-right: 6px;
             spacing: 12px;
 
             HorizontalLayout {
-                height: 36px;
+                min-height: 36px;
                 spacing: Theme.gap;
-                Text { text: "Chọn sản phẩm, mẫu, danh sách khách hàng → xem trước và sinh hàng loạt"; font-size: Theme.font-body; color: Theme.text-muted; vertical-alignment: center; }
+                Text { wrap: word-wrap; text: "Chọn sản phẩm, mẫu, danh sách khách hàng → xem trước và sinh hàng loạt"; font-size: Theme.font-body; color: Theme.text-muted; vertical-alignment: center; }
                 Rectangle { horizontal-stretch: 1; }
                 CfButton { text: "Import từ Excel (.xlsx/.xls)"; variant: "outline-primary"; clicked => { BatchHub.open-import(); } }
             }
 
             // Bố cục 2 cột (trái: tham số chung + gói bổ sung + Bên B; phải: tìm & chọn khách hàng)
-            HorizontalLayout {
-                spacing: 14px;
+            FlexboxLayout {
                 alignment: stretch;
+                spacing: 14px;
+                cross-axis-alignment: start;
 
                 // Trái
                 VerticalLayout {
+                    min-width: 475px;
+                    preferred-width: 540px;
                     horizontal-stretch: 7;
+                    alignment: start;
                     spacing: 12px;
 
                     Card {
@@ -42,8 +49,8 @@ export component BatchScreen inherits VerticalLayout {
                                 VerticalLayout {
                                     horizontal-stretch: 1; spacing: 4px;
                                     Text { text: "SẢN PHẨM (GÓI CHÍNH) *"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
-                                    ComboBox {
-                                        height: 32px;
+                                    SearchableCombo {
+                                        height: Theme.control-height;
                                         model: BatchHub.product-names;
                                         current-index: BatchHub.product-index;
                                         selected(v) => { BatchHub.product-changed(self.current-index); }
@@ -52,8 +59,8 @@ export component BatchScreen inherits VerticalLayout {
                                 VerticalLayout {
                                     horizontal-stretch: 1; spacing: 4px;
                                     Text { text: "MẪU HỢP ĐỒNG *"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
-                                    ComboBox {
-                                        height: 32px;
+                                    SearchableCombo {
+                                        height: Theme.control-height;
                                         model: BatchHub.template-names;
                                         current-index: BatchHub.template-index;
                                         selected(v) => { BatchHub.template-changed(self.current-index); }
@@ -65,17 +72,17 @@ export component BatchScreen inherits VerticalLayout {
                                 VerticalLayout {
                                     horizontal-stretch: 1; spacing: 4px;
                                     Text { text: "NGÀY KÝ *"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
-                                    LineEdit { height: 32px; text <=> BatchHub.sign-date; placeholder-text: "dd/mm/yyyy"; }
+                                    DateInput { min-width: 0px; height: Theme.control-height; text <=> BatchHub.sign-date; placeholder-text: "dd/mm/yyyy"; }
                                 }
                                 VerticalLayout {
                                     horizontal-stretch: 1; spacing: 4px;
                                     Text { text: "NGÀY HIỆU LỰC *"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
-                                    LineEdit { height: 32px; text <=> BatchHub.start-date; placeholder-text: "dd/mm/yyyy"; }
+                                    DateInput { min-width: 0px; height: Theme.control-height; text <=> BatchHub.start-date; placeholder-text: "dd/mm/yyyy"; }
                                 }
                                 VerticalLayout {
                                     width: 100px; spacing: 4px;
                                     Text { text: "SỐ THÁNG *"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
-                                    LineEdit { height: 32px; text <=> BatchHub.months; }
+                                    LineEdit { min-width: 0px; height: Theme.control-height; text <=> BatchHub.months; }
                                 }
                             }
                             if BatchHub.group-addons.length > 0 : VerticalLayout {
@@ -99,17 +106,17 @@ export component BatchScreen inherits VerticalLayout {
                                 VerticalLayout {
                                     horizontal-stretch: 1; spacing: 3px;
                                     Text { text: "Đại diện"; font-size: Theme.font-xs; color: Theme.text-muted; }
-                                    LineEdit { height: 30px; text <=> BatchHub.party-b-rep; }
+                                    LineEdit { min-width: 0px; height: 30px; text <=> BatchHub.party-b-rep; }
                                 }
                                 VerticalLayout {
                                     width: 120px; spacing: 3px;
                                     Text { text: "Số UQ"; font-size: Theme.font-xs; color: Theme.text-muted; }
-                                    LineEdit { height: 30px; text <=> BatchHub.party-b-auth-num; }
+                                    LineEdit { min-width: 0px; height: 30px; text <=> BatchHub.party-b-auth-num; }
                                 }
                                 VerticalLayout {
                                     width: 120px; spacing: 3px;
                                     Text { text: "Ngày UQ"; font-size: Theme.font-xs; color: Theme.text-muted; }
-                                    LineEdit { height: 30px; text <=> BatchHub.party-b-auth-date; }
+                                    DateInput { min-width: 0px; height: 30px; text <=> BatchHub.party-b-auth-date; }
                                 }
                             }
                         }
@@ -118,7 +125,10 @@ export component BatchScreen inherits VerticalLayout {
 
                 // Phải: chọn khách hàng
                 VerticalLayout {
+                    min-width: 340px;
+                    preferred-width: 340px;
                     horizontal-stretch: 5;
+                    alignment: start;
                     spacing: 12px;
 
                     Card {
@@ -140,10 +150,39 @@ export component BatchScreen inherits VerticalLayout {
                             }
                             Rectangle { height: 1px; background: Theme.border; }
                             if BatchHub.customers.length == 0 : Text { text: "Không có khách hàng khớp tìm kiếm."; color: Theme.text-muted; font-size: Theme.font-small; }
-                            for cust[idx] in BatchHub.customers : CheckBox {
-                                text: cust.label;
-                                checked: cust.checked;
-                                toggled => { BatchHub.toggle-customer(idx); }
+                            if BatchHub.customers.length > 0 : ScrollView {
+                                min-width: 0px;
+                                height: min(290px, BatchHub.customers.length * 42px + 8px);
+                                horizontal-scrollbar-policy: always-off;
+                                content-width: self.visible-width;
+                                VerticalLayout {
+                                    alignment: start;
+                                    spacing: 4px;
+                                    for cust[idx] in BatchHub.customers : HorizontalLayout {
+                                        min-height: 28px;
+                                        spacing: 8px;
+                                        CheckBox {
+                                            accessible-label: cust.label;
+                                            checked: cust.checked;
+                                            toggled => { BatchHub.toggle-customer(idx); }
+                                        }
+                                        Rectangle {
+                                            min-width: 0px;
+                                            horizontal-stretch: 1;
+                                            Text {
+                                                width: parent.width;
+                                                text: cust.label;
+                                                color: Theme.text;
+                                                wrap: word-wrap;
+                                                vertical-alignment: center;
+                                            }
+                                            TouchArea {
+                                                mouse-cursor: pointer;
+                                                clicked => { BatchHub.toggle-customer(idx); }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -269,8 +308,8 @@ export component BatchScreen inherits VerticalLayout {
                         VerticalLayout {
                             horizontal-stretch: 1; spacing: 4px;
                             Text { text: "MẪU HỢP ĐỒNG *"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
-                            ComboBox {
-                                height: 32px;
+                            SearchableCombo {
+                                height: Theme.control-height;
                                 model: BatchHub.template-names;
                                 current-index: BatchHub.template-index;
                                 selected(v) => { BatchHub.template-changed(self.current-index); }
@@ -279,7 +318,7 @@ export component BatchScreen inherits VerticalLayout {
                         VerticalLayout {
                             horizontal-stretch: 1; spacing: 4px;
                             Text { text: "PREFIX SỐ HĐ (NẾU CỘT SỐ HĐ TRỐNG)"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
-                            LineEdit { height: 32px; placeholder-text: "VD: HD-DV"; text <=> BatchHub.import-prefix; }
+                            LineEdit { min-width: 0px; height: Theme.control-height; placeholder-text: "VD: HD-DV"; text <=> BatchHub.import-prefix; }
                         }
                     }
                     HorizontalLayout {

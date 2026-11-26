@@ -3,7 +3,8 @@
 use std::cell::RefCell;
 
 use cf_services::{Ctx, dashboard::search::api_search};
-use slint::{ComponentHandle, ModelRc, VecModel, Weak};
+use chrono::{Datelike, Local};
+use slint::{ComponentHandle, Model, ModelRc, VecModel, Weak};
 
 use crate::{CustomerHub, MainWindow, SearchHub, SearchResultRow, nav::Screen, worker::Worker};
 
@@ -43,6 +44,42 @@ pub fn install(ui: &MainWindow, worker: &Worker<Ctx>) {
     });
     hub.on_close_popup(|| {
         with_hub(|hub| hub.set_open(false));
+    });
+    hub.on_filter_model(|query, model| {
+        let query = cf_core::text::search_key(query.as_str());
+        let indices = model
+            .iter()
+            .enumerate()
+            .filter(|(_, item)| cf_core::text::search_key(item.as_str()).contains(&query))
+            .map(|(index, _)| index as i32)
+            .collect::<Vec<_>>();
+        ModelRc::new(VecModel::from(indices))
+    });
+    hub.on_month_days(|year, month| {
+        let mut cells = vec![0_i32; 42];
+        if let Some(first) = chrono::NaiveDate::from_ymd_opt(year, month as u32, 1) {
+            let offset = first.weekday().num_days_from_monday() as usize;
+            let mut day = first;
+            while day.month() == first.month() {
+                cells[offset + day.day() as usize - 1] = day.day() as i32;
+                match day.succ_opt() {
+                    Some(next) => day = next,
+                    None => break,
+                }
+            }
+        }
+        ModelRc::new(VecModel::from(cells))
+    });
+    hub.on_date_from_text(|text| {
+        let parsed = cf_core::dates::parse_date_input(Some(text.as_str()))
+            .ok()
+            .flatten()
+            .unwrap_or_else(|| Local::now().date_naive());
+        crate::Date {
+            year: parsed.year(),
+            month: parsed.month() as i32,
+            day: parsed.day() as i32,
+        }
     });
 }
 

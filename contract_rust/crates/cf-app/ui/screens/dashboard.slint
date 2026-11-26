@@ -48,7 +48,7 @@ component MetricCard inherits Card {
             font-size: Theme.font-small;
             font-weight: 500;
             horizontal-alignment: center;
-            overflow: elide;
+            wrap: word-wrap;
         }
     }
 }
@@ -83,6 +83,7 @@ export component DashboardScreen inherits ScrollView {
     callback open(int);
 
     VerticalLayout {
+        alignment: start;
         padding-right: 6px;
         spacing: 12px;
 
@@ -95,7 +96,7 @@ export component DashboardScreen inherits ScrollView {
             CfButton { text: "Sinh hàng loạt"; variant: "outline-primary"; clicked => { DashboardHub.quick-nav(6); } }
             CfButton { text: "Báo giá"; variant: "outline-primary"; clicked => { DashboardHub.quick-nav(7); } }
             Rectangle { horizontal-stretch: 1; }
-            CfButton { text: "↻ Làm mới"; variant: "outline-secondary"; clicked => { DashboardHub.refresh(); } }
+            CfButton { text: "Làm mới"; clicked => { DashboardHub.refresh(); } }
         }
 
         // ── Việc cần xử lý (Action Strip kiểu .acc-a Python) ───────────────
@@ -107,7 +108,8 @@ export component DashboardScreen inherits ScrollView {
                 padding-left: 14px;
                 padding-right: 14px;
                 spacing: 6px;
-                HorizontalLayout {
+                FlexboxLayout {
+                    cross-axis-alignment: center;
                     spacing: 8px;
                     Text {
                         text: "Cần xử lý:";
@@ -120,7 +122,6 @@ export component DashboardScreen inherits ScrollView {
                         action: action;
                         clicked => { DashboardHub.open-action(idx); }
                     }
-                    Rectangle { horizontal-stretch: 1; }
                 }
             }
         }
@@ -132,10 +133,13 @@ export component DashboardScreen inherits ScrollView {
         }
 
         // ── Hàng 1: 6 thẻ số liệu màu giống hệt Python dashboard/index.html ─
-        HorizontalLayout {
+        FlexboxLayout {
+            alignment: stretch;
             spacing: 10px;
             for metric[idx] in root.metrics : MetricCard {
                 metric: metric;
+                min-width: 140px;
+                preferred-width: 140px;
                 horizontal-stretch: 1;
                 clicked => { DashboardHub.open-metric(idx); }
             }
@@ -144,7 +148,8 @@ export component DashboardScreen inherits ScrollView {
         // ── Thống kê trong tháng (strip .acc-p) ───────────────────────────
         if DashboardHub.monthly-title != "" : AccentCard {
             accent: Theme.primary;
-            HorizontalLayout {
+            FlexboxLayout {
+                cross-axis-alignment: center;
                 padding-top: 9px;
                 padding-bottom: 9px;
                 padding-left: 14px;
@@ -156,16 +161,18 @@ export component DashboardScreen inherits ScrollView {
                 Text { text: DashboardHub.monthly-signed-text; font-size: Theme.font-small; color: Theme.success-fg; vertical-alignment: center; }
                 Text { text: "|"; font-size: Theme.font-small; color: Theme.border-strong; vertical-alignment: center; }
                 Text { text: DashboardHub.monthly-expired-text; font-size: Theme.font-small; color: Theme.danger-fg; vertical-alignment: center; }
-                Rectangle { horizontal-stretch: 1; }
                 Text { text: DashboardHub.monthly-value-text; font-size: Theme.font-small; font-weight: 700; color: Theme.primary; vertical-alignment: center; }
             }
         }
 
         // ── Hàng 2: Hero Giá trị HĐ hiệu lực + Dự báo 12 tháng + Cơ cấu gói ─
-        HorizontalLayout {
+        FlexboxLayout {
+            alignment: stretch;
             spacing: 10px;
+            cross-axis-alignment: start;
             Card {
-                width: 300px;
+                min-width: 265px;
+                preferred-width: 265px;
                 VerticalLayout {
                     padding: 14px;
                     spacing: 8px;
@@ -175,6 +182,7 @@ export component DashboardScreen inherits ScrollView {
                         font-size: Theme.font-xs;
                         font-weight: 700;
                         letter-spacing: 0.5px;
+                        wrap: word-wrap;
                     }
                     Text {
                         text: DashboardHub.value-total-text;
@@ -227,10 +235,14 @@ export component DashboardScreen inherits ScrollView {
                 }
             }
             BarChart {
+                min-width: 365px;
+                preferred-width: 400px;
                 horizontal-stretch: 1;
                 bars: DashboardHub.forecast-bars;
             }
             PieChart {
+                min-width: 220px;
+                preferred-width: 220px;
                 horizontal-stretch: 1;
                 items: DashboardHub.pie-items;
             }

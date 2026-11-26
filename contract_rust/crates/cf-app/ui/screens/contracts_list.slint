@@ -1,5 +1,7 @@
-import { CheckBox, ComboBox, LineEdit, ScrollView } from "std-widgets.slint";
+import { CheckBox, LineEdit, ScrollView } from "std-widgets.slint";
 import { Theme } from "../theme.slint";
+import { DateInput } from "../components/date_input.slint";
+import { SearchableCombo } from "../components/searchable_combo.slint";
 import { Card, CfButton, EmptyState, StatusBadge } from "../components/common.slint";
 import { ContractHub } from "../globals.slint";
 
@@ -100,33 +102,39 @@ export component ContractsListScreen inherits VerticalLayout {
 
     // Thanh bộ lọc trong Card
     Card {
+        vertical-stretch: 0;
         VerticalLayout {
+            alignment: start;
             padding: 10px;
             spacing: 8px;
-            HorizontalLayout {
+            FlexboxLayout {
+                alignment: stretch;
+                cross-axis-alignment: center;
                 spacing: Theme.gap;
                 LineEdit {
+                    min-width: 180px;
+                    preferred-width: 220px;
                     horizontal-stretch: 1;
                     height: 32px;
                     placeholder-text: "Tìm số hợp đồng, tên khách hàng...";
                     text <=> ContractHub.list-search-text;
                     edited(text) => { root.search-changed(text); }
                 }
-                ComboBox {
+                SearchableCombo {
                     width: 170px;
                     height: 32px;
                     model: root.status-options;
                     current-index: root.status-index;
                     selected(value) => { root.filter-changed(self.current-index, root.year-index, root.alert-index, root.customer-index, root.product-index, root.date-field-index, root.date-from, root.date-to); }
                 }
-                ComboBox {
+                SearchableCombo {
                     width: 115px;
                     height: 32px;
                     model: root.year-options;
                     current-index: root.year-index;
                     selected(value) => { root.filter-changed(root.status-index, self.current-index, root.alert-index, root.customer-index, root.product-index, root.date-field-index, root.date-from, root.date-to); }
                 }
-                ComboBox {
+                SearchableCombo {
                     width: 200px;
                     height: 32px;
                     model: root.alert-options;
@@ -134,42 +142,46 @@ export component ContractsListScreen inherits VerticalLayout {
                     selected(value) => { root.filter-changed(root.status-index, root.year-index, self.current-index, root.customer-index, root.product-index, root.date-field-index, root.date-from, root.date-to); }
                 }
             }
-            HorizontalLayout {
+            FlexboxLayout {
+                alignment: stretch;
+                cross-axis-alignment: center;
                 spacing: Theme.gap;
-                ComboBox {
+                SearchableCombo {
                     width: 185px;
                     height: 32px;
                     model: root.customer-options;
                     current-index: root.customer-index;
                     selected(value) => { root.filter-changed(root.status-index, root.year-index, root.alert-index, self.current-index, root.product-index, root.date-field-index, root.date-from, root.date-to); }
                 }
-                ComboBox {
+                SearchableCombo {
                     width: 185px;
                     height: 32px;
                     model: root.product-options;
                     current-index: root.product-index;
                     selected(value) => { root.filter-changed(root.status-index, root.year-index, root.alert-index, root.customer-index, self.current-index, root.date-field-index, root.date-from, root.date-to); }
                 }
-                ComboBox {
+                SearchableCombo {
                     width: 130px;
                     height: 32px;
                     model: root.date-field-options;
                     current-index: root.date-field-index;
                     selected(value) => { root.filter-changed(root.status-index, root.year-index, root.alert-index, root.customer-index, root.product-index, self.current-index, root.date-from, root.date-to); }
                 }
-                LineEdit {
-                    width: 135px;
+                DateInput {
+                    width: 148px;
                     height: 32px;
-                    placeholder-text: "Từ YYYY-MM-DD";
+                    iso-format: true;
+                    placeholder-text: "Từ ngày";
                     text <=> root.date-from;
-                    edited(text) => { root.filter-changed(root.status-index, root.year-index, root.alert-index, root.customer-index, root.product-index, root.date-field-index, text, root.date-to); }
+                    accepted(text) => { root.filter-changed(root.status-index, root.year-index, root.alert-index, root.customer-index, root.product-index, root.date-field-index, text, root.date-to); }
                 }
-                LineEdit {
-                    width: 135px;
+                DateInput {
+                    width: 148px;
                     height: 32px;
-                    placeholder-text: "Đến YYYY-MM-DD";
+                    iso-format: true;
+                    placeholder-text: "Đến ngày";
                     text <=> root.date-to;
-                    edited(text) => { root.filter-changed(root.status-index, root.year-index, root.alert-index, root.customer-index, root.product-index, root.date-field-index, root.date-from, text); }
+                    accepted(text) => { root.filter-changed(root.status-index, root.year-index, root.alert-index, root.customer-index, root.product-index, root.date-field-index, root.date-from, text); }
                 }
                 Rectangle { horizontal-stretch: 1; }
             }
@@ -177,38 +189,45 @@ export component ContractsListScreen inherits VerticalLayout {
     }
 
     // Tiêu đề cột (khớp thứ tự cột Python: Số HĐ | Khách hàng | Ngày ký | Hết hạn | Giá trị | Trạng thái | Cảnh báo)
-    Rectangle {
-        height: 36px;
-        background: Theme.surface-2;
-        border-color: Theme.border;
-        border-width: 1px;
-        border-radius: Theme.radius-sm;
-        HorizontalLayout {
-            padding-left: 8px; padding-right: 8px; spacing: 7px;
-            CheckBox {
-                width: 28px;
-                checked: ContractHub.list-all-selected;
-                toggled => { ContractHub.list-toggle-all(); }
-            }
-            Rectangle { width: 120px; TouchArea { mouse-cursor: pointer; clicked => { root.sort-changed("contract_number"); } } Text { text: "SỐ HỢP ĐỒNG ↕"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; } }
-            Rectangle { horizontal-stretch: 1; TouchArea { mouse-cursor: pointer; clicked => { root.sort-changed("customer_name"); } } Text { text: "KHÁCH HÀNG ↕"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; } }
-            Rectangle { width: 95px; TouchArea { mouse-cursor: pointer; clicked => { root.sort-changed("sign_date"); } } Text { text: "NGÀY KÝ ↕"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; } }
-            Rectangle { width: 95px; TouchArea { mouse-cursor: pointer; clicked => { root.sort-changed("end_date"); } } Text { text: "HẾT HẠN ↕"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; } }
-            Rectangle { width: 120px; TouchArea { mouse-cursor: pointer; clicked => { root.sort-changed("total_amount"); } } Text { text: "GIÁ TRỊ ↕"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; horizontal-alignment: right; vertical-alignment: center; } }
-            Rectangle { width: 140px; TouchArea { mouse-cursor: pointer; clicked => { root.sort-changed("status"); } } Text { text: "TRẠNG THÁI ↕"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; } }
-            Text { width: 155px; text: "CẢNH BÁO"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; vertical-alignment: center; }
-        }
-    }
-
     if root.rows.length == 0 : EmptyState {
         vertical-stretch: 1;
         message: "Không có hợp đồng nào khớp bộ lọc.";
     }
     if root.rows.length > 0 : Card {
         vertical-stretch: 1;
+        min-width: 0px;
         clip: true;
-        ScrollView {
-            VerticalLayout {
+        min-height: 0px;
+        preferred-height: table-content.preferred-height + 14px;
+        max-height: self.preferred-height;
+        table := ScrollView {
+            min-width: 0px;
+            content-width: max(self.visible-width, 920px);
+            table-content := VerticalLayout {
+                width: table.content-width;
+                spacing: 0px;
+                Rectangle {
+                    height: 36px;
+                    background: Theme.surface-2;
+                    border-color: Theme.border;
+                    border-width: 1px;
+                    border-radius: Theme.radius-sm;
+                    HorizontalLayout {
+                        padding-left: 8px; padding-right: 8px; spacing: 7px;
+                        CheckBox {
+                            width: 28px;
+                            checked: ContractHub.list-all-selected;
+                            toggled => { ContractHub.list-toggle-all(); }
+                        }
+                        Rectangle { width: 120px; TouchArea { mouse-cursor: pointer; clicked => { root.sort-changed("contract_number"); } } Text { text: "SỐ HỢP ĐỒNG ↕"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; } }
+                        Rectangle { horizontal-stretch: 1; TouchArea { mouse-cursor: pointer; clicked => { root.sort-changed("customer_name"); } } Text { text: "KHÁCH HÀNG ↕"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; } }
+                        Rectangle { width: 95px; TouchArea { mouse-cursor: pointer; clicked => { root.sort-changed("sign_date"); } } Text { text: "NGÀY KÝ ↕"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; } }
+                        Rectangle { width: 95px; TouchArea { mouse-cursor: pointer; clicked => { root.sort-changed("end_date"); } } Text { text: "HẾT HẠN ↕"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; } }
+                        Rectangle { width: 120px; TouchArea { mouse-cursor: pointer; clicked => { root.sort-changed("total_amount"); } } Text { text: "GIÁ TRỊ ↕"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; horizontal-alignment: right; vertical-alignment: center; } }
+                        Rectangle { width: 140px; TouchArea { mouse-cursor: pointer; clicked => { root.sort-changed("status"); } } Text { text: "TRẠNG THÁI ↕"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; } }
+                        Text { width: 155px; text: "CẢNH BÁO"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; vertical-alignment: center; }
+                    }
+                }
                 for row[index] in root.rows : Rectangle {
                     height: 42px;
                     background: row.selected ? Theme.primary-tint : (cta.has-hover ? Theme.primary-tint : Theme.surface);
@@ -241,31 +260,31 @@ export component ContractsListScreen inherits VerticalLayout {
     }
 
     // Hàng loạt và phân trang
-    HorizontalLayout {
+    if root.rows.length > 0 || root.has-prev || root.has-next : FlexboxLayout {
+        vertical-stretch: 0;
+        alignment: stretch;
         spacing: Theme.gap;
-        height: 36px;
-        Text {
-            text: root.selected-count > 0 ? ("Đã chọn " + root.selected-count + " hợp đồng") : "Chọn hợp đồng để thao tác hàng loạt";
+        cross-axis-alignment: center;
+        if root.selected-count > 0 : Text {
+            text: "Đã chọn " + root.selected-count + " hợp đồng";
             color: Theme.text-muted;
             vertical-alignment: center;
         }
-        ComboBox {
+        if root.selected-count > 0 : SearchableCombo {
             width: 185px;
             height: 32px;
             model: root.target-options;
-            enabled: root.selected-count > 0;
             current-index <=> ContractHub.list-target-index;
         }
-        CfButton {
+        if root.selected-count > 0 : CfButton {
             text: "Áp dụng trạng thái";
             variant: "outline-primary";
-            enabled: root.selected-count > 0 && ContractHub.list-target-index >= 0;
+            enabled: ContractHub.list-target-index >= 0;
             clicked => { root.bulk-status(ContractHub.list-target-index); }
         }
-        CfButton {
+        if root.selected-count > 0 : CfButton {
             text: "Xóa đã chọn";
             variant: "danger";
-            enabled: root.selected-count > 0;
             clicked => { root.bulk-delete(); }
         }
         Rectangle { horizontal-stretch: 1; }
@@ -273,4 +292,6 @@ export component ContractsListScreen inherits VerticalLayout {
         Text { text: root.page-text; color: Theme.text; vertical-alignment: center; }
         CfButton { text: "Sau ›"; enabled: root.has-next; clicked => { root.next-page(); } }
     }
+
+    Rectangle { vertical-stretch: 1; }
 }

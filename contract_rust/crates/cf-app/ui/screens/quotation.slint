@@ -1,5 +1,7 @@
-import { CheckBox, ComboBox, LineEdit, ScrollView } from "std-widgets.slint";
+import { CheckBox, LineEdit, ScrollView } from "std-widgets.slint";
 import { Theme } from "../theme.slint";
+import { DateInput } from "../components/date_input.slint";
+import { SearchableCombo } from "../components/searchable_combo.slint";
 import { Card, CfButton, TabPill } from "../components/common.slint";
 import { QuotationHub } from "../globals.slint";
 
@@ -49,6 +51,7 @@ export component QuotationScreen inherits VerticalLayout {
     if QuotationHub.active-tab == "catalog" : ScrollView {
         vertical-stretch: 1;
         VerticalLayout {
+            alignment: start;
             padding-right: 6px;
             spacing: 12px;
 
@@ -69,8 +72,8 @@ export component QuotationScreen inherits VerticalLayout {
                             horizontal-stretch: 1;
                             spacing: 4px;
                             FieldLabel { text-label: "SẢN PHẨM / DỊCH VỤ *"; }
-                            ComboBox {
-                                height: 32px;
+                            SearchableCombo {
+                                height: Theme.control-height;
                                 model: QuotationHub.product-names;
                                 current-index <=> QuotationHub.product-index;
                                 selected(v) => { QuotationHub.catalog-product-changed(self.current-index); }
@@ -80,8 +83,8 @@ export component QuotationScreen inherits VerticalLayout {
                             horizontal-stretch: 1;
                             spacing: 4px;
                             FieldLabel { text-label: "MẪU BÁO GIÁ (.DOCX) *"; }
-                            ComboBox {
-                                height: 32px;
+                            SearchableCombo {
+                                height: Theme.control-height;
                                 model: QuotationHub.catalog-templates;
                                 current-index <=> QuotationHub.catalog-template-index;
                                 selected(v) => { QuotationHub.catalog-template-changed(self.current-index); }
@@ -92,8 +95,8 @@ export component QuotationScreen inherits VerticalLayout {
                     VerticalLayout {
                         spacing: 4px;
                         FieldLabel { text-label: "KHÁCH HÀNG *"; }
-                        ComboBox {
-                            height: 32px;
+                        SearchableCombo {
+                            height: Theme.control-height;
                             model: QuotationHub.customer-names;
                             current-index <=> QuotationHub.customer-index;
                             selected(v) => { QuotationHub.catalog-customer-changed(self.current-index); }
@@ -106,8 +109,8 @@ export component QuotationScreen inherits VerticalLayout {
                             width: 180px;
                             spacing: 4px;
                             FieldLabel { text-label: "NGÀY BÁO GIÁ *"; }
-                            LineEdit {
-                                height: 32px;
+                            DateInput {
+                                height: Theme.control-height;
                                 text <=> QuotationHub.catalog-quote-date;
                                 placeholder-text: "dd/mm/yyyy";
                                 edited(t) => { QuotationHub.catalog-params-changed(t, QuotationHub.catalog-months); }
@@ -118,7 +121,8 @@ export component QuotationScreen inherits VerticalLayout {
                             spacing: 4px;
                             FieldLabel { text-label: "SỐ THÁNG *"; }
                             LineEdit {
-                                height: 32px;
+                                min-width: 0px;
+                                height: Theme.control-height;
                                 text <=> QuotationHub.catalog-months;
                                 edited(t) => { QuotationHub.catalog-params-changed(QuotationHub.catalog-quote-date, t); }
                             }
@@ -172,6 +176,7 @@ export component QuotationScreen inherits VerticalLayout {
     if QuotationHub.active-tab == "manual" : ScrollView {
         vertical-stretch: 1;
         VerticalLayout {
+            alignment: start;
             padding-right: 6px;
             spacing: 12px;
 
@@ -182,7 +187,7 @@ export component QuotationScreen inherits VerticalLayout {
                     FieldLabel { text-label: "CHỌN BỐ CỤC MẪU BÁO GIÁ"; }
                     HorizontalLayout {
                         spacing: 10px;
-                        ComboBox { height: 32px; horizontal-stretch: 1; model: QuotationHub.layout-names; current-index <=> QuotationHub.layout-index; }
+                        SearchableCombo { height: Theme.control-height; horizontal-stretch: 1; model: QuotationHub.layout-names; current-index <=> QuotationHub.layout-index; }
                         CfButton { text: "Tải mẫu trống"; variant: "outline-primary"; clicked => { QuotationHub.manual-download-blank(QuotationHub.layout-index); } }
                     }
                 }
@@ -196,9 +201,9 @@ export component QuotationScreen inherits VerticalLayout {
                         spacing: 10px;
                         Text { text: "ĐƠN VỊ PHÁT HÀNH BÁO GIÁ"; font-size: Theme.font-small; font-weight: 700; color: Theme.primary; vertical-alignment: center; }
                         Rectangle { horizontal-stretch: 1; }
-                        ComboBox {
+                        SearchableCombo {
                             width: 240px;
-                            height: 32px;
+                            height: Theme.control-height;
                             model: QuotationHub.issuer-names;
                             current-index <=> QuotationHub.issuer-index;
                             selected(v) => { QuotationHub.manual-select-issuer(self.current-index); }
@@ -208,16 +213,16 @@ export component QuotationScreen inherits VerticalLayout {
                     Rectangle { height: 1px; background: Theme.border; }
                     HorizontalLayout {
                         spacing: 10px;
-                        LineEdit { height: 32px; horizontal-stretch: 1; placeholder-text: "Tên đơn vị phát hành *"; text <=> QuotationHub.issuer-name; }
-                        LineEdit { height: 32px; width: 180px; placeholder-text: "Mã số thuế"; text <=> QuotationHub.issuer-tax-code; }
+                        LineEdit { min-width: 0px; height: Theme.control-height; horizontal-stretch: 1; placeholder-text: "Tên đơn vị phát hành *"; text <=> QuotationHub.issuer-name; }
+                        LineEdit { height: Theme.control-height; width: 180px; placeholder-text: "Mã số thuế"; text <=> QuotationHub.issuer-tax-code; }
                     }
-                    LineEdit { height: 32px; placeholder-text: "Địa chỉ đơn vị phát hành"; text <=> QuotationHub.issuer-address; }
+                    LineEdit { min-width: 0px; height: Theme.control-height; placeholder-text: "Địa chỉ đơn vị phát hành"; text <=> QuotationHub.issuer-address; }
                     HorizontalLayout {
                         spacing: 10px;
-                        LineEdit { height: 32px; horizontal-stretch: 1; placeholder-text: "Người đại diện"; text <=> QuotationHub.issuer-rep; }
-                        LineEdit { height: 32px; horizontal-stretch: 1; placeholder-text: "Chức vụ"; text <=> QuotationHub.issuer-title; }
-                        LineEdit { height: 32px; width: 140px; placeholder-text: "Điện thoại"; text <=> QuotationHub.issuer-phone; }
-                        LineEdit { height: 32px; width: 180px; placeholder-text: "Email"; text <=> QuotationHub.issuer-email; }
+                        LineEdit { min-width: 0px; height: Theme.control-height; horizontal-stretch: 1; placeholder-text: "Người đại diện"; text <=> QuotationHub.issuer-rep; }
+                        LineEdit { min-width: 0px; height: Theme.control-height; horizontal-stretch: 1; placeholder-text: "Chức vụ"; text <=> QuotationHub.issuer-title; }
+                        LineEdit { height: Theme.control-height; width: 140px; placeholder-text: "Điện thoại"; text <=> QuotationHub.issuer-phone; }
+                        LineEdit { height: Theme.control-height; width: 180px; placeholder-text: "Email"; text <=> QuotationHub.issuer-email; }
                     }
                 }
             }
@@ -231,7 +236,7 @@ export component QuotationScreen inherits VerticalLayout {
                         Text { text: "NGƯỜI NHẬN & THỜI HẠN"; font-size: Theme.font-small; font-weight: 700; color: Theme.primary; vertical-alignment: center; }
                         Rectangle { horizontal-stretch: 1; }
                         Text { text: "Điền nhanh từ KH:"; font-size: Theme.font-xs; color: Theme.text-muted; vertical-alignment: center; }
-                        ComboBox {
+                        SearchableCombo {
                             width: 240px;
                             height: 30px;
                             model: QuotationHub.customer-names;
@@ -241,20 +246,20 @@ export component QuotationScreen inherits VerticalLayout {
                     Rectangle { height: 1px; background: Theme.border; }
                     HorizontalLayout {
                         spacing: 10px;
-                        LineEdit { height: 32px; horizontal-stretch: 1; placeholder-text: "Tên khách hàng nhận báo giá *"; text <=> QuotationHub.recipient-name; }
-                        LineEdit { height: 32px; width: 180px; placeholder-text: "MST người nhận"; text <=> QuotationHub.recipient-tax-code; }
+                        LineEdit { min-width: 0px; height: Theme.control-height; horizontal-stretch: 1; placeholder-text: "Tên khách hàng nhận báo giá *"; text <=> QuotationHub.recipient-name; }
+                        LineEdit { height: Theme.control-height; width: 180px; placeholder-text: "MST người nhận"; text <=> QuotationHub.recipient-tax-code; }
                     }
                     HorizontalLayout {
                         spacing: 10px;
-                        LineEdit { height: 32px; horizontal-stretch: 1; placeholder-text: "Địa chỉ người nhận"; text <=> QuotationHub.recipient-address; }
-                        LineEdit { height: 32px; width: 200px; placeholder-text: "Người liên hệ"; text <=> QuotationHub.recipient-contact; }
+                        LineEdit { min-width: 0px; height: Theme.control-height; horizontal-stretch: 1; placeholder-text: "Địa chỉ người nhận"; text <=> QuotationHub.recipient-address; }
+                        LineEdit { height: Theme.control-height; width: 200px; placeholder-text: "Người liên hệ"; text <=> QuotationHub.recipient-contact; }
                     }
                     HorizontalLayout {
                         spacing: 10px;
-                        LineEdit { height: 32px; width: 140px; placeholder-text: "Số báo giá"; text <=> QuotationHub.manual-quote-number; }
-                        LineEdit { height: 32px; width: 150px; placeholder-text: "Ngày (dd/mm/yyyy) *"; text <=> QuotationHub.manual-quote-date; }
-                        LineEdit { height: 32px; width: 150px; placeholder-text: "Hiệu lực đến"; text <=> QuotationHub.manual-valid-until; }
-                        LineEdit { height: 32px; horizontal-stretch: 1; placeholder-text: "Ghi chú"; text <=> QuotationHub.manual-note; }
+                        LineEdit { height: Theme.control-height; width: 140px; placeholder-text: "Số báo giá"; text <=> QuotationHub.manual-quote-number; }
+                        DateInput { height: Theme.control-height; width: 150px; placeholder-text: "Ngày (dd/mm/yyyy) *"; text <=> QuotationHub.manual-quote-date; }
+                        DateInput { height: Theme.control-height; width: 150px; placeholder-text: "Hiệu lực đến"; text <=> QuotationHub.manual-valid-until; }
+                        LineEdit { min-width: 0px; height: Theme.control-height; horizontal-stretch: 1; placeholder-text: "Ghi chú"; text <=> QuotationHub.manual-note; }
                     }
                 }
             }
@@ -268,7 +273,7 @@ export component QuotationScreen inherits VerticalLayout {
                         Text { text: "HẠNG MỤC BÁO GIÁ"; font-size: Theme.font-small; font-weight: 700; color: Theme.primary; vertical-alignment: center; }
                         Rectangle { horizontal-stretch: 1; }
                         Text { text: "Thêm nhanh từ SP:"; font-size: Theme.font-xs; color: Theme.text-muted; vertical-alignment: center; }
-                        ComboBox {
+                        SearchableCombo {
                             width: 220px;
                             height: 30px;
                             model: QuotationHub.product-names;
@@ -279,12 +284,12 @@ export component QuotationScreen inherits VerticalLayout {
                     Rectangle { height: 1px; background: Theme.border; }
                     for row[idx] in QuotationHub.manual-items : HorizontalLayout {
                         spacing: 6px;
-                        LineEdit { height: 32px; horizontal-stretch: 1; placeholder-text: "Tên hạng mục *"; text: row.name; edited(t) => { QuotationHub.manual-update-item(idx, t, row.unit, row.quantity, row.periods, row.price, row.vat); } }
-                        LineEdit { height: 32px; width: 80px; placeholder-text: "ĐVT"; text: row.unit; edited(t) => { QuotationHub.manual-update-item(idx, row.name, t, row.quantity, row.periods, row.price, row.vat); } }
-                        LineEdit { height: 32px; width: 65px; placeholder-text: "SL"; text: row.quantity; edited(t) => { QuotationHub.manual-update-item(idx, row.name, row.unit, t, row.periods, row.price, row.vat); } }
-                        LineEdit { height: 32px; width: 55px; placeholder-text: "Kỳ"; text: row.periods; edited(t) => { QuotationHub.manual-update-item(idx, row.name, row.unit, row.quantity, t, row.price, row.vat); } }
-                        LineEdit { height: 32px; width: 120px; placeholder-text: "Đơn giá"; text: row.price; edited(t) => { QuotationHub.manual-update-item(idx, row.name, row.unit, row.quantity, row.periods, t, row.vat); } }
-                        LineEdit { height: 32px; width: 58px; placeholder-text: "VAT%"; text: row.vat; edited(t) => { QuotationHub.manual-update-item(idx, row.name, row.unit, row.quantity, row.periods, row.price, t); } }
+                        LineEdit { min-width: 0px; height: Theme.control-height; horizontal-stretch: 1; placeholder-text: "Tên hạng mục *"; text: row.name; edited(t) => { QuotationHub.manual-update-item(idx, t, row.unit, row.quantity, row.periods, row.price, row.vat); } }
+                        LineEdit { height: Theme.control-height; width: 80px; placeholder-text: "ĐVT"; text: row.unit; edited(t) => { QuotationHub.manual-update-item(idx, row.name, t, row.quantity, row.periods, row.price, row.vat); } }
+                        LineEdit { height: Theme.control-height; width: 65px; placeholder-text: "SL"; text: row.quantity; edited(t) => { QuotationHub.manual-update-item(idx, row.name, row.unit, t, row.periods, row.price, row.vat); } }
+                        LineEdit { height: Theme.control-height; width: 55px; placeholder-text: "Kỳ"; text: row.periods; edited(t) => { QuotationHub.manual-update-item(idx, row.name, row.unit, row.quantity, t, row.price, row.vat); } }
+                        LineEdit { height: Theme.control-height; width: 120px; placeholder-text: "Đơn giá"; text: row.price; edited(t) => { QuotationHub.manual-update-item(idx, row.name, row.unit, row.quantity, row.periods, t, row.vat); } }
+                        LineEdit { height: Theme.control-height; width: 58px; placeholder-text: "VAT%"; text: row.vat; edited(t) => { QuotationHub.manual-update-item(idx, row.name, row.unit, row.quantity, row.periods, row.price, t); } }
                         CfButton { text: "Xóa"; variant: "danger"; clicked => { QuotationHub.manual-remove-item(idx); } }
                     }
                     if QuotationHub.manual-totals-text != "" : Rectangle {
@@ -309,6 +314,7 @@ export component QuotationScreen inherits VerticalLayout {
     if QuotationHub.active-tab == "request" : ScrollView {
         vertical-stretch: 1;
         VerticalLayout {
+            alignment: start;
             padding-right: 6px;
             spacing: 12px;
             Card {
@@ -326,13 +332,13 @@ export component QuotationScreen inherits VerticalLayout {
                         VerticalLayout {
                             horizontal-stretch: 1; spacing: 4px;
                             FieldLabel { text-label: "KHÁCH HÀNG *"; }
-                            ComboBox { height: 32px; model: QuotationHub.customer-names; current-index <=> QuotationHub.customer-index; }
+                            SearchableCombo { height: Theme.control-height; model: QuotationHub.customer-names; current-index <=> QuotationHub.customer-index; }
                         }
                         VerticalLayout {
                             horizontal-stretch: 1; spacing: 4px;
                             FieldLabel { text-label: "GÓI CHÍNH *"; }
-                            ComboBox {
-                                height: 32px;
+                            SearchableCombo {
+                                height: Theme.control-height;
                                 model: QuotationHub.product-names;
                                 current-index <=> QuotationHub.product-index;
                                 selected(v) => { QuotationHub.request-product-changed(self.current-index); }
@@ -342,19 +348,19 @@ export component QuotationScreen inherits VerticalLayout {
                     VerticalLayout {
                         spacing: 4px;
                         FieldLabel { text-label: "MẪU YÊU CẦU *"; }
-                        ComboBox { height: 32px; model: QuotationHub.request-templates; current-index <=> QuotationHub.request-template-index; }
+                        SearchableCombo { height: Theme.control-height; model: QuotationHub.request-templates; current-index <=> QuotationHub.request-template-index; }
                     }
                     HorizontalLayout {
                         spacing: 12px;
                         VerticalLayout {
                             horizontal-stretch: 2; spacing: 4px;
                             FieldLabel { text-label: "TÊN HẠNG MỤC CHÍNH (TÙY CHỈNH)"; }
-                            LineEdit { height: 32px; placeholder-text: "Để trống = theo tên sản phẩm"; text <=> QuotationHub.request-main-name; }
+                            LineEdit { min-width: 0px; height: Theme.control-height; placeholder-text: "Để trống = theo tên sản phẩm"; text <=> QuotationHub.request-main-name; }
                         }
                         VerticalLayout {
                             width: 110px; spacing: 4px;
                             FieldLabel { text-label: "SỐ LƯỢNG"; }
-                            LineEdit { height: 32px; text <=> QuotationHub.request-main-qty; }
+                            LineEdit { min-width: 0px; height: Theme.control-height; text <=> QuotationHub.request-main-qty; }
                         }
                     }
                     if QuotationHub.request-addons.length > 0 : VerticalLayout {
@@ -371,34 +377,34 @@ export component QuotationScreen inherits VerticalLayout {
                         VerticalLayout {
                             width: 160px; spacing: 4px;
                             FieldLabel { text-label: "NGÀY YÊU CẦU *"; }
-                            LineEdit { height: 32px; text <=> QuotationHub.request-date; placeholder-text: "dd/mm/yyyy"; }
+                            DateInput { height: Theme.control-height; text <=> QuotationHub.request-date; placeholder-text: "dd/mm/yyyy"; }
                         }
                         VerticalLayout {
                             width: 160px; spacing: 4px;
                             FieldLabel { text-label: "HẠN PHẢN HỒI *"; }
-                            LineEdit { height: 32px; text <=> QuotationHub.request-deadline; placeholder-text: "dd/mm/yyyy"; }
+                            DateInput { height: Theme.control-height; text <=> QuotationHub.request-deadline; placeholder-text: "dd/mm/yyyy"; }
                         }
                         VerticalLayout {
                             width: 100px; spacing: 4px;
                             FieldLabel { text-label: "SỐ THÁNG"; }
-                            LineEdit { height: 32px; text <=> QuotationHub.request-months; }
+                            LineEdit { min-width: 0px; height: Theme.control-height; text <=> QuotationHub.request-months; }
                         }
                         Rectangle { horizontal-stretch: 1; }
                     }
                     VerticalLayout {
                         spacing: 4px;
                         FieldLabel { text-label: "KÍNH GỬI (TRỐNG = …)"; }
-                        LineEdit { height: 32px; text <=> QuotationHub.request-addressee; }
+                        LineEdit { min-width: 0px; height: Theme.control-height; text <=> QuotationHub.request-addressee; }
                     }
                     VerticalLayout {
                         spacing: 4px;
                         FieldLabel { text-label: "TIÊU ĐỀ / NỘI DUNG"; }
-                        LineEdit { height: 32px; text <=> QuotationHub.request-subject; }
+                        LineEdit { min-width: 0px; height: Theme.control-height; text <=> QuotationHub.request-subject; }
                     }
                     VerticalLayout {
                         spacing: 4px;
                         FieldLabel { text-label: "GHI CHÚ"; }
-                        LineEdit { height: 32px; text <=> QuotationHub.request-note; }
+                        LineEdit { min-width: 0px; height: Theme.control-height; text <=> QuotationHub.request-note; }
                     }
                     HorizontalLayout {
                         alignment: end;

@@ -35,35 +35,41 @@ export component ExpiringScreen inherits VerticalLayout {
     }
 
     // Tiêu đề bảng
-    Rectangle {
-        height: 34px;
-        background: Theme.surface-2;
-        border-color: Theme.border;
-        border-width: 1px;
-        border-radius: Theme.radius-sm;
-        HorizontalLayout {
-            padding-left: 12px;
-            padding-right: 12px;
-            spacing: 12px;
-            Text { width: 165px; text: "SỐ HỢP ĐỒNG"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
-            Text { horizontal-stretch: 1; text: "KHÁCH HÀNG"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
-            Text { width: 100px; text: "HẾT HẠN"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
-            Text { width: 110px; text: "CÒN LẠI"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; horizontal-alignment: center; vertical-alignment: center; }
-            Text { width: 130px; text: "TRẠNG THÁI"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
-            Text { width: 120px; text: "GIÁ TRỊ"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; horizontal-alignment: right; vertical-alignment: center; }
-        }
-    }
-
     if ExpiringHub.rows.length == 0 : EmptyState {
         vertical-stretch: 1;
         message: "Không có hợp đồng nào hết hạn trong " + ExpiringHub.days + " ngày tới.";
     }
-
     if ExpiringHub.rows.length > 0 : Card {
         vertical-stretch: 1;
+        min-width: 0px;
         clip: true;
-        ScrollView {
-            VerticalLayout {
+        min-height: 0px;
+        preferred-height: table-content.preferred-height + 14px;
+        max-height: self.preferred-height;
+        table := ScrollView {
+            min-width: 0px;
+            content-width: max(self.visible-width, 840px);
+            table-content := VerticalLayout {
+                width: table.content-width;
+                spacing: 0px;
+                Rectangle {
+                    height: 34px;
+                    background: Theme.surface-2;
+                    border-color: Theme.border;
+                    border-width: 1px;
+                    border-radius: Theme.radius-sm;
+                    HorizontalLayout {
+                        padding-left: 12px;
+                        padding-right: 12px;
+                        spacing: 12px;
+                        Text { width: 165px; text: "SỐ HỢP ĐỒNG"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
+                        Text { horizontal-stretch: 1; text: "KHÁCH HÀNG"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
+                        Text { width: 100px; text: "HẾT HẠN"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
+                        Text { width: 110px; text: "CÒN LẠI"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; horizontal-alignment: center; vertical-alignment: center; }
+                        Text { width: 130px; text: "TRẠNG THÁI"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
+                        Text { width: 120px; text: "GIÁ TRỊ"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; horizontal-alignment: right; vertical-alignment: center; }
+                    }
+                }
                 for row in ExpiringHub.rows : Rectangle {
                     height: 44px;
                     background: row.urgency == "critical" || row.urgency == "expired" ? Theme.danger-bg
@@ -130,4 +136,6 @@ export component ExpiringScreen inherits VerticalLayout {
             }
         }
     }
+
+    Rectangle { vertical-stretch: 1; }
 }

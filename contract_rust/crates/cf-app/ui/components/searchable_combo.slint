@@ -1,0 +1,170 @@
+import { LineEdit, ScrollView } from "std-widgets.slint";
+import { Theme } from "../theme.slint";
+import { SearchHub } from "../globals.slint";
+
+// ComboBox thay thế có ô lọc luôn hiện trong danh sách mở.
+export component SearchableCombo inherits Rectangle {
+    in property <[string]> model;
+    in-out property <int> current-index: 0;
+    in property <string> current-value: "";
+    in property <bool> value-driven: false;
+    in property <bool> enabled: true;
+    callback selected(string);
+
+    property <string> query: "";
+    property <string> selected-label: root.value-driven ? root.current-value
+        : (root.current-index >= 0 && root.current-index < root.model.length ? root.model[root.current-index] : "");
+
+    function choose(index: int) {
+        if index < 0 || index >= root.model.length {
+            return;
+        }
+        let value = root.model[index];
+        if !root.value-driven {
+            root.current-index = index;
+        }
+        popup.close();
+        root.selected(value);
+    }
+
+    function open-list() {
+        root.query = "";
+        popup.show();
+    }
+
+    min-width: 0px;
+    preferred-width: 160px;
+    horizontal-stretch: 1;
+    height: Theme.control-height;
+    opacity: root.enabled ? 1.0 : 0.45;
+    background: Theme.surface;
+    border-color: keyboard.has-focus ? Theme.primary : Theme.border-strong;
+    border-width: 1px;
+    border-radius: Theme.radius-sm;
+    forward-focus: keyboard;
+    accessible-role: combobox;
+    accessible-label: root.selected-label;
+    accessible-enabled: root.enabled;
+    accessible-action-default => { if root.enabled { root.open-list(); } }
+
+    Text {
+        x: 10px;
+        width: max(0px, root.width - 34px);
+        height: root.height;
+        text: root.selected-label;
+        color: Theme.text;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+
+    Path {
+        x: root.width - 24px;
+        width: 12px;
+        height: 8px;
+        y: (root.height - self.height) / 2;
+        viewbox-width: 12;
+        viewbox-height: 8;
+        commands: "M 1 2 L 6 7 L 11 2";
+        stroke: Theme.text-muted;
+        stroke-width: 1.3px;
+    }
+
+    keyboard := FocusScope {
+        width: 0px;
+        enabled: root.enabled;
+        key-pressed(event) => {
+            if event.text == Key.Space || event.text == Key.Return || event.text == Key.DownArrow {
+                root.open-list();
+                return accept;
+            }
+            return reject;
+        }
+    }
+
+    TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: root.enabled ? pointer : default;
+        clicked => { root.open-list(); }
+    }
+
+    popup := PopupWindow {
+        x: 0px;
+        y: root.height;
+        width: max(252px, root.width);
+        height: 54px + max(1, min(6, root.model.length)) * 36px;
+        close-policy: close-on-click-outside;
+        forward-focus: popup-focus;
+
+        Rectangle {
+            width: parent.width;
+            height: parent.height;
+            background: Theme.surface;
+            border-color: Theme.border-strong;
+            border-width: 1px;
+            border-radius: Theme.radius-sm;
+
+            popup-focus := FocusScope {
+                property <[int]> indices: SearchHub.filter-model(root.query, root.model);
+                forward-focus: search-input;
+                key-pressed(event) => {
+                    if event.text == Key.Escape {
+                        popup.close();
+                        return accept;
+                    }
+                    return reject;
+                }
+
+                VerticalLayout {
+                    padding: 6px;
+                    spacing: 4px;
+
+                    search-input := LineEdit {
+                        height: Theme.control-height;
+                        placeholder-text: "Nhập để tìm…";
+                        text <=> root.query;
+                        accepted => {
+                            if popup-focus.indices.length > 0 {
+                                root.choose(popup-focus.indices[0]);
+                            }
+                        }
+                    }
+
+                    if popup-focus.indices.length > 0 : ScrollView {
+                        vertical-stretch: 1;
+                        VerticalLayout {
+                            spacing: 2px;
+                            for index in popup-focus.indices : Rectangle {
+                                height: 34px;
+                                border-radius: Theme.radius-sm;
+                                background: row-touch.has-hover || (!root.value-driven && index == root.current-index) ? Theme.primary-tint : transparent;
+                                row-touch := TouchArea {
+                                    mouse-cursor: pointer;
+                                    clicked => {
+                                        root.choose(index);
+                                    }
+                                }
+                                Text {
+                                    x: 8px;
+                                    width: max(0px, parent.width - 16px);
+                                    height: parent.height;
+                                    text: root.model[index];
+                                    color: Theme.text;
+                                    vertical-alignment: center;
+                                    overflow: elide;
+                                }
+                            }
+                        }
+                    }
+
+                    if popup-focus.indices.length == 0 : Text {
+                        text: "Không có kết quả phù hợp.";
+                        color: Theme.text-muted;
+                        font-size: Theme.font-small;
+                        vertical-alignment: center;
+                        wrap: word-wrap;
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,5 +1,6 @@
 import { CheckBox, LineEdit, ScrollView } from "std-widgets.slint";
 import { Theme } from "../theme.slint";
+import { DateInput } from "../components/date_input.slint";
 import { Card, CfButton, StatusBadge } from "../components/common.slint";
 import { ContractHub } from "../globals.slint";
 
@@ -73,6 +74,7 @@ export component ContractDetailScreen inherits ScrollView {
             // CỘT TRÁI
             VerticalLayout {
                 horizontal-stretch: 2;
+                max-width: 100000px;
                 spacing: 12px;
 
                 // Thông tin cơ bản (Bên A + Thời hạn)
@@ -271,6 +273,7 @@ export component ContractDetailScreen inherits ScrollView {
             // CỘT PHẢI: File .docx, Chứng từ (Scan/HĐ/UNC), Nhật ký
             VerticalLayout {
                 horizontal-stretch: 1;
+                max-width: 100000px;
                 spacing: 12px;
                 alignment: start;
 
@@ -328,7 +331,7 @@ export component ContractDetailScreen inherits ScrollView {
                             if ContractHub.detail-invoice.uploaded-at != "" : Text { text: "Upload: " + ContractHub.detail-invoice.uploaded-at; font-size: Theme.font-xs; color: Theme.text-muted; }
                         }
                         if !ContractHub.detail-invoice.has-file : Text { text: "Chưa có hóa đơn (chỉ PDF, tối đa 5 MB)"; font-size: Theme.font-small; color: Theme.text-muted; }
-                        LineEdit { height: 30px; placeholder-text: "Ngày xuất HĐ (dd/mm/yyyy)"; text <=> ContractHub.detail-invoice-date-input; }
+                        DateInput { height: 30px; placeholder-text: "Ngày xuất HĐ (dd/mm/yyyy)"; text <=> ContractHub.detail-invoice-date-input; }
                         HorizontalLayout {
                             spacing: 6px;
                             if ContractHub.detail-invoice.has-file : CfButton { text: "Xem PDF"; variant: "outline-primary"; clicked => { ContractHub.view-evidence(1); } }
@@ -351,7 +354,7 @@ export component ContractDetailScreen inherits ScrollView {
                             if ContractHub.detail-payment-slip.uploaded-at != "" : Text { text: "Upload: " + ContractHub.detail-payment-slip.uploaded-at; font-size: Theme.font-xs; color: Theme.text-muted; }
                         }
                         if !ContractHub.detail-payment-slip.has-file : Text { text: "Chưa có ủy nhiệm chi (.pdf, .jpg, .png)"; font-size: Theme.font-small; color: Theme.text-muted; }
-                        LineEdit { height: 30px; placeholder-text: "Ngày thanh toán (dd/mm/yyyy)"; text <=> ContractHub.detail-payment-date-input; }
+                        DateInput { height: 30px; placeholder-text: "Ngày thanh toán (dd/mm/yyyy)"; text <=> ContractHub.detail-payment-date-input; }
                         HorizontalLayout {
                             spacing: 6px;
                             if ContractHub.detail-payment-slip.has-file : CfButton { text: "Xem file"; variant: "outline-primary"; clicked => { ContractHub.view-evidence(2); } }

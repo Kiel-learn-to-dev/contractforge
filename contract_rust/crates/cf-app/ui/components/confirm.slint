@@ -1,4 +1,5 @@
 import { Theme } from "../theme.slint";
+import { CfButton } from "common.slint";
 
 // Hộp xác nhận modal: lớp mờ phủ cửa sổ + thẻ ở giữa. Rust bật/tắt bằng `shown`.
 // Đây là lớp phủ trong cửa sổ chính (không dùng PopupWindow) để đơn giản hóa việc đặt vị trí.
@@ -16,8 +17,8 @@ export component ConfirmDialog inherits Rectangle {
     TouchArea { }
 
     Rectangle {
-        width: 420px;
-        height: 200px;
+        width: min(460px, root.width - 40px);
+        height: min(root.height - 40px, max(168px, dialog-content.preferred-height));
         x: (root.width - self.width) / 2;
         y: (root.height - self.height) / 2;
         background: Theme.surface;
@@ -25,7 +26,7 @@ export component ConfirmDialog inherits Rectangle {
         border-color: Theme.border;
         border-width: 1px;
 
-        VerticalLayout {
+        dialog-content := VerticalLayout {
             padding: Theme.pad;
             spacing: Theme.gap;
             Text {
@@ -33,6 +34,7 @@ export component ConfirmDialog inherits Rectangle {
                 font-size: Theme.font-title;
                 font-weight: 700;
                 color: Theme.text;
+                wrap: word-wrap;
             }
             Text {
                 text: root.message;
@@ -44,24 +46,8 @@ export component ConfirmDialog inherits Rectangle {
             HorizontalLayout {
                 alignment: end;
                 spacing: Theme.gap;
-                Rectangle {
-                    width: 96px;
-                    height: 32px;
-                    border-radius: Theme.radius;
-                    border-color: Theme.border;
-                    border-width: 1px;
-                    background: Theme.surface;
-                    TouchArea { clicked => { root.cancelled(); } }
-                    Text { text: "Hủy"; color: Theme.text; horizontal-alignment: center; vertical-alignment: center; }
-                }
-                Rectangle {
-                    width: 96px;
-                    height: 32px;
-                    border-radius: Theme.radius;
-                    background: Theme.primary;
-                    TouchArea { clicked => { root.confirmed(); } }
-                    Text { text: "Đồng ý"; color: white; horizontal-alignment: center; vertical-alignment: center; }
-                }
+                CfButton { text: "Hủy"; clicked => { root.cancelled(); } }
+                CfButton { text: "Đồng ý"; variant: "primary"; clicked => { root.confirmed(); } }
             }
         }
     }

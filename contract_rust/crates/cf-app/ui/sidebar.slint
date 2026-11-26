@@ -5,7 +5,7 @@ component NavItemRow inherits Rectangle {
     in property <bool> active: false;
     callback clicked();
 
-    height: 34px;
+    height: 36px;
     border-radius: Theme.radius-sm;
     background: root.active ? Theme.primary : (ta.has-hover ? Theme.primary-tint : transparent);
 
@@ -29,7 +29,7 @@ component NavItemRow inherits Rectangle {
 component NavSectionLabel inherits Text {
     in property <string> title;
     text: root.title;
-    color: Theme.text-faint;
+    color: Theme.text-muted;
     font-size: Theme.font-xs;
     font-weight: 700;
     letter-spacing: 0.8px;

@@ -1,5 +1,7 @@
-import { CheckBox, ComboBox, LineEdit, ScrollView } from "std-widgets.slint";
+import { CheckBox, LineEdit, ScrollView } from "std-widgets.slint";
 import { Theme } from "../theme.slint";
+import { DateInput } from "../components/date_input.slint";
+import { SearchableCombo } from "../components/searchable_combo.slint";
 import { Card, CfButton } from "../components/common.slint";
 import { ContractHub, IdLabel } from "../globals.slint";
 
@@ -77,9 +79,9 @@ export component RenewalFormScreen inherits ScrollView {
                 HorizontalLayout {
                     spacing: Theme.gap;
                     Text { width: 160px; text: "Hình thức gia hạn"; color: Theme.text; vertical-alignment: center; }
-                    ComboBox {
+                    SearchableCombo {
                         width: 300px;
-                        height: 32px;
+                        height: Theme.control-height;
                         model: ["Phụ lục gia hạn trên hợp đồng này", "Ký hợp đồng mới (liên kết về HĐ này)"];
                         current-index: root.renew-mode == "contract" ? 1 : 0;
                         selected(v) => {
@@ -91,23 +93,23 @@ export component RenewalFormScreen inherits ScrollView {
                 if root.renew-mode == "contract" : HorizontalLayout {
                     spacing: Theme.gap;
                     Text { width: 160px; text: "Số hợp đồng mới *"; color: Theme.text; vertical-alignment: center; }
-                    LineEdit { horizontal-stretch: 1; height: 32px; text <=> root.contract-number; }
+                    LineEdit { min-width: 0px; horizontal-stretch: 1; height: Theme.control-height; text <=> root.contract-number; }
                 }
                 HorizontalLayout {
                     spacing: Theme.gap;
                     Text { width: 160px; text: "Ngày bắt đầu *"; color: Theme.text; vertical-alignment: center; }
-                    LineEdit { width: 150px; height: 32px; text <=> root.start-date; placeholder-text: "dd/mm/yyyy"; }
+                    DateInput { width: 150px; height: Theme.control-height; text <=> root.start-date; placeholder-text: "dd/mm/yyyy"; }
                     Text { width: 80px; text: "Số tháng *"; color: Theme.text; vertical-alignment: center; }
-                    LineEdit { width: 80px; height: 32px; text <=> root.months-text; }
+                    LineEdit { width: 80px; height: Theme.control-height; text <=> root.months-text; }
                     Text { width: 70px; text: "Ngày ký"; color: Theme.text; vertical-alignment: center; }
-                    LineEdit { width: 150px; height: 32px; text <=> root.sign-date; placeholder-text: "dd/mm/yyyy"; }
+                    DateInput { width: 150px; height: Theme.control-height; text <=> root.sign-date; placeholder-text: "dd/mm/yyyy"; }
                 }
                 HorizontalLayout {
                     spacing: Theme.gap;
                     Text { width: 160px; text: "Mẫu văn bản"; color: Theme.text; vertical-alignment: center; }
-                    ComboBox {
+                    SearchableCombo {
                         horizontal-stretch: 1;
-                        height: 32px;
+                        height: Theme.control-height;
                         model: root.template-names;
                         current-index: root.template-index;
                         selected(v) => { root.template-changed(self.current-index); }
@@ -127,9 +129,9 @@ export component RenewalFormScreen inherits ScrollView {
                     for ln in ContractHub.renew-lines : HorizontalLayout {
                         spacing: Theme.gap;
                         Text { width: 280px; text: ln.old-label; color: Theme.text-muted; font-size: Theme.font-small; vertical-alignment: center; overflow: elide; }
-                        ComboBox {
+                        SearchableCombo {
                             horizontal-stretch: 1;
-                            height: 32px;
+                            height: Theme.control-height;
                             model: ContractHub.renew-candidate-names;
                             current-index: ln.selected-index;
                             selected(v) => { ContractHub.renew-line-changed(ln.idx, self.current-index); }

@@ -1,5 +1,6 @@
-import { ComboBox, LineEdit, ScrollView } from "std-widgets.slint";
+import { LineEdit, ScrollView } from "std-widgets.slint";
 import { Theme } from "../theme.slint";
+import { SearchableCombo } from "../components/searchable_combo.slint";
 import { Card, CfButton, EmptyState } from "../components/common.slint";
 import { TemplateMappingRowData } from "../types.slint";
 
@@ -78,10 +79,11 @@ export component TemplateDetailScreen inherits VerticalLayout {
                     HorizontalLayout {
                         padding-left: 10px; padding-right: 10px; spacing: 8px;
                         Text { width: 225px; text: "{{" + row.placeholder + "}}"; color: row.field == "" ? Theme.warning-fg : Theme.primary; font-weight: 600; vertical-alignment: center; overflow: elide; }
-                        ComboBox {
+                        SearchableCombo {
                             width: 245px; height: 32px;
                             model: root.canonical-fields;
                             current-value: row.field == "" ? "— chưa map —" : (row.custom ? "Tự nhập" : row.field);
+                                value-driven: true;
                             selected(value) => { root.mapping-changed(row.placeholder, value); }
                         }
                         LineEdit {

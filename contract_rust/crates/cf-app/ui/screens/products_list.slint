@@ -14,41 +14,18 @@ export component ProductsListScreen inherits VerticalLayout {
     callback import-products();
     spacing: 10px;
 
-    HorizontalLayout {
-        height: 36px;
+    FlexboxLayout {
+        vertical-stretch: 0;
+        alignment: stretch;
+        cross-axis-alignment: center;
         spacing: 8px;
-        TabPill { y: (parent.height - self.height) / 2; text: "Đang bán"; active: root.show == "active"; clicked => { root.show-changed("active"); } }
-        TabPill { y: (parent.height - self.height) / 2; text: "Đã ngừng bán"; active: root.show == "inactive"; clicked => { root.show-changed("inactive"); } }
-        TabPill { y: (parent.height - self.height) / 2; text: "Tất cả"; active: root.show == "all"; clicked => { root.show-changed("all"); } }
+        TabPill { text: "Đang bán"; active: root.show == "active"; clicked => { root.show-changed("active"); } }
+        TabPill { text: "Đã ngừng bán"; active: root.show == "inactive"; clicked => { root.show-changed("inactive"); } }
+        TabPill { text: "Tất cả"; active: root.show == "all"; clicked => { root.show-changed("all"); } }
         Rectangle { horizontal-stretch: 1; }
         Text { text: root.rows.length + " sản phẩm"; color: Theme.text-muted; font-size: Theme.font-small; vertical-alignment: center; }
-        CfButton { text: "Import / Export Excel"; variant: "outline-primary"; clicked => { root.import-products(); } }
+        CfButton { text: "Excel"; variant: "outline-primary"; clicked => { root.import-products(); } }
         CfButton { text: "+ Thêm sản phẩm"; variant: "primary"; clicked => { root.add-product(); } }
-    }
-
-    Rectangle {
-        height: 34px;
-        background: Theme.surface-2;
-        border-color: Theme.border;
-        border-width: 1px;
-        border-radius: Theme.radius-sm;
-        HorizontalLayout {
-            padding-left: 10px;
-            padding-right: 10px;
-            spacing: 8px;
-            Text { width: 92px; text: "MÃ"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; vertical-alignment: center; }
-            Text { horizontal-stretch: 1; text: "TÊN SẢN PHẨM"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; vertical-alignment: center; }
-            Text { width: 95px; text: "NHÓM"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; vertical-alignment: center; }
-            Text { width: 95px; text: "KIỂU"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; vertical-alignment: center; }
-            Text { width: 95px; text: "LOẠI"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; vertical-alignment: center; }
-            Text { width: 65px; text: "ĐVT"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; vertical-alignment: center; }
-            Text { width: 105px; text: "ĐƠN GIÁ"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; horizontal-alignment: right; vertical-alignment: center; }
-            Text { width: 52px; text: "VAT"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
-            Text { width: 72px; text: "THỜI HẠN"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
-            Text { width: 95px; text: "TRẠNG THÁI"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
-            Text { width: 58px; text: "HĐ"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
-            Text { width: 145px; text: ""; }
-        }
     }
 
     if root.rows.length == 0 : EmptyState {
@@ -57,10 +34,38 @@ export component ProductsListScreen inherits VerticalLayout {
     }
     if root.rows.length > 0 : Card {
         vertical-stretch: 1;
+        min-width: 0px;
         clip: true;
-        ScrollView {
-            VerticalLayout {
+        min-height: 0px;
+        preferred-height: table-content.preferred-height + 14px;
+        max-height: self.preferred-height;
+        table := ScrollView {
+            min-width: 0px;
+            content-width: max(self.visible-width, 924px);
+            table-content := VerticalLayout {
+                width: table.content-width;
                 spacing: 0px;
+                Rectangle {
+                    height: 34px;
+                    background: Theme.surface-2;
+                    border-color: Theme.border;
+                    border-width: 1px;
+                    border-radius: Theme.radius-sm;
+                    HorizontalLayout {
+                        padding-left: 10px;
+                        padding-right: 10px;
+                        spacing: 6px;
+                        Text { width: 88px; text: "MÃ"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; vertical-alignment: center; }
+                        Text { horizontal-stretch: 1; text: "TÊN SẢN PHẨM"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; vertical-alignment: center; }
+                        Text { width: 48px; text: "ĐVT"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; vertical-alignment: center; }
+                        Text { width: 105px; text: "ĐƠN GIÁ"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; horizontal-alignment: right; vertical-alignment: center; }
+                        Text { width: 44px; text: "VAT"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
+                        Text { width: 72px; text: "THỜI HẠN"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
+                        Text { width: 95px; text: "TRẠNG THÁI"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
+                        Text { width: 38px; text: "HĐ"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
+                        Text { width: 130px; text: ""; }
+                    }
+                }
                 for row in root.rows : VerticalLayout {
                     if row.show-group : Rectangle {
                         height: 30px;
@@ -71,34 +76,37 @@ export component ProductsListScreen inherits VerticalLayout {
                         }
                     }
                     Rectangle {
-                        height: 42px;
+                        height: 48px;
                         background: row.active ? Theme.surface : Theme.surface-2;
                         Rectangle { x: 0px; y: parent.height - 1px; width: parent.width; height: 1px; background: Theme.border; }
                         HorizontalLayout {
                             padding-left: 10px;
-                            padding-right: 8px;
-                            spacing: 8px;
-                            Text { width: 92px; text: row.code; color: Theme.primary; font-weight: 700; vertical-alignment: center; overflow: elide; }
-                            Text { horizontal-stretch: 1; text: row.name; color: Theme.text; vertical-alignment: center; overflow: elide; }
-                            Text { width: 95px; text: row.group-title; color: Theme.text-muted; font-size: Theme.font-small; vertical-alignment: center; overflow: elide; }
-                            Text { width: 95px; text: row.kind; color: Theme.text-2; font-size: Theme.font-small; vertical-alignment: center; overflow: elide; }
-                            Text { width: 95px; text: row.product-type; color: Theme.text-2; font-size: Theme.font-small; vertical-alignment: center; overflow: elide; }
-                            Text { width: 65px; text: row.unit-label; color: Theme.text; vertical-alignment: center; overflow: elide; }
+                            padding-right: 10px;
+                            spacing: 6px;
+                            Text { width: 88px; text: row.code; color: Theme.primary; font-weight: 700; vertical-alignment: center; overflow: elide; }
+                            VerticalLayout {
+                                horizontal-stretch: 1;
+                                alignment: center;
+                                spacing: 2px;
+                                Text { text: row.name; color: Theme.text; overflow: elide; }
+                                Text { text: row.kind + " · " + row.product-type; color: Theme.text-muted; font-size: Theme.font-xs; overflow: elide; }
+                            }
+                            Text { width: 48px; text: row.unit-label; color: Theme.text; vertical-alignment: center; overflow: elide; }
                             Text { width: 105px; text: row.price; color: Theme.text; font-weight: 600; horizontal-alignment: right; vertical-alignment: center; }
-                            Text { width: 52px; text: row.vat; color: Theme.text; horizontal-alignment: center; vertical-alignment: center; }
+                            Text { width: 44px; text: row.vat; color: Theme.text; horizontal-alignment: center; vertical-alignment: center; }
                             Text { width: 72px; text: row.duration; color: Theme.text; horizontal-alignment: center; vertical-alignment: center; }
                             HorizontalLayout {
                                 width: 95px;
                                 alignment: center;
                                 StatusBadge { y: (parent.height - self.height) / 2; label: row.active ? "Đang bán" : "Ngừng bán"; variant: row.active ? "success" : "secondary"; }
                             }
-                            Text { width: 58px; text: row.in-service-count; color: Theme.text; horizontal-alignment: center; vertical-alignment: center; }
+                            Text { width: 38px; text: row.in-service-count; color: Theme.text; horizontal-alignment: center; vertical-alignment: center; }
                             HorizontalLayout {
-                                width: 145px;
+                                width: 130px;
                                 spacing: 4px;
                                 alignment: end;
-                                CfButton { text: row.active ? "Ngừng" : "Bán lại"; clicked => { root.toggle-active(row.id); } }
-                                CfButton { text: "Sửa"; variant: "outline-primary"; clicked => { root.edit-product(row.id); } }
+                                CfButton { height: 32px; text: row.active ? "Ngừng" : "Bán lại"; clicked => { root.toggle-active(row.id); } }
+                                CfButton { height: 32px; text: "Sửa"; variant: "outline-primary"; clicked => { root.edit-product(row.id); } }
                             }
                         }
                     }
@@ -106,4 +114,6 @@ export component ProductsListScreen inherits VerticalLayout {
             }
         }
     }
+
+    Rectangle { vertical-stretch: 1; }
 }

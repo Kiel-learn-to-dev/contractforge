@@ -241,7 +241,7 @@ fn close() {
     }
 }
 
-fn reload() {
+pub fn reload() {
     let Some((worker, id)) =
         with_screen(|screen| screen.contract_id.map(|id| (screen.worker.clone(), id))).flatten()
     else {

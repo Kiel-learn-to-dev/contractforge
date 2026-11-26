@@ -198,7 +198,7 @@ fn page_count(total: usize, per_page: usize) -> usize {
 }
 
 /// Tải lại danh sách trên worker rồi cập nhật UI.
-fn request_load() {
+pub fn request_load() {
     let Some((worker, filters)) =
         with_screen(|screen| (screen.worker.clone(), screen.filters.clone()))
     else {

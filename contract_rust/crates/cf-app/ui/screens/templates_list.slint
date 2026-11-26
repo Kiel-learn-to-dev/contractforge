@@ -1,9 +1,15 @@
-import { CheckBox, ComboBox, ScrollView } from "std-widgets.slint";
+import { CheckBox, ScrollView } from "std-widgets.slint";
 import { Theme } from "../theme.slint";
+import { SearchableCombo } from "../components/searchable_combo.slint";
 import { Card, CfButton, EmptyState, StatusBadge } from "../components/common.slint";
 import { TemplateRowData } from "../types.slint";
 
+component TemplateRowButton inherits CfButton {
+    height: 26px;
+}
+
 export component TemplatesListScreen inherits VerticalLayout {
+    property <length> action-column-width: 184px;
     in property <[TemplateRowData]> rows;
     in property <[string]> type-options;
     in property <[string]> group-options;
@@ -21,11 +27,15 @@ export component TemplatesListScreen inherits VerticalLayout {
     callback edit-template(int);
     spacing: 10px;
 
-    HorizontalLayout {
-        height: 36px;
+    FlexboxLayout {
+        vertical-stretch: 0;
+        alignment: stretch;
+        cross-axis-alignment: center;
         spacing: 8px;
-        ComboBox { width: 175px; height: 32px; model: root.type-options; current-value: root.type-filter; selected(value) => { root.filter-changed(value, root.group-filter, root.active-only); } }
-        ComboBox { width: 165px; height: 32px; model: root.group-options; current-value: root.group-filter; selected(value) => { root.filter-changed(root.type-filter, value, root.active-only); } }
+        SearchableCombo { width: 175px; height: 32px; model: root.type-options; current-value: root.type-filter;
+                                value-driven: true; selected(value) => { root.filter-changed(value, root.group-filter, root.active-only); } }
+        SearchableCombo { width: 165px; height: 32px; model: root.group-options; current-value: root.group-filter;
+                                value-driven: true; selected(value) => { root.filter-changed(root.type-filter, value, root.active-only); } }
         CheckBox { text: "Chỉ mẫu đang bật"; checked: root.active-only; toggled => { root.filter-changed(root.type-filter, root.group-filter, self.checked); } }
         Rectangle { horizontal-stretch: 1; }
         CfButton { text: "Tải lên nhiều file"; variant: "outline-primary"; clicked => { root.upload(); } }
@@ -34,57 +44,66 @@ export component TemplatesListScreen inherits VerticalLayout {
     }
     if root.operation-message != "" : Text { text: root.operation-message; color: Theme.text-muted; font-size: Theme.font-small; }
 
-    Rectangle {
-        height: 34px;
-        background: Theme.surface-2;
-        border-color: Theme.border;
-        border-width: 1px;
-        border-radius: Theme.radius-sm;
-        HorizontalLayout {
-            padding-left: 10px; padding-right: 10px; spacing: 7px;
-            Text { width: 90px; text: "MÃ"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; vertical-alignment: center; }
-            Text { horizontal-stretch: 1; text: "TÊN MẪU"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; vertical-alignment: center; }
-            Text { width: 130px; text: "LOẠI"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; vertical-alignment: center; }
-            Text { width: 95px; text: "NHÓM"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; vertical-alignment: center; }
-            Text { width: 92px; text: "TRẠNG THÁI"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
-            Text { width: 65px; text: "TRƯỜNG"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
-            Text { width: 70px; text: "ĐÃ MAP"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
-            Text { width: 280px; text: ""; }
-        }
-    }
     if root.rows.length == 0 : EmptyState { vertical-stretch: 1; message: "Chưa có mẫu phù hợp bộ lọc."; }
     if root.rows.length > 0 : Card {
         vertical-stretch: 1;
+        min-width: 0px;
         clip: true;
-        ScrollView {
-            VerticalLayout {
+        min-height: 0px;
+        preferred-height: table-content.preferred-height + 14px;
+        max-height: self.preferred-height;
+        table := ScrollView {
+            min-width: 0px;
+            content-width: max(self.visible-width, 920px);
+            table-content := VerticalLayout {
+                width: table.content-width;
                 spacing: 0px;
+                Rectangle {
+                    height: 34px;
+                    background: Theme.surface-2;
+                    border-color: Theme.border;
+                    border-width: 1px;
+                    border-radius: Theme.radius-sm;
+                    HorizontalLayout {
+                        padding-left: 10px; padding-right: 10px; spacing: 7px;
+                        Text { width: 90px; text: "MÃ"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; vertical-alignment: center; }
+                        Text { horizontal-stretch: 1; text: "TÊN MẪU"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; vertical-alignment: center; }
+                        Text { width: 105px; text: "LOẠI"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; vertical-alignment: center; }
+                        Text { width: 80px; text: "NHÓM"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; vertical-alignment: center; }
+                        Text { width: 92px; text: "TRẠNG THÁI"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
+                        Text { width: 57px; text: "TRƯỜNG"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
+                        Text { width: 62px; text: "ĐÃ MAP"; color: Theme.text-muted; font-size: Theme.font-xs; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
+                        Text { width: root.action-column-width; text: ""; }
+                    }
+                }
                 for row in root.rows : Rectangle {
                     height: 42px;
                     background: tta.has-hover ? Theme.primary-tint : Theme.surface;
                     Rectangle { x: 0px; y: parent.height - 1px; width: parent.width; height: 1px; background: Theme.border; }
                     tta := TouchArea { mouse-cursor: pointer; clicked => { root.open-template(row.id); } }
                     HorizontalLayout {
-                        padding-left: 10px; padding-right: 8px; spacing: 7px;
+                        padding-left: 10px; padding-right: 10px; spacing: 7px;
                         Text { width: 90px; text: row.code; color: Theme.primary; font-weight: 700; vertical-alignment: center; overflow: elide; }
                         Text { horizontal-stretch: 1; text: row.name; color: Theme.text; vertical-alignment: center; overflow: elide; }
-                        Text { width: 130px; text: row.kind; color: Theme.text-2; font-size: Theme.font-small; vertical-alignment: center; overflow: elide; }
-                        Text { width: 95px; text: row.group; color: Theme.text-muted; font-size: Theme.font-small; vertical-alignment: center; overflow: elide; }
+                        Text { width: 105px; text: row.kind; color: Theme.text-2; font-size: Theme.font-small; vertical-alignment: center; overflow: elide; }
+                        Text { width: 80px; text: row.group; color: Theme.text-muted; font-size: Theme.font-small; vertical-alignment: center; overflow: elide; }
                         HorizontalLayout { width: 92px; alignment: center; StatusBadge { y: (parent.height - self.height) / 2; label: row.status; variant: row.status == "Đang bật" ? "success" : "secondary"; } }
-                        Text { width: 65px; text: row.placeholders; color: Theme.text; horizontal-alignment: center; vertical-alignment: center; }
-                        Text { width: 70px; text: row.mapped; color: row.mapped < row.placeholders ? Theme.warning-fg : Theme.success-fg; font-weight: 600; horizontal-alignment: center; vertical-alignment: center; }
+                        Text { width: 57px; text: row.placeholders; color: Theme.text; horizontal-alignment: center; vertical-alignment: center; }
+                        Text { width: 62px; text: row.mapped; color: row.mapped < row.placeholders ? Theme.warning-fg : Theme.success-fg; font-weight: 600; horizontal-alignment: center; vertical-alignment: center; }
                         HorizontalLayout {
-                            width: 280px;
+                            width: root.action-column-width;
                             spacing: 4px;
                             alignment: end;
-                            CfButton { text: row.status == "Đang bật" ? "Tắt" : "Bật"; clicked => { root.toggle(row.id); } }
-                            CfButton { text: "Tải"; clicked => { root.download(row.id); } }
-                            CfButton { text: "Sửa"; variant: "outline-primary"; clicked => { root.edit-template(row.id); } }
-                            CfButton { text: "Chi tiết"; variant: "outline-primary"; clicked => { root.open-template(row.id); } }
+                            TemplateRowButton { width: 36px; y: (parent.height - self.height) / 2; text: row.status == "Đang bật" ? "Tắt" : "Bật"; clicked => { root.toggle(row.id); } }
+                            TemplateRowButton { width: 36px; y: (parent.height - self.height) / 2; text: "Tải"; clicked => { root.download(row.id); } }
+                            TemplateRowButton { width: 38px; y: (parent.height - self.height) / 2; text: "Sửa"; variant: "outline-primary"; clicked => { root.edit-template(row.id); } }
+                            TemplateRowButton { width: 60px; y: (parent.height - self.height) / 2; text: "Chi tiết"; variant: "outline-primary"; clicked => { root.open-template(row.id); } }
                         }
                     }
                 }
             }
         }
     }
+
+    Rectangle { vertical-stretch: 1; }
 }

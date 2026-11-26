@@ -1,5 +1,7 @@
-import { CheckBox, ComboBox, LineEdit, ScrollView } from "std-widgets.slint";
+import { CheckBox, LineEdit, ScrollView } from "std-widgets.slint";
 import { Theme } from "../theme.slint";
+import { DateInput } from "../components/date_input.slint";
+import { SearchableCombo } from "../components/searchable_combo.slint";
 import { Card, CfButton } from "../components/common.slint";
 import { ContractHub } from "../globals.slint";
 
@@ -31,7 +33,20 @@ export component ContractFormScreen inherits ScrollView {
     callback field-changed(string, string);
     callback save(bool);
 
+    // Derive all form columns from the actual ScrollView viewport. The outer
+    // padding is removed exactly once so card widths never depend on preferred
+    // child widths.
+    property <length> form-content-width: max(0px, root.visible-width - 2 * Theme.pad);
+    property <bool> side-by-side: root.form-content-width >= 860px;
+    property <length> party-column-width: min(400px, max(260px, root.form-content-width * 0.30));
+    property <length> contract-column-width: root.side-by-side
+        ? max(575px, root.form-content-width - root.party-column-width - 14px)
+        : root.form-content-width;
+    property <length> party-column-layout-width: root.side-by-side
+        ? root.party-column-width : root.form-content-width;
+
     VerticalLayout {
+        width: root.visible-width;
         padding: Theme.pad;
         spacing: Theme.gap;
 
@@ -64,14 +79,19 @@ export component ContractFormScreen inherits ScrollView {
             }
         }
 
-        // Bố cục 2 cột (~66% trái / ~34% phải)
-        HorizontalLayout {
-            spacing: 14px;
+        // Hai cột khi đủ chỗ, xếp dọc ở cửa sổ hẹp.
+        FlexboxLayout {
+            width: root.form-content-width;
+            flex-direction: root.side-by-side ? row : column;
+            flex-wrap: no-wrap;
             alignment: stretch;
+            spacing: 14px;
+            cross-axis-alignment: start;
 
             // Cột trái
             VerticalLayout {
-                horizontal-stretch: 2;
+                width: root.contract-column-width;
+                alignment: start;
                 spacing: Theme.gap;
 
                 // 1. Thông tin hợp đồng & Khách hàng
@@ -87,7 +107,8 @@ export component ContractFormScreen inherits ScrollView {
                                 horizontal-stretch: 1; spacing: 4px;
                                 Text { text: "SỐ HỢP ĐỒNG *"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
                                 LineEdit {
-                                    height: 32px;
+                                    min-width: 0px;
+                                    height: Theme.control-height;
                                     text: root.number-text;
                                     placeholder-text: "Tự động gợi ý khi chọn khách hàng";
                                     edited(t) => { root.field-changed("number", t); }
@@ -97,7 +118,8 @@ export component ContractFormScreen inherits ScrollView {
                                 horizontal-stretch: 1; spacing: 4px;
                                 Text { text: "ĐỊA ĐIỂM KÝ"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
                                 LineEdit {
-                                    height: 32px;
+                                    min-width: 0px;
+                                    height: Theme.control-height;
                                     text <=> ContractHub.location;
                                     placeholder-text: "Tự điền theo tên đơn vị";
                                     edited(t) => { root.field-changed("location", t); }
@@ -108,13 +130,14 @@ export component ContractFormScreen inherits ScrollView {
                             spacing: 4px;
                             Text { text: "KHÁCH HÀNG (BÊN A) *"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
                             LineEdit {
+                                min-width: 0px;
                                 height: 30px;
                                 placeholder-text: "Lọc nhanh theo tên hoặc mã không dấu...";
                                 text <=> ContractHub.customer-filter;
                                 edited(t) => { ContractHub.filter-customers(t); }
                             }
-                            ComboBox {
-                                height: 32px;
+                            SearchableCombo {
+                                height: Theme.control-height;
                                 model: root.customer-names;
                                 current-index: root.customer-index;
                                 selected(v) => { root.customer-changed(self.current-index); }
@@ -131,8 +154,8 @@ export component ContractFormScreen inherits ScrollView {
                             VerticalLayout {
                                 horizontal-stretch: 1; spacing: 4px;
                                 Text { text: "SẢN PHẨM / DỊCH VỤ *"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
-                                ComboBox {
-                                    height: 32px;
+                                SearchableCombo {
+                                    height: Theme.control-height;
                                     model: root.main-names;
                                     current-index: root.main-index;
                                     selected(v) => { root.product-changed(self.current-index); }
@@ -141,8 +164,8 @@ export component ContractFormScreen inherits ScrollView {
                             VerticalLayout {
                                 horizontal-stretch: 1; spacing: 4px;
                                 Text { text: "MẪU HỢP ĐỒNG *"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
-                                ComboBox {
-                                    height: 32px;
+                                SearchableCombo {
+                                    height: Theme.control-height;
                                     enabled: root.main-index >= 0;
                                     model: root.main-index >= 0 ? root.template-names : ["— Chọn sản phẩm trước —"];
                                     current-index: root.main-index >= 0 ? root.template-index : 0;
@@ -165,22 +188,22 @@ export component ContractFormScreen inherits ScrollView {
                             VerticalLayout {
                                 horizontal-stretch: 1; spacing: 4px;
                                 Text { text: "NGÀY KÝ (dd/mm/yyyy)"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
-                                LineEdit { height: 32px; text <=> ContractHub.sign-date; placeholder-text: "dd/mm/yyyy"; edited(t) => { root.field-changed("sign_date", t); } }
+                                DateInput { height: Theme.control-height; text <=> ContractHub.sign-date; placeholder-text: "dd/mm/yyyy"; edited(t) => { root.field-changed("sign_date", t); } }
                             }
                             VerticalLayout {
                                 horizontal-stretch: 1; spacing: 4px;
                                 Text { text: "NGÀY BẮT ĐẦU"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
-                                LineEdit { height: 32px; text <=> ContractHub.start-date; placeholder-text: "dd/mm/yyyy"; edited(t) => { root.field-changed("start_date", t); } }
+                                DateInput { height: Theme.control-height; text <=> ContractHub.start-date; placeholder-text: "dd/mm/yyyy"; edited(t) => { root.field-changed("start_date", t); } }
                             }
                             VerticalLayout {
                                 width: 95px; spacing: 4px;
                                 Text { text: "SỐ THÁNG"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
-                                LineEdit { height: 32px; text <=> ContractHub.months; placeholder-text: "12"; edited(t) => { root.field-changed("months", t); } }
+                                LineEdit { min-width: 0px; height: Theme.control-height; text <=> ContractHub.months; placeholder-text: "12"; edited(t) => { root.field-changed("months", t); } }
                             }
                             VerticalLayout {
                                 horizontal-stretch: 1; spacing: 4px;
                                 Text { text: "NGÀY KẾT THÚC"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
-                                LineEdit { height: 32px; text <=> ContractHub.end-date-input; placeholder-text: "Tự tính hoặc sửa"; edited(t) => { root.field-changed("end_date", t); } }
+                                DateInput { height: Theme.control-height; text <=> ContractHub.end-date-input; placeholder-text: "Tự tính hoặc sửa"; edited(t) => { root.field-changed("end_date", t); } }
                             }
                         }
                         HorizontalLayout {
@@ -188,12 +211,12 @@ export component ContractFormScreen inherits ScrollView {
                             VerticalLayout {
                                 horizontal-stretch: 1; spacing: 4px;
                                 Text { text: "NGÀY NGHIỆM THU"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
-                                LineEdit { height: 32px; text <=> ContractHub.acceptance-date; placeholder-text: "dd/mm/yyyy"; edited(t) => { root.field-changed("acceptance_date", t); } }
+                                DateInput { height: Theme.control-height; text <=> ContractHub.acceptance-date; placeholder-text: "dd/mm/yyyy"; edited(t) => { root.field-changed("acceptance_date", t); } }
                             }
                             VerticalLayout {
                                 horizontal-stretch: 1; spacing: 4px;
                                 Text { text: "NGÀY THANH LÝ"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
-                                LineEdit { height: 32px; text <=> ContractHub.liquidation-date; placeholder-text: "dd/mm/yyyy"; edited(t) => { root.field-changed("liquidation_date", t); } }
+                                DateInput { height: Theme.control-height; text <=> ContractHub.liquidation-date; placeholder-text: "dd/mm/yyyy"; edited(t) => { root.field-changed("liquidation_date", t); } }
                             }
                             Rectangle { horizontal-stretch: 1; }
                         }
@@ -213,13 +236,13 @@ export component ContractFormScreen inherits ScrollView {
                             VerticalLayout {
                                 width: 120px; spacing: 4px;
                                 Text { text: "SỐ CƠ SỞ"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
-                                LineEdit { height: 32px; text <=> ContractHub.unit-count-input; edited(t) => { root.field-changed("unit_count", t); } }
+                                LineEdit { min-width: 0px; height: Theme.control-height; text <=> ContractHub.unit-count-input; edited(t) => { root.field-changed("unit_count", t); } }
                             }
                             VerticalLayout {
                                 width: 185px; spacing: 4px;
                                 Text { text: "HÌNH THỨC THANH TOÁN"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
-                                ComboBox {
-                                    height: 32px;
+                                SearchableCombo {
+                                    height: Theme.control-height;
                                     model: ["— Chưa chọn —", "Trả trước", "Trả sau"];
                                     current-index: ContractHub.payment-mode-index;
                                     selected(v) => { ContractHub.payment-mode-changed(self.current-index); }
@@ -228,7 +251,7 @@ export component ContractFormScreen inherits ScrollView {
                             VerticalLayout {
                                 width: 165px; spacing: 4px;
                                 Text { text: "CHU KỲ TT (THÁNG)"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
-                                LineEdit { height: 32px; text <=> ContractHub.payment-cycle-months; placeholder-text: "VD: 12"; edited(t) => { root.field-changed("payment_cycle_months", t); } }
+                                LineEdit { min-width: 0px; height: Theme.control-height; text <=> ContractHub.payment-cycle-months; placeholder-text: "VD: 12"; edited(t) => { root.field-changed("payment_cycle_months", t); } }
                             }
                             Rectangle { horizontal-stretch: 1; }
                         }
@@ -302,17 +325,17 @@ export component ContractFormScreen inherits ScrollView {
                         VerticalLayout {
                             spacing: 4px;
                             Text { text: "SỐ TIỀN BẰNG CHỮ (tự sinh — có thể sửa)"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
-                            LineEdit { height: 32px; text <=> ContractHub.amount-words; edited(t) => { root.field-changed("amount_text", t); } }
+                            LineEdit { min-width: 0px; height: Theme.control-height; text <=> ContractHub.amount-words; edited(t) => { root.field-changed("amount_text", t); } }
                         }
                         VerticalLayout {
                             spacing: 4px;
                             Text { text: "MÔ TẢ CÁCH TÍNH GIÁ"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
-                            LineEdit { height: 32px; text <=> ContractHub.pricing-desc; edited(t) => { root.field-changed("pricing_description", t); } }
+                            LineEdit { min-width: 0px; height: Theme.control-height; text <=> ContractHub.pricing-desc; edited(t) => { root.field-changed("pricing_description", t); } }
                         }
                         HorizontalLayout {
                             spacing: Theme.gap;
                             Text { width: 150px; text: "Tổng tiền ghi đè (tùy chọn)"; vertical-alignment: center; color: Theme.text-muted; font-size: Theme.font-small; }
-                            LineEdit { width: 200px; height: 32px; text <=> ContractHub.total-text; placeholder-text: "VD: 1.250.000"; edited(t) => { root.field-changed("total", t); } }
+                            LineEdit { width: 200px; height: Theme.control-height; text <=> ContractHub.total-text; placeholder-text: "VD: 1.250.000"; edited(t) => { root.field-changed("total", t); } }
                         }
                     }
                 }
@@ -320,7 +343,7 @@ export component ContractFormScreen inherits ScrollView {
 
             // Cột phải
             VerticalLayout {
-                horizontal-stretch: 1;
+                width: root.party-column-layout-width;
                 spacing: Theme.gap;
                 alignment: start;
 
@@ -332,11 +355,11 @@ export component ContractFormScreen inherits ScrollView {
                         Text { text: "BÊN B (VIETTEL)"; font-weight: 700; color: Theme.text; font-size: Theme.font-small; }
                         Rectangle { height: 1px; background: Theme.border; }
                         Text { text: "Đại diện Bên B"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
-                        LineEdit { height: 32px; text <=> ContractHub.party-b-rep; edited(t) => { root.field-changed("party_b_rep", t); } }
+                        LineEdit { min-width: 0px; height: Theme.control-height; text <=> ContractHub.party-b-rep; edited(t) => { root.field-changed("party_b_rep", t); } }
                         Text { text: "Số giấy uỷ quyền"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
-                        LineEdit { height: 32px; text <=> ContractHub.party-b-auth-num; edited(t) => { root.field-changed("party_b_auth_num", t); } }
+                        LineEdit { min-width: 0px; height: Theme.control-height; text <=> ContractHub.party-b-auth-num; edited(t) => { root.field-changed("party_b_auth_num", t); } }
                         Text { text: "Ngày uỷ quyền"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
-                        LineEdit { height: 32px; text <=> ContractHub.party-b-auth-date; edited(t) => { root.field-changed("party_b_auth_date", t); } }
+                        DateInput { height: Theme.control-height; text <=> ContractHub.party-b-auth-date; edited(t) => { root.field-changed("party_b_auth_date", t); } }
                     }
                 }
 
@@ -346,7 +369,7 @@ export component ContractFormScreen inherits ScrollView {
                         padding: Theme.pad;
                         spacing: 8px;
                         Text { text: "GHI CHÚ NỘI BỘ"; font-weight: 700; color: Theme.text; font-size: Theme.font-small; }
-                        LineEdit { height: 36px; text <=> ContractHub.notes; placeholder-text: "Ghi chú thêm cho hợp đồng..."; edited(t) => { root.field-changed("notes", t); } }
+                        LineEdit { min-width: 0px; height: 36px; text <=> ContractHub.notes; placeholder-text: "Ghi chú thêm cho hợp đồng..."; edited(t) => { root.field-changed("notes", t); } }
                     }
                 }
 

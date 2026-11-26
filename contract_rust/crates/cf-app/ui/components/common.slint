@@ -82,7 +82,8 @@ export component PageHeader inherits HorizontalLayout {
 // Trạng thái rỗng: thông báo ngắn ở giữa vùng nội dung.
 export component EmptyState inherits VerticalLayout {
     in property <string> message;
-    alignment: center;
+    alignment: start;
+    padding-top: 24px;
     spacing: Theme.gap;
     Text {
         text: root.message;
@@ -93,22 +94,27 @@ export component EmptyState inherits VerticalLayout {
     }
 }
 
-// Nút bấm gọn chuẩn desktop (chiều cao cố định 32px, không bị kéo giãn trong layout).
+// Nút desktop. Các bảng có thể ghi đè chiều cao để giữ mật độ dòng.
 export component CfButton inherits Rectangle {
     in property <string> text;
     in property <string> variant: "secondary"; // "primary" | "secondary" | "outline-primary" | "danger" | "success"
     in property <bool> enabled: true;
     callback clicked();
 
-    height: 32px;
+    height: Theme.control-height;
     width: btn-lbl.preferred-width + 24px;
     border-radius: Theme.radius-sm;
+    forward-focus: keyboard;
+    accessible-role: button;
+    accessible-label: root.text;
+    accessible-enabled: root.enabled;
+    accessible-action-default => { if root.enabled { root.clicked(); } }
     opacity: root.enabled ? 1.0 : 0.45;
     border-width: (variant == "secondary" || variant == "outline-primary") ? 1px : 0px;
     border-color: variant == "outline-primary" ? Theme.primary : Theme.border-strong;
     background: variant == "primary" ? (ta.has-hover && root.enabled ? Theme.primary-hover : Theme.primary)
         : variant == "danger" ? (ta.has-hover && root.enabled ? #b91c1c : Theme.danger-fg)
-        : variant == "success" ? (ta.has-hover && root.enabled ? #15803d : Theme.success-fg)
+        : variant == "success" ? (ta.has-hover && root.enabled ? #105c37 : Theme.success-fg)
         : variant == "outline-primary" ? (ta.has-hover && root.enabled ? Theme.primary-tint : Theme.surface)
         : (ta.has-hover && root.enabled ? Theme.surface-2 : Theme.surface);
 
@@ -116,6 +122,18 @@ export component CfButton inherits Rectangle {
         enabled: root.enabled;
         mouse-cursor: root.enabled ? pointer : default;
         clicked => { if (root.enabled) { root.clicked(); } }
+    }
+
+    keyboard := FocusScope {
+        width: 0px;
+        enabled: root.enabled;
+        key-pressed(event) => {
+            if event.text == Key.Space || event.text == Key.Return {
+                root.clicked();
+                return accept;
+            }
+            return reject;
+        }
     }
 
     btn-lbl := Text {
@@ -127,6 +145,12 @@ export component CfButton inherits Rectangle {
         horizontal-alignment: center;
         vertical-alignment: center;
     }
+
+    if keyboard.has-focus : Rectangle {
+        border-radius: Theme.radius-sm;
+        border-width: 2px;
+        border-color: Theme.text;
+    }
 }
 
 // Nút tab dạng pill gọn trong thanh chọn tab.
@@ -135,7 +159,7 @@ export component TabPill inherits Rectangle {
     in property <bool> active: false;
     callback clicked();
 
-    height: 30px;
+    height: 34px;
     width: tab-lbl.preferred-width + 26px;
     border-radius: Theme.radius-sm;
     background: root.active ? Theme.primary : (ta.has-hover ? Theme.primary-tint : transparent);

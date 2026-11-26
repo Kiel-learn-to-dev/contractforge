@@ -1,5 +1,6 @@
-import { ComboBox, LineEdit, ScrollView, TextEdit } from "std-widgets.slint";
+import { LineEdit, ScrollView, TextEdit } from "std-widgets.slint";
 import { Theme } from "../theme.slint";
+import { SearchableCombo } from "../components/searchable_combo.slint";
 import { Card, CfButton } from "../components/common.slint";
 import { TemplateFormData } from "../types.slint";
 
@@ -41,22 +42,22 @@ export component TemplateFormScreen inherits VerticalLayout {
                         VerticalLayout {
                             horizontal-stretch: 1; spacing: 4px;
                             Text { text: "MÃ TEMPLATE (TRỐNG = TỰ TẠO)"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
-                            LineEdit { height: 32px; text <=> root.data.code; enabled: root.data.id == ""; }
+                            LineEdit { min-width: 0px; height: Theme.control-height; text <=> root.data.code; enabled: root.data.id == ""; }
                         }
                         VerticalLayout {
                             horizontal-stretch: 2; spacing: 4px;
                             Text { text: "TÊN MẪU *"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
-                            LineEdit { height: 32px; text <=> root.data.name; }
+                            LineEdit { min-width: 0px; height: Theme.control-height; text <=> root.data.name; }
                         }
                     }
                     Text { text: "LOẠI VĂN BẢN (CHỌN HOẶC GÕ TỰ DO)"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
                     HorizontalLayout {
                         spacing: 8px;
-                        LineEdit { height: 32px; text <=> root.data.kind; horizontal-stretch: 1; }
-                        ComboBox { width: 220px; height: 32px; model: root.type-suggestions; selected(value) => { root.data.kind = value; } }
+                        LineEdit { min-width: 0px; height: Theme.control-height; text <=> root.data.kind; horizontal-stretch: 1; }
+                        SearchableCombo { width: 220px; height: Theme.control-height; model: root.type-suggestions; selected(value) => { root.data.kind = value; } }
                     }
                     Text { text: "NHÓM SẢN PHẨM (ĐỂ TRỐNG = MẪU CHUNG MỌI NHÓM)"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
-                    LineEdit { height: 32px; text <=> root.data.group; placeholder-text: "VD: HIS, EMR, CA..."; }
+                    LineEdit { min-width: 0px; height: Theme.control-height; text <=> root.data.group; placeholder-text: "VD: HIS, EMR, CA..."; }
                     Text { text: "MÔ TẢ"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; }
                     TextEdit { text <=> root.data.description; height: 90px; }
                     if root.data.id == "" : HorizontalLayout {

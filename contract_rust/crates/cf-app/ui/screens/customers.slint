@@ -1,5 +1,6 @@
-import { CheckBox, ComboBox, LineEdit, ScrollView } from "std-widgets.slint";
+import { CheckBox, LineEdit, ScrollView } from "std-widgets.slint";
 import { Theme } from "../theme.slint";
+import { SearchableCombo } from "../components/searchable_combo.slint";
 import { Card, CfButton, StatusBadge, EmptyState } from "../components/common.slint";
 import { CustomerRowData } from "../types.slint";
 import { CustomerHub } from "../globals.slint";
@@ -33,8 +34,10 @@ export component CustomersScreen inherits VerticalLayout {
     spacing: Theme.gap;
 
     // Thanh công cụ trên cùng
-    HorizontalLayout {
-        height: 36px;
+    FlexboxLayout {
+        vertical-stretch: 0;
+        alignment: stretch;
+        cross-axis-alignment: center;
         spacing: Theme.gap;
         Text { text: root.summary-text; color: Theme.text-muted; vertical-alignment: center; }
         Rectangle { horizontal-stretch: 1; }
@@ -45,23 +48,28 @@ export component CustomersScreen inherits VerticalLayout {
     }
 
     // Thanh tìm kiếm & bộ lọc
-    HorizontalLayout {
+    FlexboxLayout {
+        vertical-stretch: 0;
+        alignment: stretch;
+        cross-axis-alignment: center;
         spacing: Theme.gap;
         LineEdit {
+            min-width: 200px;
+            preferred-width: 250px;
             horizontal-stretch: 1;
-            height: 32px;
+            height: Theme.control-height;
             text <=> CustomerHub.list-search-text;
             placeholder-text: "Tìm tên, tên ngắn, mã, MST hoặc đại diện (có/không dấu)";
             edited(text) => { root.search-changed(text); }
         }
-        ComboBox {
+        SearchableCombo {
             width: 190px;
             height: 32px;
             model: root.ward-options;
             current-index: root.ward-index;
             selected(value) => { root.filter-changed(self.current-index, root.type-index, root.active-only); }
         }
-        ComboBox {
+        SearchableCombo {
             width: 170px;
             height: 32px;
             model: root.type-options;
@@ -76,42 +84,49 @@ export component CustomersScreen inherits VerticalLayout {
         CfButton { text: "Xóa lọc"; clicked => { CustomerHub.list-reset-filters(); } }
     }
 
-    // Tiêu đề cột
-    Rectangle {
-        height: 34px;
-        background: Theme.surface-2;
-        border-color: Theme.border;
-        border-width: 1px;
-        border-radius: Theme.radius-sm;
-        HorizontalLayout {
-            padding-left: 8px;
-            padding-right: 12px;
-            spacing: 8px;
-            CheckBox {
-                width: 28px;
-                checked: CustomerHub.list-all-selected;
-                toggled => { CustomerHub.list-toggle-all(self.checked); }
-            }
-            Text { width: 88px; text: "MÃ KH"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
-            Text { horizontal-stretch: 1; text: "TÊN PHÁP LÝ"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
-            Text { width: 135px; text: "PHƯỜNG/XÃ"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
-            Text { width: 105px; text: "LOẠI"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
-            Text { width: 130px; text: "ĐẠI DIỆN"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
-            Text { width: 48px; text: "HĐ"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; horizontal-alignment: right; vertical-alignment: center; }
-            Text { width: 124px; text: "TRẠNG THÁI"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
-            Text { width: 64px; text: ""; }
-        }
-    }
-
     if root.rows.length == 0 : EmptyState {
         vertical-stretch: 1;
         message: "Không có khách hàng nào khớp bộ lọc.";
     }
+    // Tiêu đề và dữ liệu dùng chung vùng cuộn để luôn thẳng cột.
     if root.rows.length > 0 : Card {
         vertical-stretch: 1;
+        min-width: 0px;
         clip: true;
-        ScrollView {
-            VerticalLayout {
+        min-height: 0px;
+        preferred-height: table-content.preferred-height + 14px;
+        max-height: self.preferred-height;
+        table := ScrollView {
+            min-width: 0px;
+            content-width: max(self.visible-width, 875px);
+            table-content := VerticalLayout {
+                width: table.content-width;
+                spacing: 0px;
+                Rectangle {
+                    height: 34px;
+                    background: Theme.surface-2;
+                    border-color: Theme.border;
+                    border-width: 1px;
+                    border-radius: Theme.radius-sm;
+                    HorizontalLayout {
+                        padding-left: 8px;
+                        padding-right: 12px;
+                        spacing: 8px;
+                        CheckBox {
+                            width: 28px;
+                            checked: CustomerHub.list-all-selected;
+                            toggled => { CustomerHub.list-toggle-all(self.checked); }
+                        }
+                        Text { width: 88px; text: "MÃ KH"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
+                        Text { horizontal-stretch: 1; text: "TÊN PHÁP LÝ"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
+                        Text { width: 135px; text: "PHƯỜNG/XÃ"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
+                        Text { width: 105px; text: "LOẠI"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
+                        Text { width: 130px; text: "ĐẠI DIỆN"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
+                        Text { width: 48px; text: "HĐ"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; horizontal-alignment: right; vertical-alignment: center; }
+                        Text { width: 124px; text: "TRẠNG THÁI"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; vertical-alignment: center; }
+                        Text { width: 64px; text: ""; }
+                    }
+                }
                 for row[index] in root.rows : Rectangle {
                     height: 42px;
                     background: row.selected ? Theme.primary-tint : (rta.has-hover ? Theme.primary-tint : Theme.surface);
@@ -144,6 +159,8 @@ export component CustomersScreen inherits VerticalLayout {
                             }
                         }
                         CfButton {
+                            height: 32px;
+                            width: 64px;
                             y: (parent.height - self.height) / 2;
                             text: "Sửa";
                             clicked => { CustomerHub.open-edit(row.id); }
@@ -155,13 +172,12 @@ export component CustomersScreen inherits VerticalLayout {
     }
 
     // Chân trang: xóa đã chọn, phân trang
-    HorizontalLayout {
+    if root.rows.length > 0 || root.has-prev || root.has-next : HorizontalLayout {
         spacing: Theme.gap;
         height: 36px;
-        CfButton {
+        if root.selected-count > 0 : CfButton {
             text: "Xóa đã chọn (" + root.selected-count + ")";
             variant: "danger";
-            enabled: root.selected-count > 0;
             clicked => { root.delete-selected(); }
         }
         Rectangle { horizontal-stretch: 1; }
@@ -169,4 +185,6 @@ export component CustomersScreen inherits VerticalLayout {
         Text { text: root.page-text; color: Theme.text; vertical-alignment: center; }
         CfButton { text: "Sau ›"; enabled: root.has-next; clicked => { root.next-page(); } }
     }
+
+    Rectangle { vertical-stretch: 1; }
 }

@@ -1,5 +1,6 @@
 import { LineEdit, ScrollView } from "std-widgets.slint";
 import { Theme } from "../theme.slint";
+import { DateInput } from "../components/date_input.slint";
 import { Card, CfButton } from "../components/common.slint";
 
 export struct SettingsPartyB {
@@ -49,15 +50,18 @@ export component SettingsScreen inherits VerticalLayout {
                 }
             }
 
-            // Bố cục 2 cột giống Python settings.html
-            HorizontalLayout {
-                spacing: 14px;
+            FlexboxLayout {
                 alignment: stretch;
+                spacing: 14px;
+                cross-axis-alignment: start;
 
                 // Trái: Thông tin tổ chức Bên B
                 VerticalLayout {
+                    min-width: 480px;
+                    preferred-width: 580px;
                     horizontal-stretch: 7;
                     spacing: 12px;
+                    alignment: start;
                     Card {
                         VerticalLayout {
                             padding: Theme.pad;
@@ -66,34 +70,34 @@ export component SettingsScreen inherits VerticalLayout {
                             Text { text: "Thông tin tự điền vào hợp đồng mới. Sau khi sửa, bấm Sinh lại file trên hợp đồng cũ để cập nhật."; color: Theme.text-muted; font-size: Theme.font-small; wrap: word-wrap; }
                             Rectangle { height: 1px; background: Theme.border; }
 
-                            VerticalLayout { spacing: 4px; Text { text: "TÊN ĐƠN VỊ *"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.party-b.name; placeholder-text: "VD: Viettel Chi nhánh..."; } }
-                            VerticalLayout { spacing: 4px; Text { text: "ĐỊA CHỈ *"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.party-b.address; } }
+                            VerticalLayout { spacing: 4px; Text { text: "TÊN ĐƠN VỊ *"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { min-width: 0px; height: Theme.control-height; text <=> root.party-b.name; placeholder-text: "VD: Viettel Chi nhánh..."; } }
+                            VerticalLayout { spacing: 4px; Text { text: "ĐỊA CHỈ *"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { min-width: 0px; height: Theme.control-height; text <=> root.party-b.address; } }
 
                             HorizontalLayout {
                                 spacing: 10px;
-                                VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "MÃ SỐ THUẾ"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.party-b.tax_code; } }
-                                VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "CHỨC VỤ NGƯỜI ĐẠI DIỆN"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.party-b.title; placeholder-text: "VD: Giám đốc"; } }
+                                VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "MÃ SỐ THUẾ"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { min-width: 0px; height: Theme.control-height; text <=> root.party-b.tax_code; } }
+                                VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "CHỨC VỤ NGƯỜI ĐẠI DIỆN"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { min-width: 0px; height: Theme.control-height; text <=> root.party-b.title; placeholder-text: "VD: Giám đốc"; } }
                             }
                             HorizontalLayout {
                                 spacing: 10px;
-                                VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "ĐIỆN THOẠI"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.party-b.phone; } }
-                                VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "NGƯỜI LIÊN HỆ"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.party-b.contact_name; } }
-                                VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "EMAIL LIÊN HỆ"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.party-b.contact_email; } }
+                                VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "ĐIỆN THOẠI"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { min-width: 0px; height: Theme.control-height; text <=> root.party-b.phone; } }
+                                VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "NGƯỜI LIÊN HỆ"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { min-width: 0px; height: Theme.control-height; text <=> root.party-b.contact_name; } }
+                                VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "EMAIL LIÊN HỆ"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { min-width: 0px; height: Theme.control-height; text <=> root.party-b.contact_email; } }
                             }
                             HorizontalLayout {
                                 spacing: 10px;
-                                VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "SỐ TÀI KHOẢN NGÂN HÀNG"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.party-b.bank_account; } }
-                                VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "NGÂN HÀNG"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.party-b.bank_name; } }
+                                VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "SỐ TÀI KHOẢN NGÂN HÀNG"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { min-width: 0px; height: Theme.control-height; text <=> root.party-b.bank_account; } }
+                                VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "NGÂN HÀNG"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { min-width: 0px; height: Theme.control-height; text <=> root.party-b.bank_name; } }
                             }
-                            VerticalLayout { spacing: 4px; Text { text: "ĐƠN VỊ THỤ HƯỞNG"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.party-b.beneficiary; } }
+                            VerticalLayout { spacing: 4px; Text { text: "ĐƠN VỊ THỤ HƯỞNG"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { min-width: 0px; height: Theme.control-height; text <=> root.party-b.beneficiary; } }
 
                             Rectangle { height: 1px; background: Theme.border; }
                             Text { text: "GIẤY ỦY QUYỀN KÝ HỢP ĐỒNG"; color: Theme.text; font-size: Theme.font-small; font-weight: 700; }
-                            VerticalLayout { spacing: 4px; Text { text: "ĐẠI DIỆN KÝ HỢP ĐỒNG"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.party-b.representative; } }
+                            VerticalLayout { spacing: 4px; Text { text: "ĐẠI DIỆN KÝ HỢP ĐỒNG"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { min-width: 0px; height: Theme.control-height; text <=> root.party-b.representative; } }
                             HorizontalLayout {
                                 spacing: 10px;
-                                VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "SỐ GIẤY ỦY QUYỀN"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.party-b.authorization_number; } }
-                                VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "NGÀY ỦY QUYỀN (dd/mm/yyyy)"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { height: 32px; text <=> root.party-b.authorization_date; placeholder-text: "09/07/2026"; } }
+                                VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "SỐ GIẤY ỦY QUYỀN"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } LineEdit { min-width: 0px; height: Theme.control-height; text <=> root.party-b.authorization_number; } }
+                                VerticalLayout { horizontal-stretch: 1; spacing: 4px; Text { text: "NGÀY ỦY QUYỀN (dd/mm/yyyy)"; font-size: Theme.font-xs; font-weight: 700; color: Theme.text-muted; } DateInput { height: Theme.control-height; text <=> root.party-b.authorization_date; placeholder-text: "09/07/2026"; } }
                             }
                             HorizontalLayout {
                                 alignment: end;
@@ -105,6 +109,8 @@ export component SettingsScreen inherits VerticalLayout {
 
                 // Phải: Khuôn số phụ lục + Thư mục dữ liệu + Thông tin hệ thống + Thùng rác
                 VerticalLayout {
+                    min-width: 240px;
+                    preferred-width: 260px;
                     horizontal-stretch: 5;
                     spacing: 12px;
                     alignment: start;
@@ -116,7 +122,7 @@ export component SettingsScreen inherits VerticalLayout {
                             Text { text: "KHUÔN SỐ PHỤ LỤC"; color: Theme.primary; font-size: Theme.font-small; font-weight: 700; }
                             Rectangle { height: 1px; background: Theme.border; }
                             Text { text: "Bắt buộc chứa {seq} (số thứ tự) và {parent} (số hợp đồng gốc). VD: PL{seq}/{parent}"; color: Theme.text-muted; font-size: Theme.font-small; wrap: word-wrap; }
-                            LineEdit { height: 32px; text <=> root.addendum-format; placeholder-text: "PL{seq}/{parent}"; }
+                            LineEdit { min-width: 0px; height: Theme.control-height; text <=> root.addendum-format; placeholder-text: "PL{seq}/{parent}"; }
                             HorizontalLayout {
                                 alignment: end;
                                 CfButton { text: "Lưu khuôn phụ lục"; variant: "outline-primary"; clicked => { root.save-addendum-format(); } }

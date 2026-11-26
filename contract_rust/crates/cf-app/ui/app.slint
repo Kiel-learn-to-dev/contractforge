@@ -1,7 +1,7 @@
 import { Palette } from "std-widgets.slint";
 import { Theme } from "theme.slint";
 import { Sidebar } from "sidebar.slint";
-import { PageHeader } from "components/common.slint";
+import { CfButton, PageHeader } from "components/common.slint";
 import { Toast } from "components/toast.slint";
 import { ConfirmDialog } from "components/confirm.slint";
 import { DashboardScreen, DashboardMetric, DashboardAction } from "screens/dashboard.slint";
@@ -38,11 +38,13 @@ import { TemplateDetailScreen } from "screens/template_detail.slint";
 // Khung ứng dụng. Mọi nghiệp vụ nằm ở Rust; file này chỉ hiển thị và chuyển sự kiện.
 export component MainWindow inherits Window {
     title: "ContractForge";
+    icon: @image-url("assets/cf_icon.png");
     preferred-width: 1200px;
     preferred-height: 780px;
     min-width: 900px;
     min-height: 600px;
     default-font-family: "Segoe UI";
+    default-font-size: Theme.font-body;
     background: Theme.background;
     init => { Palette.color-scheme = ColorScheme.light; }
 
@@ -116,6 +118,7 @@ export component MainWindow inherits Window {
     in property <string> confirm-message;
 
     callback navigate(int);
+    callback refresh-db();
     callback back();
     callback toast-closed();
     callback confirm-ok();
@@ -237,7 +240,9 @@ export component MainWindow inherits Window {
     callback template-edit();
 
     HorizontalLayout {
+        x: 0px;
         Sidebar {
+            width: root.width < 1080px ? 184px : 232px;
             items: root.screen-titles;
             current: root.current-screen;
             version: root.version;
@@ -264,8 +269,8 @@ export component MainWindow inherits Window {
                     padding-right: 20px;
                     spacing: 12px;
                     if root.can-go-back : Rectangle {
-                        width: 82px;
-                        height: 30px;
+                        width: 88px;
+                        height: Theme.control-height;
                         y: (parent.height - self.height) / 2;
                         border-radius: Theme.radius-sm;
                         background: back-ta.has-hover ? Theme.surface-2 : Theme.surface;
@@ -286,11 +291,17 @@ export component MainWindow inherits Window {
                     }
                     PageHeader { title: root.screen-title; }
                     Rectangle { horizontal-stretch: 1; }
+                    CfButton {
+                        text: "⟳ Làm mới";
+                        y: (parent.height - self.height) / 2;
+                        clicked => { root.refresh-db(); }
+                    }
                     GlobalSearch {
-                        height: 30px;
+                        width: root.width < 1080px ? 210px : 280px;
+                        height: Theme.control-height;
                         y: (parent.height - self.height) / 2;
                     }
-                    if DashboardHub.today-label != "" : Text {
+                    if root.width >= 1080px && DashboardHub.today-label != "" : Text {
                         text: DashboardHub.today-label;
                         color: Theme.text-muted;
                         font-size: Theme.font-small;

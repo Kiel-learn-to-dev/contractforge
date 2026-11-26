@@ -1,3 +1,4 @@
+import { Date } from "std-widgets.slint";
 import {
     BatchImportPreviewRow, ContractEvidenceSlot, ContractItemViewRow, ContractPriceLineRow,
     CustomerContractRowData, CustomerDetailDocSlot, CustomerDetailProfile,
@@ -533,4 +534,8 @@ export global SearchHub {
     callback submit-first();
     callback pick-result(string, int);
     callback close-popup();
+    pure callback filter-model(string, [string]) -> [int];
+    callback date-from-text(string) -> Date;
+    // 42 ô (6 tuần x 7 ngày, bắt đầu từ Thứ 2); 0 = ô trống.
+    pure callback month-days(int, int) -> [int];
 }

@@ -107,6 +107,7 @@ fn main() -> Result<()> {
     let worker = Worker::spawn(ctx);
     let _expiry_timer = wire_expiry(&ui, &worker);
     wire_navigation(&ui, &nav, &worker);
+    wire_refresh(&ui, &worker);
     wire_dashboard(&ui, &nav, &worker);
     customers_view::install(&ui, &worker, &feedback);
     screens::customer_form::install(&ui, &worker);
@@ -410,6 +411,11 @@ fn set_dashboard(weak: slint::Weak<MainWindow>, data: dashboard_view::DashboardV
 
     let hub = ui.global::<DashboardHub>();
     hub.set_today_label(data.today_label.into());
+    let bars = if bars.iter().any(|bar| bar.count > 0) {
+        bars
+    } else {
+        Vec::new()
+    };
     hub.set_forecast_bars(ModelRc::new(VecModel::from(bars)));
     hub.set_status_dist(ModelRc::new(VecModel::from(dist)));
     hub.set_pie_items(ModelRc::new(VecModel::from(pies)));
@@ -646,6 +652,42 @@ fn sync_screen(ui: &MainWindow, nav: &Nav) {
     ui.set_current_screen(screen.index());
     ui.set_screen_title(screen.title().into());
     ui.set_can_go_back(nav.can_go_back());
+}
+
+/// Nút "Làm mới": nạp lại toàn bộ dữ liệu từ file DB rồi vẽ lại các màn hình đang dùng.
+fn wire_refresh(ui: &MainWindow, worker: &Worker<Ctx>) {
+    let weak = ui.as_weak();
+    let worker = worker.clone();
+    ui.on_refresh_db(move || {
+        let weak = weak.clone();
+        let dash_worker = worker.clone();
+        worker.run(
+            |ctx| ctx.store_mut().reload().map_err(|error| error.to_string()),
+            move |result| {
+                ui_helpers::post_to_ui(move || match result {
+                    Ok(()) => {
+                        reload_dashboard(weak, &dash_worker);
+                        customers_view::request_load();
+                        screens::customer_detail::reload();
+                        screens::products::reload();
+                        screens::templates_list::reload();
+                        screens::contracts_list::reload();
+                        screens::contract_detail::reload();
+                        screens::batch::reload();
+                        screens::quotation::reload();
+                        ui_helpers::toast_from_worker(
+                            ui_helpers::ToastKind::Success,
+                            "Đã làm mới dữ liệu".to_owned(),
+                        );
+                    }
+                    Err(error) => ui_helpers::toast_from_worker(
+                        ui_helpers::ToastKind::Danger,
+                        format!("Không làm mới được dữ liệu: {error}"),
+                    ),
+                });
+            },
+        );
+    });
 }
 
 fn wire_navigation(ui: &MainWindow, nav: &Rc<RefCell<Nav>>, worker: &Worker<Ctx>) {
